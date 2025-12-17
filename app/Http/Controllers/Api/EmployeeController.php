@@ -142,4 +142,64 @@ class EmployeeController extends Controller
 
         return response()->json($query->orderBy('date', 'desc')->get());
     }
+
+    public function employeeSalaries(Employee $employee)
+    {
+        $salaries = $employee->salaries()->with('creator')->orderBy('payment_date', 'desc')->get();
+        return response()->json($salaries);
+    }
+
+    public function employeeAdvances(Employee $employee)
+    {
+        $advances = $employee->advances()->with('creator')->orderBy('date', 'desc')->get();
+        return response()->json($advances);
+    }
+
+    public function storeSalary(Request $request)
+    {
+        $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+            'amount' => 'required|numeric|min:0',
+            'month' => 'required|string|regex:/^\d{4}-\d{2}$/',
+            'payment_date' => 'required|date',
+            'note' => 'nullable|string',
+        ]);
+
+        $employee = Employee::findOrFail($request->employee_id);
+
+        $salary = Salary::create([
+            'project_id' => $request->project_id ?? $employee->project_id,
+            'employee_id' => $request->employee_id,
+            'amount' => $request->amount,
+            'month' => $request->month,
+            'payment_date' => $request->payment_date,
+            'note' => $request->note,
+            'created_by' => $request->user()->id,
+        ]);
+
+        return response()->json($salary->load(['employee', 'creator']), 201);
+    }
+
+    public function storeAdvance(Request $request)
+    {
+        $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+            'amount' => 'required|numeric|min:0',
+            'date' => 'required|date',
+            'reason' => 'nullable|string',
+        ]);
+
+        $employee = Employee::findOrFail($request->employee_id);
+
+        $advance = Advance::create([
+            'project_id' => $request->project_id ?? $employee->project_id,
+            'employee_id' => $request->employee_id,
+            'amount' => $request->amount,
+            'date' => $request->date,
+            'reason' => $request->reason,
+            'created_by' => $request->user()->id,
+        ]);
+
+        return response()->json($advance->load(['employee', 'creator']), 201);
+    }
 }

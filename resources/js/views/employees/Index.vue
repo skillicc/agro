@@ -189,6 +189,8 @@ const paySalary = async () => {
     try {
         await api.post(`/employees/${selectedEmployee.value.id}/salary`, salaryForm)
         salaryDialog.value = false
+        fetchEmployees()
+        alert('Salary paid successfully!')
     } catch (error) {
         console.error('Error:', error)
     }
@@ -206,6 +208,8 @@ const giveAdvance = async () => {
     try {
         await api.post(`/employees/${selectedEmployee.value.id}/advance`, advanceForm)
         advanceDialog.value = false
+        fetchEmployees()
+        alert('Advance given successfully!')
     } catch (error) {
         console.error('Error:', error)
     }
