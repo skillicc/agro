@@ -224,4 +224,54 @@ class EmployeeController extends Controller
 
         return response()->json($advance->load(['employee', 'creator']), 201);
     }
+
+    public function updateSalary(Request $request, Salary $salary)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:0',
+            'month' => 'required|string|regex:/^\d{4}-\d{2}$/',
+            'payment_date' => 'required|date',
+            'note' => 'nullable|string',
+        ]);
+
+        $salary->update([
+            'amount' => $request->amount,
+            'month' => $request->month,
+            'payment_date' => $request->payment_date,
+            'note' => $request->note,
+        ]);
+
+        return response()->json($salary->load(['employee', 'creator']));
+    }
+
+    public function deleteSalary(Salary $salary)
+    {
+        $salary->delete();
+        return response()->json(['message' => 'Salary deleted successfully']);
+    }
+
+    public function updateAdvance(Request $request, Advance $advance)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:0',
+            'date' => 'required|date',
+            'reason' => 'nullable|string',
+            'is_deducted' => 'nullable|boolean',
+        ]);
+
+        $advance->update([
+            'amount' => $request->amount,
+            'date' => $request->date,
+            'reason' => $request->reason,
+            'is_deducted' => $request->is_deducted ?? false,
+        ]);
+
+        return response()->json($advance->load(['employee', 'creator']));
+    }
+
+    public function deleteAdvance(Advance $advance)
+    {
+        $advance->delete();
+        return response()->json(['message' => 'Advance deleted successfully']);
+    }
 }

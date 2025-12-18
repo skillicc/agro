@@ -58,7 +58,33 @@
 
         <v-card>
             <v-card-text>
-                <v-data-table :headers="headers" :items="employees" :loading="loading">
+                <v-data-table
+                    :headers="headers"
+                    :items="employees"
+                    :loading="loading"
+                    :group-by="groupBy"
+                    items-per-page="-1"
+                >
+                    <template v-slot:group-header="{ item, columns, toggleGroup, isGroupOpen }">
+                        <tr class="bg-primary-lighten-5">
+                            <td :colspan="columns.length">
+                                <v-btn
+                                    size="small"
+                                    variant="text"
+                                    :icon="isGroupOpen(item) ? 'mdi-chevron-down' : 'mdi-chevron-right'"
+                                    @click="toggleGroup(item)"
+                                ></v-btn>
+                                <v-icon class="mr-2" color="primary">mdi-folder</v-icon>
+                                <span class="font-weight-bold text-primary">{{ item.value }}</span>
+                                <v-chip size="x-small" class="ml-2" color="primary">
+                                    {{ item.items.length }} employees
+                                </v-chip>
+                                <v-chip size="x-small" class="ml-1" color="info">
+                                    Salary: ৳{{ formatNumber(getGroupTotalSalary(item.items)) }}
+                                </v-chip>
+                            </td>
+                        </tr>
+                    </template>
                     <template v-slot:item.salary_amount="{ item }">
                         ৳{{ formatNumber(item.salary_amount) }}
                     </template>
@@ -177,6 +203,7 @@
                                         <th>Amount</th>
                                         <th>Payment Date</th>
                                         <th>Note</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -185,16 +212,24 @@
                                         <td>৳{{ formatNumber(salary.amount) }}</td>
                                         <td>{{ salary.payment_date }}</td>
                                         <td>{{ salary.note || '-' }}</td>
+                                        <td>
+                                            <v-btn icon size="x-small" color="primary" @click="editSalary(salary)" title="Edit">
+                                                <v-icon size="small">mdi-pencil</v-icon>
+                                            </v-btn>
+                                            <v-btn icon size="x-small" color="error" @click="confirmDeleteSalary(salary)" title="Delete">
+                                                <v-icon size="small">mdi-delete</v-icon>
+                                            </v-btn>
+                                        </td>
                                     </tr>
                                     <tr v-if="salaryHistory.length === 0">
-                                        <td colspan="4" class="text-center text-grey">No salary records found</td>
+                                        <td colspan="5" class="text-center text-grey">No salary records found</td>
                                     </tr>
                                 </tbody>
                                 <tfoot v-if="salaryHistory.length > 0">
                                     <tr class="font-weight-bold">
                                         <td>Total</td>
                                         <td>৳{{ formatNumber(totalSalary) }}</td>
-                                        <td colspan="2"></td>
+                                        <td colspan="3"></td>
                                     </tr>
                                 </tfoot>
                             </v-table>
@@ -209,11 +244,12 @@
                                         <th>Amount</th>
                                         <th>Reason</th>
                                         <th>Deducted</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr v-for="advance in advanceHistory" :key="advance.id">
-                                        <td>{{ advance.date }}</td>
+                                        <td>{{ formatDate(advance.date) }}</td>
                                         <td>৳{{ formatNumber(advance.amount) }}</td>
                                         <td>{{ advance.reason || '-' }}</td>
                                         <td>
@@ -221,16 +257,24 @@
                                                 {{ advance.is_deducted ? 'Yes' : 'No' }}
                                             </v-chip>
                                         </td>
+                                        <td>
+                                            <v-btn icon size="x-small" color="primary" @click="editAdvance(advance)" title="Edit">
+                                                <v-icon size="small">mdi-pencil</v-icon>
+                                            </v-btn>
+                                            <v-btn icon size="x-small" color="error" @click="confirmDeleteAdvance(advance)" title="Delete">
+                                                <v-icon size="small">mdi-delete</v-icon>
+                                            </v-btn>
+                                        </td>
                                     </tr>
                                     <tr v-if="advanceHistory.length === 0">
-                                        <td colspan="4" class="text-center text-grey">No advance records found</td>
+                                        <td colspan="5" class="text-center text-grey">No advance records found</td>
                                     </tr>
                                 </tbody>
                                 <tfoot v-if="advanceHistory.length > 0">
                                     <tr class="font-weight-bold">
                                         <td>Total</td>
                                         <td>৳{{ formatNumber(totalAdvance) }}</td>
-                                        <td colspan="2"></td>
+                                        <td colspan="3"></td>
                                     </tr>
                                 </tfoot>
                             </v-table>
@@ -240,6 +284,80 @@
                 <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn @click="historyDialog = false">Close</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Edit Salary Dialog -->
+        <v-dialog v-model="editSalaryDialog" max-width="400">
+            <v-card>
+                <v-card-title>Edit Salary</v-card-title>
+                <v-card-text>
+                    <v-form @submit.prevent="updateSalary">
+                        <v-text-field v-model.number="editSalaryForm.amount" label="Amount" type="number" required></v-text-field>
+                        <v-text-field v-model="editSalaryForm.month" label="Month (YYYY-MM)" placeholder="2025-01" required></v-text-field>
+                        <v-text-field v-model="editSalaryForm.payment_date" label="Payment Date" type="date" required></v-text-field>
+                        <v-textarea v-model="editSalaryForm.note" label="Note" rows="2"></v-textarea>
+                    </v-form>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="editSalaryDialog = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="updateSalary" :loading="updatingSalary">Update</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Edit Advance Dialog -->
+        <v-dialog v-model="editAdvanceDialog" max-width="400">
+            <v-card>
+                <v-card-title>Edit Advance</v-card-title>
+                <v-card-text>
+                    <v-form @submit.prevent="updateAdvance">
+                        <v-text-field v-model.number="editAdvanceForm.amount" label="Amount" type="number" required></v-text-field>
+                        <v-text-field v-model="editAdvanceForm.date" label="Date" type="date" required></v-text-field>
+                        <v-textarea v-model="editAdvanceForm.reason" label="Reason" rows="2"></v-textarea>
+                        <v-switch v-model="editAdvanceForm.is_deducted" label="Is Deducted" color="success"></v-switch>
+                    </v-form>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="editAdvanceDialog = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="updateAdvance" :loading="updatingAdvance">Update</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Delete Salary Confirmation Dialog -->
+        <v-dialog v-model="deleteSalaryDialog" max-width="400">
+            <v-card>
+                <v-card-title class="text-error">Delete Salary</v-card-title>
+                <v-card-text>
+                    Are you sure you want to delete this salary payment of <strong>৳{{ formatNumber(selectedSalaryForDelete?.amount) }}</strong>?
+                    <br>
+                    This action cannot be undone.
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="deleteSalaryDialog = false">Cancel</v-btn>
+                    <v-btn color="error" @click="deleteSalary" :loading="deletingSalary">Delete</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Delete Advance Confirmation Dialog -->
+        <v-dialog v-model="deleteAdvanceDialog" max-width="400">
+            <v-card>
+                <v-card-title class="text-error">Delete Advance</v-card-title>
+                <v-card-text>
+                    Are you sure you want to delete this advance of <strong>৳{{ formatNumber(selectedAdvanceForDelete?.amount) }}</strong>?
+                    <br>
+                    This action cannot be undone.
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="deleteAdvanceDialog = false">Cancel</v-btn>
+                    <v-btn color="error" @click="deleteAdvance" :loading="deletingAdvance">Delete</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -385,11 +503,28 @@ const filterEmployee = ref(null)
 const allSalariesOriginal = ref([])
 const allAdvancesOriginal = ref([])
 
+// Edit/Delete states
+const editSalaryDialog = ref(false)
+const editAdvanceDialog = ref(false)
+const deleteSalaryDialog = ref(false)
+const deleteAdvanceDialog = ref(false)
+const selectedSalaryForDelete = ref(null)
+const selectedAdvanceForDelete = ref(null)
+const updatingSalary = ref(false)
+const updatingAdvance = ref(false)
+const deletingSalary = ref(false)
+const deletingAdvance = ref(false)
+const editSalaryForm = reactive({ id: null, amount: 0, month: '', payment_date: '', note: '' })
+const editAdvanceForm = reactive({ id: null, amount: 0, date: '', reason: '', is_deducted: false })
+
+// Group by project
+const groupBy = [{ key: 'project.name', order: 'asc' }]
+
 const headers = [
-    { title: 'ID', key: 'id', width: '70px' },
+    { title: 'ID', key: 'id', width: '60px' },
     { title: 'Name', key: 'name' },
-    { title: 'Project', key: 'project.name' },
     { title: 'Position', key: 'position' },
+    { title: 'Phone', key: 'phone' },
     { title: 'Salary', key: 'salary_amount' },
     { title: 'Total Paid', key: 'total_paid' },
     { title: 'This Month Due', key: 'current_month_due' },
@@ -418,6 +553,18 @@ const salaryForm = reactive({ amount: 0, month: '', payment_date: new Date().toI
 const advanceForm = reactive({ amount: 0, date: new Date().toISOString().split('T')[0], reason: '' })
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
+
+// Format date
+const formatDate = (dateStr) => {
+    if (!dateStr) return '-'
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('en-CA') // YYYY-MM-DD format
+}
+
+// Get group total salary
+const getGroupTotalSalary = (items) => {
+    return items.filter(e => e.is_active).reduce((sum, e) => sum + Number(e.salary_amount || 0), 0)
+}
 
 // Computed for summary cards
 const totalEmployees = computed(() => employees.value.length)
@@ -585,6 +732,122 @@ const showAllSummary = async () => {
     } catch (error) {
         console.error('Error fetching summary:', error)
     }
+}
+
+// Edit Salary
+const editSalary = (salary) => {
+    Object.assign(editSalaryForm, {
+        id: salary.id,
+        amount: salary.amount,
+        month: salary.month,
+        payment_date: salary.payment_date,
+        note: salary.note || ''
+    })
+    editSalaryDialog.value = true
+}
+
+// Update Salary
+const updateSalary = async () => {
+    updatingSalary.value = true
+    try {
+        await api.put(`/salaries/${editSalaryForm.id}`, editSalaryForm)
+        editSalaryDialog.value = false
+        // Refresh history
+        if (selectedEmployee.value) {
+            const salariesRes = await api.get(`/employees/${selectedEmployee.value.id}/salaries`)
+            salaryHistory.value = salariesRes.data
+        }
+        fetchEmployees()
+        alert('Salary updated successfully!')
+    } catch (error) {
+        console.error('Error updating salary:', error)
+        alert('Error updating salary')
+    }
+    updatingSalary.value = false
+}
+
+// Confirm Delete Salary
+const confirmDeleteSalary = (salary) => {
+    selectedSalaryForDelete.value = salary
+    deleteSalaryDialog.value = true
+}
+
+// Delete Salary
+const deleteSalary = async () => {
+    deletingSalary.value = true
+    try {
+        await api.delete(`/salaries/${selectedSalaryForDelete.value.id}`)
+        deleteSalaryDialog.value = false
+        // Refresh history
+        if (selectedEmployee.value) {
+            const salariesRes = await api.get(`/employees/${selectedEmployee.value.id}/salaries`)
+            salaryHistory.value = salariesRes.data
+        }
+        fetchEmployees()
+        alert('Salary deleted successfully!')
+    } catch (error) {
+        console.error('Error deleting salary:', error)
+        alert('Error deleting salary')
+    }
+    deletingSalary.value = false
+}
+
+// Edit Advance
+const editAdvance = (advance) => {
+    Object.assign(editAdvanceForm, {
+        id: advance.id,
+        amount: advance.amount,
+        date: advance.date,
+        reason: advance.reason || '',
+        is_deducted: advance.is_deducted || false
+    })
+    editAdvanceDialog.value = true
+}
+
+// Update Advance
+const updateAdvance = async () => {
+    updatingAdvance.value = true
+    try {
+        await api.put(`/advances/${editAdvanceForm.id}`, editAdvanceForm)
+        editAdvanceDialog.value = false
+        // Refresh history
+        if (selectedEmployee.value) {
+            const advancesRes = await api.get(`/employees/${selectedEmployee.value.id}/advances`)
+            advanceHistory.value = advancesRes.data
+        }
+        fetchEmployees()
+        alert('Advance updated successfully!')
+    } catch (error) {
+        console.error('Error updating advance:', error)
+        alert('Error updating advance')
+    }
+    updatingAdvance.value = false
+}
+
+// Confirm Delete Advance
+const confirmDeleteAdvance = (advance) => {
+    selectedAdvanceForDelete.value = advance
+    deleteAdvanceDialog.value = true
+}
+
+// Delete Advance
+const deleteAdvance = async () => {
+    deletingAdvance.value = true
+    try {
+        await api.delete(`/advances/${selectedAdvanceForDelete.value.id}`)
+        deleteAdvanceDialog.value = false
+        // Refresh history
+        if (selectedEmployee.value) {
+            const advancesRes = await api.get(`/employees/${selectedEmployee.value.id}/advances`)
+            advanceHistory.value = advancesRes.data
+        }
+        fetchEmployees()
+        alert('Advance deleted successfully!')
+    } catch (error) {
+        console.error('Error deleting advance:', error)
+        alert('Error deleting advance')
+    }
+    deletingAdvance.value = false
 }
 
 onMounted(() => {

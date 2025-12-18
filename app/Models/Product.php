@@ -12,9 +12,11 @@ class Product extends Model
     protected $fillable = [
         'name',
         'category_id',
+        'type',
         'project_type',
         'unit',
         'buying_price',
+        'production_cost',
         'selling_price',
         'stock_quantity',
         'alert_quantity',
@@ -24,13 +26,33 @@ class Product extends Model
 
     protected $casts = [
         'buying_price' => 'decimal:2',
+        'production_cost' => 'decimal:2',
         'selling_price' => 'decimal:2',
         'is_active' => 'boolean',
     ];
 
+    // Check if product is own production
+    public function isOwnProduction(): bool
+    {
+        return $this->type === 'own_production';
+    }
+
+    // Get cost price (buying_price for trading, production_cost for own production)
+    public function getCostPrice(): float
+    {
+        return $this->isOwnProduction()
+            ? (float) ($this->production_cost ?? 0)
+            : (float) ($this->buying_price ?? 0);
+    }
+
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function categories()
+    {
+        return $this->belongsToMany(Category::class)->withTimestamps();
     }
 
     public function purchaseItems()

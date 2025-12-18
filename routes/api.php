@@ -102,8 +102,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/employees/{employee}/advances', [EmployeeController::class, 'employeeAdvances']);
     Route::get('/salaries', [EmployeeController::class, 'salaries']);
     Route::post('/salaries', [EmployeeController::class, 'storeSalary']);
+    Route::put('/salaries/{salary}', [EmployeeController::class, 'updateSalary']);
+    Route::delete('/salaries/{salary}', [EmployeeController::class, 'deleteSalary']);
     Route::get('/advances', [EmployeeController::class, 'advances']);
     Route::post('/advances', [EmployeeController::class, 'storeAdvance']);
+    Route::put('/advances/{advance}', [EmployeeController::class, 'updateAdvance']);
+    Route::delete('/advances/{advance}', [EmployeeController::class, 'deleteAdvance']);
 
     // Reports
     Route::get('/dashboard', [ReportController::class, 'dashboard']);

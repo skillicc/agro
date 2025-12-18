@@ -11,32 +11,49 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::with('category')->get();
+        $products = Product::with(['category', 'categories'])->get();
         return response()->json($products);
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $rules = [
             'name' => 'required|string|max:255',
             'category_id' => 'nullable|exists:categories,id',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'exists:categories,id',
+            'type' => 'required|in:own_production,trading',
             'project_type' => 'required|in:administration,central',
             'unit' => 'required|string|max:50',
-            'buying_price' => 'required|numeric|min:0',
             'selling_price' => 'required|numeric|min:0',
             'stock_quantity' => 'nullable|integer|min:0',
             'alert_quantity' => 'nullable|integer|min:0',
             'description' => 'nullable|string',
-        ]);
+        ];
 
-        $product = Product::create($request->all());
+        // Conditional validation based on type
+        if ($request->type === 'trading') {
+            $rules['buying_price'] = 'required|numeric|min:0';
+        } else {
+            $rules['buying_price'] = 'nullable|numeric|min:0';
+            $rules['production_cost'] = 'nullable|numeric|min:0';
+        }
 
-        return response()->json($product->load('category'), 201);
+        $request->validate($rules);
+
+        $product = Product::create($request->except('category_ids'));
+
+        // Sync multiple categories if provided
+        if ($request->has('category_ids')) {
+            $product->categories()->sync($request->category_ids);
+        }
+
+        return response()->json($product->load(['category', 'categories']), 201);
     }
 
     public function show(Product $product)
     {
-        return response()->json($product->load('category'));
+        return response()->json($product->load(['category', 'categories']));
     }
 
     public function update(Request $request, Product $product)
@@ -44,18 +61,27 @@ class ProductController extends Controller
         $request->validate([
             'name' => 'nullable|string|max:255',
             'category_id' => 'nullable|exists:categories,id',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'exists:categories,id',
+            'type' => 'nullable|in:own_production,trading',
             'project_type' => 'nullable|in:administration,central',
             'unit' => 'nullable|string|max:50',
             'buying_price' => 'nullable|numeric|min:0',
+            'production_cost' => 'nullable|numeric|min:0',
             'selling_price' => 'nullable|numeric|min:0',
-            'quantity' => 'nullable|integer|min:0',
+            'stock_quantity' => 'nullable|integer|min:0',
             'alert_quantity' => 'nullable|integer|min:0',
             'description' => 'nullable|string',
         ]);
 
-        $product->update($request->all());
+        $product->update($request->except('category_ids'));
 
-        return response()->json($product->load('category'));
+        // Sync multiple categories if provided
+        if ($request->has('category_ids')) {
+            $product->categories()->sync($request->category_ids);
+        }
+
+        return response()->json($product->load(['category', 'categories']));
     }
 
     public function destroy(Product $product)

@@ -17,13 +17,31 @@
         <v-card>
             <v-card-text>
                 <v-data-table :headers="headers" :items="products" :loading="loading">
+                    <template v-slot:item.type="{ item }">
+                        <v-chip :color="item.type === 'own_production' ? 'success' : 'info'" size="small">
+                            {{ item.type === 'own_production' ? 'উৎপাদন' : 'ক্রয়-বিক্রয়' }}
+                        </v-chip>
+                    </template>
+                    <template v-slot:item.categories="{ item }">
+                        <div class="d-flex flex-wrap ga-1">
+                            <v-chip v-for="cat in item.categories" :key="cat.id" size="small" color="primary" variant="tonal">
+                                {{ cat.name }}
+                            </v-chip>
+                            <span v-if="!item.categories || item.categories.length === 0" class="text-grey">-</span>
+                        </div>
+                    </template>
                     <template v-slot:item.stock_quantity="{ item }">
                         <v-chip :color="item.stock_quantity <= item.alert_quantity ? 'error' : 'success'" size="small">
                             {{ item.stock_quantity }} {{ item.unit }}
                         </v-chip>
                     </template>
-                    <template v-slot:item.buying_price="{ item }">
-                        ৳{{ formatNumber(item.buying_price) }}
+                    <template v-slot:item.cost_price="{ item }">
+                        <span v-if="item.type === 'own_production'">
+                            ৳{{ formatNumber(item.production_cost || 0) }}
+                        </span>
+                        <span v-else>
+                            ৳{{ formatNumber(item.buying_price) }}
+                        </span>
                     </template>
                     <template v-slot:item.selling_price="{ item }">
                         ৳{{ formatNumber(item.selling_price) }}
@@ -52,11 +70,22 @@
                             </v-col>
                             <v-col cols="12" md="6">
                                 <v-select
-                                    v-model="form.category_id"
+                                    v-model="form.type"
+                                    :items="productTypes"
+                                    label="Product Type"
+                                    required
+                                ></v-select>
+                            </v-col>
+                            <v-col cols="12" md="6">
+                                <v-select
+                                    v-model="form.category_ids"
                                     :items="categories"
                                     item-title="name"
                                     item-value="id"
-                                    label="Category"
+                                    label="Categories (Multiple)"
+                                    multiple
+                                    chips
+                                    closable-chips
                                     clearable
                                 >
                                     <template v-slot:prepend-item>
@@ -78,11 +107,16 @@
                                     required
                                 ></v-select>
                             </v-col>
-                            <v-col cols="12" md="6">
-                                <v-text-field v-model.number="form.buying_price" label="Buying Price" type="number" required></v-text-field>
+                            <!-- Buying Price - only for Trading products -->
+                            <v-col cols="12" md="6" v-if="form.type === 'trading'">
+                                <v-text-field v-model.number="form.buying_price" label="Buying Price (ক্রয় মূল্য)" type="number" required></v-text-field>
+                            </v-col>
+                            <!-- Production Cost - only for Own Production products -->
+                            <v-col cols="12" md="6" v-if="form.type === 'own_production'">
+                                <v-text-field v-model.number="form.production_cost" label="Production Cost (উৎপাদন খরচ)" type="number" hint="Optional - for profit calculation"></v-text-field>
                             </v-col>
                             <v-col cols="12" md="6">
-                                <v-text-field v-model.number="form.selling_price" label="Selling Price" type="number" required></v-text-field>
+                                <v-text-field v-model.number="form.selling_price" label="Selling Price (বিক্রয় মূল্য)" type="number" required></v-text-field>
                             </v-col>
                             <v-col cols="12" md="6">
                                 <v-text-field v-model.number="form.alert_quantity" label="Alert Quantity" type="number"></v-text-field>
@@ -235,11 +269,17 @@ const unitOptions = [
     { title: 'Packet (প্যাকেট)', value: 'packet' },
 ]
 
+const productTypes = [
+    { title: 'নিজস্ব উৎপাদন (Own Production)', value: 'own_production' },
+    { title: 'ক্রয়-বিক্রয় (Trading)', value: 'trading' },
+]
+
 const headers = [
     { title: 'Name', key: 'name' },
-    { title: 'Category', key: 'category.name' },
+    { title: 'Type', key: 'type' },
+    { title: 'Categories', key: 'categories' },
     { title: 'Unit', key: 'unit' },
-    { title: 'Buying Price', key: 'buying_price' },
+    { title: 'Cost Price', key: 'cost_price' },
     { title: 'Selling Price', key: 'selling_price' },
     { title: 'Stock', key: 'stock_quantity' },
     { title: 'Actions', key: 'actions', sortable: false },
@@ -248,8 +288,11 @@ const headers = [
 const form = reactive({
     name: '',
     category_id: null,
+    category_ids: [],
+    type: 'trading',
     unit: 'pcs',
     buying_price: 0,
+    production_cost: 0,
     selling_price: 0,
     alert_quantity: 10,
     description: '',
@@ -287,8 +330,10 @@ const openDialog = (product = null) => {
     selectedProduct.value = product
     if (product) {
         Object.assign(form, product)
+        // Extract category IDs from categories array
+        form.category_ids = product.categories ? product.categories.map(c => c.id) : []
     } else {
-        Object.assign(form, { name: '', category_id: null, unit: 'pcs', buying_price: 0, selling_price: 0, alert_quantity: 10, description: '' })
+        Object.assign(form, { name: '', category_id: null, category_ids: [], type: 'trading', unit: 'pcs', buying_price: 0, production_cost: 0, selling_price: 0, alert_quantity: 10, description: '' })
     }
     dialog.value = true
 }
