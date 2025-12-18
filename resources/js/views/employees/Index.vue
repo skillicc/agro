@@ -8,6 +8,54 @@
             </v-btn>
         </div>
 
+        <!-- Summary Cards -->
+        <v-row class="mb-4">
+            <v-col cols="12" md="3">
+                <v-card color="primary" variant="tonal">
+                    <v-card-text class="d-flex align-center">
+                        <v-icon size="40" class="mr-3">mdi-account-group</v-icon>
+                        <div>
+                            <div class="text-h5 font-weight-bold">{{ totalEmployees }}</div>
+                            <div class="text-caption">Total Employees</div>
+                        </div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="12" md="3">
+                <v-card color="success" variant="tonal">
+                    <v-card-text class="d-flex align-center">
+                        <v-icon size="40" class="mr-3">mdi-account-check</v-icon>
+                        <div>
+                            <div class="text-h5 font-weight-bold">{{ activeEmployees }}</div>
+                            <div class="text-caption">Active Employees</div>
+                        </div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="12" md="3">
+                <v-card color="info" variant="tonal">
+                    <v-card-text class="d-flex align-center">
+                        <v-icon size="40" class="mr-3">mdi-cash-multiple</v-icon>
+                        <div>
+                            <div class="text-h5 font-weight-bold">৳{{ formatNumber(totalMonthlySalary) }}</div>
+                            <div class="text-caption">Monthly Salary (Active)</div>
+                        </div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="12" md="3">
+                <v-card color="warning" variant="tonal" @click="showAllSummary" style="cursor: pointer;">
+                    <v-card-text class="d-flex align-center">
+                        <v-icon size="40" class="mr-3">mdi-chart-bar</v-icon>
+                        <div>
+                            <div class="text-h5 font-weight-bold">View All</div>
+                            <div class="text-caption">Salary & Advance Summary</div>
+                        </div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+        </v-row>
+
         <v-card>
             <v-card-text>
                 <v-data-table :headers="headers" :items="employees" :loading="loading">
@@ -187,6 +235,85 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <!-- All Summary Dialog -->
+        <v-dialog v-model="summaryDialog" max-width="900">
+            <v-card>
+                <v-card-title class="d-flex align-center">
+                    <v-icon class="mr-2">mdi-chart-box</v-icon>
+                    All Employees - Salary & Advance Summary
+                </v-card-title>
+                <v-card-text>
+                    <v-row class="mb-4">
+                        <v-col cols="6" md="3">
+                            <v-card color="success" variant="outlined" class="text-center pa-3">
+                                <div class="text-h6 font-weight-bold">৳{{ formatNumber(allTotalSalaryPaid) }}</div>
+                                <div class="text-caption">Total Salary Paid</div>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="6" md="3">
+                            <v-card color="warning" variant="outlined" class="text-center pa-3">
+                                <div class="text-h6 font-weight-bold">৳{{ formatNumber(allTotalAdvanceGiven) }}</div>
+                                <div class="text-caption">Total Advance Given</div>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="6" md="3">
+                            <v-card color="info" variant="outlined" class="text-center pa-3">
+                                <div class="text-h6 font-weight-bold">{{ allSalaries.length }}</div>
+                                <div class="text-caption">Salary Payments</div>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="6" md="3">
+                            <v-card color="primary" variant="outlined" class="text-center pa-3">
+                                <div class="text-h6 font-weight-bold">{{ allAdvances.length }}</div>
+                                <div class="text-caption">Advance Payments</div>
+                            </v-card>
+                        </v-col>
+                    </v-row>
+
+                    <v-tabs v-model="summaryTab" color="primary">
+                        <v-tab value="salaries">All Salaries</v-tab>
+                        <v-tab value="advances">All Advances</v-tab>
+                    </v-tabs>
+
+                    <v-window v-model="summaryTab">
+                        <v-window-item value="salaries">
+                            <v-data-table
+                                :headers="salaryHeaders"
+                                :items="allSalaries"
+                                density="compact"
+                                class="mt-2"
+                            >
+                                <template v-slot:item.amount="{ item }">
+                                    ৳{{ formatNumber(item.amount) }}
+                                </template>
+                            </v-data-table>
+                        </v-window-item>
+                        <v-window-item value="advances">
+                            <v-data-table
+                                :headers="advanceHeaders"
+                                :items="allAdvances"
+                                density="compact"
+                                class="mt-2"
+                            >
+                                <template v-slot:item.amount="{ item }">
+                                    ৳{{ formatNumber(item.amount) }}
+                                </template>
+                                <template v-slot:item.is_deducted="{ item }">
+                                    <v-chip :color="item.is_deducted ? 'success' : 'warning'" size="x-small">
+                                        {{ item.is_deducted ? 'Yes' : 'No' }}
+                                    </v-chip>
+                                </template>
+                            </v-data-table>
+                        </v-window-item>
+                    </v-window>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="summaryDialog = false">Close</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </div>
 </template>
 
@@ -201,7 +328,9 @@ const dialog = ref(false)
 const salaryDialog = ref(false)
 const advanceDialog = ref(false)
 const historyDialog = ref(false)
+const summaryDialog = ref(false)
 const historyTab = ref('salaries')
+const summaryTab = ref('salaries')
 const editMode = ref(false)
 const selectedEmployee = ref(null)
 const saving = ref(false)
@@ -209,6 +338,8 @@ const payingSalary = ref(false)
 const givingAdvance = ref(false)
 const salaryHistory = ref([])
 const advanceHistory = ref([])
+const allSalaries = ref([])
+const allAdvances = ref([])
 
 const headers = [
     { title: 'ID', key: 'id', width: '70px' },
@@ -221,14 +352,40 @@ const headers = [
     { title: 'Actions', key: 'actions', sortable: false },
 ]
 
+const salaryHeaders = [
+    { title: 'Employee', key: 'employee.name' },
+    { title: 'Month', key: 'month' },
+    { title: 'Amount', key: 'amount' },
+    { title: 'Payment Date', key: 'payment_date' },
+    { title: 'Note', key: 'note' },
+]
+
+const advanceHeaders = [
+    { title: 'Employee', key: 'employee.name' },
+    { title: 'Date', key: 'date' },
+    { title: 'Amount', key: 'amount' },
+    { title: 'Reason', key: 'reason' },
+    { title: 'Deducted', key: 'is_deducted' },
+]
+
 const form = reactive({ project_id: null, name: '', phone: '', position: '', salary_amount: 0, joining_date: '', is_active: true })
 const salaryForm = reactive({ amount: 0, month: '', payment_date: new Date().toISOString().split('T')[0], note: '' })
 const advanceForm = reactive({ amount: 0, date: new Date().toISOString().split('T')[0], reason: '' })
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
 
+// Computed for summary cards
+const totalEmployees = computed(() => employees.value.length)
+const activeEmployees = computed(() => employees.value.filter(e => e.is_active).length)
+const totalMonthlySalary = computed(() => employees.value.filter(e => e.is_active).reduce((sum, e) => sum + Number(e.salary_amount || 0), 0))
+
+// Computed for individual history
 const totalSalary = computed(() => salaryHistory.value.reduce((sum, s) => sum + Number(s.amount), 0))
 const totalAdvance = computed(() => advanceHistory.value.reduce((sum, a) => sum + Number(a.amount), 0))
+
+// Computed for all summary
+const allTotalSalaryPaid = computed(() => allSalaries.value.reduce((sum, s) => sum + Number(s.amount), 0))
+const allTotalAdvanceGiven = computed(() => allAdvances.value.reduce((sum, a) => sum + Number(a.amount), 0))
 
 const fetchEmployees = async () => {
     loading.value = true
@@ -334,6 +491,24 @@ const viewHistory = async (employee) => {
         advanceHistory.value = advancesRes.data
     } catch (error) {
         console.error('Error fetching history:', error)
+    }
+}
+
+const showAllSummary = async () => {
+    summaryTab.value = 'salaries'
+    allSalaries.value = []
+    allAdvances.value = []
+    summaryDialog.value = true
+
+    try {
+        const [salariesRes, advancesRes] = await Promise.all([
+            api.get('/salaries'),
+            api.get('/advances')
+        ])
+        allSalaries.value = salariesRes.data
+        allAdvances.value = advancesRes.data
+    } catch (error) {
+        console.error('Error fetching summary:', error)
     }
 }
 
