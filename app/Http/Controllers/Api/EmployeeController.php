@@ -20,6 +20,24 @@ class EmployeeController extends Controller
 
         $employees = $query->orderBy('name')->get();
 
+        // Calculate total paid (salaries + advances) and total due for each employee
+        $employees->each(function ($employee) {
+            $totalSalaryPaid = $employee->salaries()->sum('amount');
+            $totalAdvancePaid = $employee->advances()->sum('amount');
+            $employee->total_paid = $totalSalaryPaid + $totalAdvancePaid;
+
+            // Calculate total due (expected salary - paid)
+            // Get months since joining
+            $joiningDate = $employee->joining_date ? \Carbon\Carbon::parse($employee->joining_date) : $employee->created_at;
+            $monthsWorked = $joiningDate->diffInMonths(now()) + 1;
+            $expectedSalary = $employee->salary_amount * $monthsWorked;
+            $employee->total_due = max(0, $expectedSalary - $totalSalaryPaid);
+
+            // Also store individual totals
+            $employee->total_salary_paid = $totalSalaryPaid;
+            $employee->total_advance_paid = $totalAdvancePaid;
+        });
+
         return response()->json($employees);
     }
 
