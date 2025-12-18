@@ -211,6 +211,7 @@ const salaryHistory = ref([])
 const advanceHistory = ref([])
 
 const headers = [
+    { title: 'ID', key: 'id', width: '70px' },
     { title: 'Name', key: 'name' },
     { title: 'Project', key: 'project.name' },
     { title: 'Position', key: 'position' },
