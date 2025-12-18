@@ -62,28 +62,10 @@
                     :headers="headers"
                     :items="employees"
                     :loading="loading"
-                    :group-by="groupBy"
                     items-per-page="-1"
                 >
-                    <template v-slot:group-header="{ item, columns, toggleGroup, isGroupOpen }">
-                        <tr class="bg-primary-lighten-5">
-                            <td :colspan="columns.length">
-                                <v-btn
-                                    size="small"
-                                    variant="text"
-                                    :icon="isGroupOpen(item) ? 'mdi-chevron-down' : 'mdi-chevron-right'"
-                                    @click="toggleGroup(item)"
-                                ></v-btn>
-                                <v-icon class="mr-2" color="primary">mdi-folder</v-icon>
-                                <span class="font-weight-bold text-primary">{{ item.value }}</span>
-                                <v-chip size="x-small" class="ml-2" color="primary">
-                                    {{ item.items.length }} employees
-                                </v-chip>
-                                <v-chip size="x-small" class="ml-1" color="info">
-                                    Salary: ৳{{ formatNumber(getGroupTotalSalary(item.items)) }}
-                                </v-chip>
-                            </td>
-                        </tr>
+                    <template v-slot:item.sl="{ index }">
+                        {{ index + 1 }}
                     </template>
                     <template v-slot:item.salary_amount="{ item }">
                         ৳{{ formatNumber(item.salary_amount) }}
@@ -517,12 +499,10 @@ const deletingAdvance = ref(false)
 const editSalaryForm = reactive({ id: null, amount: 0, month: '', payment_date: '', note: '' })
 const editAdvanceForm = reactive({ id: null, amount: 0, date: '', reason: '', is_deducted: false })
 
-// Group by project
-const groupBy = [{ key: 'project.name', order: 'asc' }]
-
 const headers = [
-    { title: 'ID', key: 'id', width: '60px' },
+    { title: 'SL', key: 'sl', width: '60px' },
     { title: 'Name', key: 'name' },
+    { title: 'Project', key: 'project.name' },
     { title: 'Position', key: 'position' },
     { title: 'Phone', key: 'phone' },
     { title: 'Salary', key: 'salary_amount' },
