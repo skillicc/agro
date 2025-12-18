@@ -23,21 +23,15 @@ class ProductController extends Controller
             'category_ids' => 'nullable|array',
             'category_ids.*' => 'exists:categories,id',
             'type' => 'required|in:own_production,trading',
-            'project_type' => 'required|in:administration,central',
+            'project_type' => 'nullable|in:administration,central',
             'unit' => 'required|string|max:50',
-            'selling_price' => 'required|numeric|min:0',
+            'buying_price' => 'nullable|numeric|min:0',
+            'production_cost' => 'nullable|numeric|min:0',
+            'selling_price' => 'nullable|numeric|min:0',
             'stock_quantity' => 'nullable|integer|min:0',
             'alert_quantity' => 'nullable|integer|min:0',
             'description' => 'nullable|string',
         ];
-
-        // Conditional validation based on type
-        if ($request->type === 'trading') {
-            $rules['buying_price'] = 'required|numeric|min:0';
-        } else {
-            $rules['buying_price'] = 'nullable|numeric|min:0';
-            $rules['production_cost'] = 'nullable|numeric|min:0';
-        }
 
         $request->validate($rules);
 

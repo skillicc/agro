@@ -112,10 +112,10 @@
                             </v-col>
                             <!-- Buying Price - only for Trading products -->
                             <v-col cols="12" md="6" v-if="form.type === 'trading'">
-                                <v-text-field v-model.number="form.buying_price" label="Buying Price (ক্রয় মূল্য)" type="number" required></v-text-field>
+                                <v-text-field v-model.number="form.buying_price" label="Buying Price (ক্রয় মূল্য)" type="number"></v-text-field>
                             </v-col>
                             <v-col cols="12" md="6">
-                                <v-text-field v-model.number="form.selling_price" label="Selling Price (বিক্রয় মূল্য)" type="number" required></v-text-field>
+                                <v-text-field v-model.number="form.selling_price" label="Selling Price (বিক্রয় মূল্য)" type="number"></v-text-field>
                             </v-col>
                             <v-col cols="12" md="6">
                                 <v-text-field v-model.number="form.alert_quantity" label="Alert Quantity" type="number"></v-text-field>
