@@ -20,13 +20,16 @@
                         </v-chip>
                     </template>
                     <template v-slot:item.actions="{ item }">
-                        <v-btn icon size="small" color="success" @click="openSalaryDialog(item)">
+                        <v-btn icon size="small" color="info" @click="viewHistory(item)" title="View History">
+                            <v-icon>mdi-history</v-icon>
+                        </v-btn>
+                        <v-btn icon size="small" color="success" @click="openSalaryDialog(item)" title="Pay Salary">
                             <v-icon>mdi-cash</v-icon>
                         </v-btn>
-                        <v-btn icon size="small" color="warning" @click="openAdvanceDialog(item)">
+                        <v-btn icon size="small" color="warning" @click="openAdvanceDialog(item)" title="Give Advance">
                             <v-icon>mdi-cash-minus</v-icon>
                         </v-btn>
-                        <v-btn icon size="small" @click="openDialog(item)">
+                        <v-btn icon size="small" @click="openDialog(item)" title="Edit">
                             <v-icon>mdi-pencil</v-icon>
                         </v-btn>
                     </template>
@@ -95,11 +98,100 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <!-- History Dialog -->
+        <v-dialog v-model="historyDialog" max-width="800">
+            <v-card>
+                <v-card-title>
+                    Payment History - {{ selectedEmployee?.name }}
+                </v-card-title>
+                <v-card-text>
+                    <v-tabs v-model="historyTab" color="primary">
+                        <v-tab value="salaries">Salaries ({{ salaryHistory.length }})</v-tab>
+                        <v-tab value="advances">Advances ({{ advanceHistory.length }})</v-tab>
+                    </v-tabs>
+
+                    <v-window v-model="historyTab">
+                        <!-- Salary History -->
+                        <v-window-item value="salaries">
+                            <v-table density="compact" class="mt-4">
+                                <thead>
+                                    <tr>
+                                        <th>Month</th>
+                                        <th>Amount</th>
+                                        <th>Payment Date</th>
+                                        <th>Note</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="salary in salaryHistory" :key="salary.id">
+                                        <td>{{ salary.month }}</td>
+                                        <td>৳{{ formatNumber(salary.amount) }}</td>
+                                        <td>{{ salary.payment_date }}</td>
+                                        <td>{{ salary.note || '-' }}</td>
+                                    </tr>
+                                    <tr v-if="salaryHistory.length === 0">
+                                        <td colspan="4" class="text-center text-grey">No salary records found</td>
+                                    </tr>
+                                </tbody>
+                                <tfoot v-if="salaryHistory.length > 0">
+                                    <tr class="font-weight-bold">
+                                        <td>Total</td>
+                                        <td>৳{{ formatNumber(totalSalary) }}</td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </tfoot>
+                            </v-table>
+                        </v-window-item>
+
+                        <!-- Advance History -->
+                        <v-window-item value="advances">
+                            <v-table density="compact" class="mt-4">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Amount</th>
+                                        <th>Reason</th>
+                                        <th>Deducted</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="advance in advanceHistory" :key="advance.id">
+                                        <td>{{ advance.date }}</td>
+                                        <td>৳{{ formatNumber(advance.amount) }}</td>
+                                        <td>{{ advance.reason || '-' }}</td>
+                                        <td>
+                                            <v-chip :color="advance.is_deducted ? 'success' : 'warning'" size="x-small">
+                                                {{ advance.is_deducted ? 'Yes' : 'No' }}
+                                            </v-chip>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="advanceHistory.length === 0">
+                                        <td colspan="4" class="text-center text-grey">No advance records found</td>
+                                    </tr>
+                                </tbody>
+                                <tfoot v-if="advanceHistory.length > 0">
+                                    <tr class="font-weight-bold">
+                                        <td>Total</td>
+                                        <td>৳{{ formatNumber(totalAdvance) }}</td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </tfoot>
+                            </v-table>
+                        </v-window-item>
+                    </v-window>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="historyDialog = false">Close</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import api from '../../services/api'
 
 const employees = ref([])
@@ -108,11 +200,15 @@ const loading = ref(false)
 const dialog = ref(false)
 const salaryDialog = ref(false)
 const advanceDialog = ref(false)
+const historyDialog = ref(false)
+const historyTab = ref('salaries')
 const editMode = ref(false)
 const selectedEmployee = ref(null)
 const saving = ref(false)
 const payingSalary = ref(false)
 const givingAdvance = ref(false)
+const salaryHistory = ref([])
+const advanceHistory = ref([])
 
 const headers = [
     { title: 'Name', key: 'name' },
@@ -129,6 +225,9 @@ const salaryForm = reactive({ amount: 0, month: '', payment_date: new Date().toI
 const advanceForm = reactive({ amount: 0, date: new Date().toISOString().split('T')[0], reason: '' })
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
+
+const totalSalary = computed(() => salaryHistory.value.reduce((sum, s) => sum + Number(s.amount), 0))
+const totalAdvance = computed(() => advanceHistory.value.reduce((sum, a) => sum + Number(a.amount), 0))
 
 const fetchEmployees = async () => {
     loading.value = true
@@ -193,6 +292,7 @@ const paySalary = async () => {
         alert('Salary paid successfully!')
     } catch (error) {
         console.error('Error:', error)
+        alert('Error paying salary')
     }
     payingSalary.value = false
 }
@@ -212,8 +312,28 @@ const giveAdvance = async () => {
         alert('Advance given successfully!')
     } catch (error) {
         console.error('Error:', error)
+        alert('Error giving advance')
     }
     givingAdvance.value = false
+}
+
+const viewHistory = async (employee) => {
+    selectedEmployee.value = employee
+    historyTab.value = 'salaries'
+    salaryHistory.value = []
+    advanceHistory.value = []
+    historyDialog.value = true
+
+    try {
+        const [salariesRes, advancesRes] = await Promise.all([
+            api.get(`/employees/${employee.id}/salaries`),
+            api.get(`/employees/${employee.id}/advances`)
+        ])
+        salaryHistory.value = salariesRes.data
+        advanceHistory.value = advancesRes.data
+    } catch (error) {
+        console.error('Error fetching history:', error)
+    }
 }
 
 onMounted(() => {
