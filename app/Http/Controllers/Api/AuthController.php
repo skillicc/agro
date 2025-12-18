@@ -82,11 +82,12 @@ class AuthController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'phone' => 'nullable|string|max:20',
         ]);
 
-        $user->update($request->only(['name', 'email']));
+        $user->update($request->only(['name', 'email', 'phone']));
 
-        return response()->json($user);
+        return response()->json($user->load('projects'));
     }
 
     public function changePassword(Request $request)

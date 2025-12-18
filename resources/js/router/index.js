@@ -50,6 +50,9 @@ import Warehouses from '../views/warehouses/Index.vue'
 // Invest, Loan & Liability
 import InvestLoanLiability from '../views/invest-loan-liability/Index.vue'
 
+// Profile
+import Profile from '../views/profile/Index.vue'
+
 const routes = [
     {
         path: '/',
@@ -151,6 +154,11 @@ const routes = [
                 name: 'users',
                 component: Users,
                 meta: { requiresAdmin: true },
+            },
+            {
+                path: 'profile',
+                name: 'profile',
+                component: Profile,
             },
         ],
     },

@@ -21,6 +21,12 @@
                         <v-list-item-subtitle>{{ authStore.user?.role }}</v-list-item-subtitle>
                     </v-list-item>
                     <v-divider></v-divider>
+                    <v-list-item :to="{ name: 'profile' }">
+                        <template v-slot:prepend>
+                            <v-icon>mdi-account</v-icon>
+                        </template>
+                        <v-list-item-title>Profile</v-list-item-title>
+                    </v-list-item>
                     <v-list-item @click="logout">
                         <template v-slot:prepend>
                             <v-icon>mdi-logout</v-icon>
