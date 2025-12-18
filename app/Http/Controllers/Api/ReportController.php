@@ -37,6 +37,48 @@ class ReportController extends Controller
         $startOfMonth = $today->startOfMonth()->format('Y-m-d');
         $endOfMonth = $today->endOfMonth()->format('Y-m-d');
 
+        // Calculate monthly profit
+        $monthlySales = Sale::whereIn('project_id', $projectIds)
+            ->whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->sum('total');
+        $monthlyPurchases = Purchase::whereIn('project_id', $projectIds)
+            ->whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->sum('total');
+        $monthlyExpenses = Expense::whereIn('project_id', $projectIds)
+            ->whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->sum('amount');
+        $monthlySalaries = Salary::whereIn('project_id', $projectIds)
+            ->where('month', $thisMonth)
+            ->sum('amount');
+        $monthlyAdvances = Advance::whereIn('project_id', $projectIds)
+            ->whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->sum('amount');
+
+        $monthlyProfit = $monthlySales - $monthlyPurchases - $monthlyExpenses - $monthlySalaries;
+
+        // Get employee count
+        $totalEmployees = \App\Models\Employee::whereIn('project_id', $projectIds)->count();
+        $activeEmployees = \App\Models\Employee::whereIn('project_id', $projectIds)->where('is_active', true)->count();
+
+        // Get stock value
+        $totalStockValue = Product::sum(DB::raw('stock_quantity * purchase_price'));
+
+        // Get investment/loan summary
+        $totalInvestment = \App\Models\InvestLoanLiability::where('type', 'investment')->sum('amount');
+        $totalLoan = \App\Models\InvestLoanLiability::where('type', 'loan')->sum('amount');
+
+        // Get top selling products this month
+        $topProducts = DB::table('sale_items')
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->join('products', 'sale_items.product_id', '=', 'products.id')
+            ->whereIn('sales.project_id', $projectIds)
+            ->whereBetween('sales.date', [$startOfMonth, $endOfMonth])
+            ->select('products.name', DB::raw('SUM(sale_items.quantity) as total_qty'), DB::raw('SUM(sale_items.subtotal) as total_amount'))
+            ->groupBy('sale_items.product_id', 'products.name')
+            ->orderByDesc('total_qty')
+            ->limit(5)
+            ->get();
+
         return response()->json([
             'total_projects' => Project::whereIn('id', $projectIds)->count(),
             'total_suppliers' => Supplier::count(),
@@ -44,21 +86,19 @@ class ReportController extends Controller
             'total_products' => Product::count(),
             'low_stock_products' => Product::whereRaw('stock_quantity <= alert_quantity')->count(),
 
-            'monthly_expenses' => Expense::whereIn('project_id', $projectIds)
-                ->whereBetween('date', [$startOfMonth, $endOfMonth])
-                ->sum('amount'),
+            'monthly_expenses' => $monthlyExpenses,
+            'monthly_purchases' => $monthlyPurchases,
+            'monthly_sales' => $monthlySales,
+            'monthly_salaries' => $monthlySalaries,
+            'monthly_advances' => $monthlyAdvances,
+            'monthly_profit' => $monthlyProfit,
 
-            'monthly_purchases' => Purchase::whereIn('project_id', $projectIds)
-                ->whereBetween('date', [$startOfMonth, $endOfMonth])
-                ->sum('total'),
+            'total_employees' => $totalEmployees,
+            'active_employees' => $activeEmployees,
+            'total_stock_value' => $totalStockValue,
 
-            'monthly_sales' => Sale::whereIn('project_id', $projectIds)
-                ->whereBetween('date', [$startOfMonth, $endOfMonth])
-                ->sum('total'),
-
-            'monthly_salaries' => Salary::whereIn('project_id', $projectIds)
-                ->where('month', $thisMonth)
-                ->sum('amount'),
+            'total_investment' => $totalInvestment,
+            'total_loan' => $totalLoan,
 
             'total_supplier_due' => Supplier::sum('total_due'),
             'total_customer_due' => Customer::sum('total_due'),
@@ -74,6 +114,14 @@ class ReportController extends Controller
                 ->orderBy('date', 'desc')
                 ->limit(5)
                 ->get(),
+
+            'recent_expenses' => Expense::whereIn('project_id', $projectIds)
+                ->with(['project', 'category'])
+                ->orderBy('date', 'desc')
+                ->limit(5)
+                ->get(),
+
+            'top_products' => $topProducts,
         ]);
     }
 
