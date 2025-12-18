@@ -68,6 +68,9 @@
                     class="elevation-0"
                     :density="$vuetify.display.smAndDown ? 'compact' : 'default'"
                 >
+                    <template v-slot:item.sl="{ index }">
+                        {{ index + 1 }}
+                    </template>
                     <template v-slot:item.total_purchase="{ item }">
                         ৳{{ formatNumber(item.total_purchase) }}
                     </template>
@@ -248,6 +251,7 @@ const paymentForm = reactive({
 })
 
 const allHeaders = [
+    { title: 'SL', key: 'sl', width: '60px' },
     { title: 'Name', key: 'name' },
     { title: 'Phone', key: 'phone' },
     { title: 'Total Purchase', key: 'total_purchase' },
@@ -259,7 +263,7 @@ const allHeaders = [
 // Responsive headers - hide some columns on smaller screens
 const responsiveHeaders = computed(() => {
     if (display.smAndDown.value) {
-        return allHeaders.filter(h => ['name', 'total_due', 'actions'].includes(h.key))
+        return allHeaders.filter(h => ['sl', 'name', 'total_due', 'actions'].includes(h.key))
     }
     if (display.md.value) {
         return allHeaders.filter(h => h.key !== 'phone')

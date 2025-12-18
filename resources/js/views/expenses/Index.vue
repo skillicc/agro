@@ -28,6 +28,9 @@
         <v-card>
             <v-card-text>
                 <v-data-table :headers="headers" :items="expenses" :loading="loading">
+                    <template v-slot:item.sl="{ index }">
+                        {{ index + 1 }}
+                    </template>
                     <template v-slot:item.amount="{ item }">
                         ৳{{ formatNumber(item.amount) }}
                     </template>
@@ -99,6 +102,7 @@ const filters = reactive({ project_id: null, start_date: '', end_date: '' })
 const form = reactive({ project_id: null, expense_category_id: null, bill_no: '', amount: 0, date: new Date().toISOString().split('T')[0], description: '' })
 
 const headers = [
+    { title: 'SL', key: 'sl', width: '60px' },
     { title: 'Date', key: 'date' },
     { title: 'Bill No.', key: 'bill_no' },
     { title: 'Project', key: 'project.name' },

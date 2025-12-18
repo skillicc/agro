@@ -17,6 +17,9 @@
         <v-card>
             <v-card-text>
                 <v-data-table :headers="headers" :items="products" :loading="loading">
+                    <template v-slot:item.sl="{ index }">
+                        {{ index + 1 }}
+                    </template>
                     <template v-slot:item.type="{ item }">
                         <v-chip :color="item.type === 'own_production' ? 'success' : 'info'" size="small">
                             {{ item.type === 'own_production' ? 'উৎপাদন' : 'ক্রয়-বিক্রয়' }}
@@ -110,10 +113,6 @@
                             <!-- Buying Price - only for Trading products -->
                             <v-col cols="12" md="6" v-if="form.type === 'trading'">
                                 <v-text-field v-model.number="form.buying_price" label="Buying Price (ক্রয় মূল্য)" type="number" required></v-text-field>
-                            </v-col>
-                            <!-- Production Cost - only for Own Production products -->
-                            <v-col cols="12" md="6" v-if="form.type === 'own_production'">
-                                <v-text-field v-model.number="form.production_cost" label="Production Cost (উৎপাদন খরচ)" type="number" hint="Optional - for profit calculation"></v-text-field>
                             </v-col>
                             <v-col cols="12" md="6">
                                 <v-text-field v-model.number="form.selling_price" label="Selling Price (বিক্রয় মূল্য)" type="number" required></v-text-field>
@@ -275,6 +274,7 @@ const productTypes = [
 ]
 
 const headers = [
+    { title: 'SL', key: 'sl', width: '60px' },
     { title: 'Name', key: 'name' },
     { title: 'Type', key: 'type' },
     { title: 'Categories', key: 'categories' },

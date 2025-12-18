@@ -11,6 +11,9 @@
         <v-card>
             <v-card-text>
                 <v-data-table :headers="headers" :items="purchases" :loading="loading">
+                    <template v-slot:item.sl="{ index }">
+                        {{ index + 1 }}
+                    </template>
                     <template v-slot:item.total="{ item }">
                         ৳{{ formatNumber(item.total) }}
                     </template>
@@ -107,6 +110,7 @@ const viewDialog = ref(false)
 const selectedPurchase = ref(null)
 
 const headers = [
+    { title: 'SL', key: 'sl', width: '60px' },
     { title: 'Invoice', key: 'invoice_no' },
     { title: 'Date', key: 'date' },
     { title: 'Project', key: 'project.name' },

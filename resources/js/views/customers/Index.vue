@@ -17,6 +17,9 @@
         <v-card>
             <v-card-text>
                 <v-data-table :headers="headers" :items="customers" :loading="loading">
+                    <template v-slot:item.sl="{ index }">
+                        {{ index + 1 }}
+                    </template>
                     <template v-slot:item.total_due="{ item }">
                         <v-chip :color="item.total_due > 0 ? 'warning' : 'success'" size="small">
                             ৳{{ formatNumber(item.total_due) }}
@@ -169,6 +172,7 @@ const paymentForm = reactive({
 })
 
 const headers = [
+    { title: 'SL', key: 'sl', width: '60px' },
     { title: 'Name', key: 'name' },
     { title: 'Phone', key: 'phone' },
     { title: 'Total Sale', key: 'total_sale' },
