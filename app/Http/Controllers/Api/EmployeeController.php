@@ -20,18 +20,22 @@ class EmployeeController extends Controller
 
         $employees = $query->orderBy('name')->get();
 
-        // Calculate total paid (salaries + advances) and total due for each employee
-        $employees->each(function ($employee) {
+        // Calculate total paid and current month due for each employee
+        $currentMonth = now()->format('Y-m');
+
+        $employees->each(function ($employee) use ($currentMonth) {
             $totalSalaryPaid = $employee->salaries()->sum('amount');
             $totalAdvancePaid = $employee->advances()->sum('amount');
             $employee->total_paid = $totalSalaryPaid + $totalAdvancePaid;
 
-            // Calculate total due (expected salary - paid)
-            // Get months since joining
-            $joiningDate = $employee->joining_date ? \Carbon\Carbon::parse($employee->joining_date) : $employee->created_at;
-            $monthsWorked = $joiningDate->diffInMonths(now()) + 1;
-            $expectedSalary = $employee->salary_amount * $monthsWorked;
-            $employee->total_due = max(0, $expectedSalary - $totalSalaryPaid);
+            // Check if current month salary is paid
+            $currentMonthSalaryPaid = $employee->salaries()
+                ->where('month', $currentMonth)
+                ->sum('amount');
+
+            // Current month due = monthly salary - what's paid this month
+            $employee->current_month_due = max(0, $employee->salary_amount - $currentMonthSalaryPaid);
+            $employee->current_month_paid = $currentMonthSalaryPaid;
 
             // Also store individual totals
             $employee->total_salary_paid = $totalSalaryPaid;

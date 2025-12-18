@@ -65,9 +65,9 @@
                     <template v-slot:item.total_paid="{ item }">
                         <span class="text-success font-weight-bold">৳{{ formatNumber(item.total_paid) }}</span>
                     </template>
-                    <template v-slot:item.total_due="{ item }">
-                        <v-chip :color="item.total_due > 0 ? 'error' : 'success'" size="small">
-                            ৳{{ formatNumber(item.total_due) }}
+                    <template v-slot:item.current_month_due="{ item }">
+                        <v-chip :color="item.current_month_due > 0 ? 'error' : 'success'" size="small">
+                            {{ item.current_month_due > 0 ? '৳' + formatNumber(item.current_month_due) : 'Paid' }}
                         </v-chip>
                     </template>
                     <template v-slot:item.is_active="{ item }">
@@ -392,7 +392,7 @@ const headers = [
     { title: 'Position', key: 'position' },
     { title: 'Salary', key: 'salary_amount' },
     { title: 'Total Paid', key: 'total_paid' },
-    { title: 'Total Due', key: 'total_due' },
+    { title: 'This Month Due', key: 'current_month_due' },
     { title: 'Status', key: 'is_active' },
     { title: 'Actions', key: 'actions', sortable: false },
 ]
