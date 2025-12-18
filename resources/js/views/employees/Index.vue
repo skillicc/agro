@@ -241,9 +241,41 @@
             <v-card>
                 <v-card-title class="d-flex align-center">
                     <v-icon class="mr-2">mdi-chart-box</v-icon>
-                    All Employees - Salary & Advance Summary
+                    All Employees - Salary & Advance History
                 </v-card-title>
                 <v-card-text>
+                    <!-- Date Filters -->
+                    <v-row class="mb-4">
+                        <v-col cols="12" md="4">
+                            <v-text-field
+                                v-model="filterMonth"
+                                label="Filter by Month (YYYY-MM)"
+                                placeholder="2025-01"
+                                clearable
+                                density="compact"
+                                hide-details
+                            ></v-text-field>
+                        </v-col>
+                        <v-col cols="12" md="4">
+                            <v-select
+                                v-model="filterEmployee"
+                                :items="employeeFilterOptions"
+                                item-title="name"
+                                item-value="id"
+                                label="Filter by Employee"
+                                clearable
+                                density="compact"
+                                hide-details
+                            ></v-select>
+                        </v-col>
+                        <v-col cols="12" md="4">
+                            <v-btn color="primary" @click="applyFilters" block>
+                                <v-icon left>mdi-filter</v-icon>
+                                Apply Filter
+                            </v-btn>
+                        </v-col>
+                    </v-row>
+
                     <v-row class="mb-4">
                         <v-col cols="6" md="3">
                             <v-card color="success" variant="outlined" class="text-center pa-3">
@@ -340,6 +372,10 @@ const salaryHistory = ref([])
 const advanceHistory = ref([])
 const allSalaries = ref([])
 const allAdvances = ref([])
+const filterMonth = ref('')
+const filterEmployee = ref(null)
+const allSalariesOriginal = ref([])
+const allAdvancesOriginal = ref([])
 
 const headers = [
     { title: 'ID', key: 'id', width: '70px' },
@@ -386,6 +422,30 @@ const totalAdvance = computed(() => advanceHistory.value.reduce((sum, a) => sum 
 // Computed for all summary
 const allTotalSalaryPaid = computed(() => allSalaries.value.reduce((sum, s) => sum + Number(s.amount), 0))
 const allTotalAdvanceGiven = computed(() => allAdvances.value.reduce((sum, a) => sum + Number(a.amount), 0))
+
+// Employee filter options
+const employeeFilterOptions = computed(() => employees.value.map(e => ({ id: e.id, name: e.name })))
+
+// Apply filters function
+const applyFilters = () => {
+    let filteredSalaries = [...allSalariesOriginal.value]
+    let filteredAdvances = [...allAdvancesOriginal.value]
+
+    // Filter by month
+    if (filterMonth.value) {
+        filteredSalaries = filteredSalaries.filter(s => s.month === filterMonth.value || s.payment_date?.startsWith(filterMonth.value))
+        filteredAdvances = filteredAdvances.filter(a => a.date?.startsWith(filterMonth.value))
+    }
+
+    // Filter by employee
+    if (filterEmployee.value) {
+        filteredSalaries = filteredSalaries.filter(s => s.employee_id === filterEmployee.value)
+        filteredAdvances = filteredAdvances.filter(a => a.employee_id === filterEmployee.value)
+    }
+
+    allSalaries.value = filteredSalaries
+    allAdvances.value = filteredAdvances
+}
 
 const fetchEmployees = async () => {
     loading.value = true
@@ -498,6 +558,10 @@ const showAllSummary = async () => {
     summaryTab.value = 'salaries'
     allSalaries.value = []
     allAdvances.value = []
+    allSalariesOriginal.value = []
+    allAdvancesOriginal.value = []
+    filterMonth.value = ''
+    filterEmployee.value = null
     summaryDialog.value = true
 
     try {
@@ -507,6 +571,8 @@ const showAllSummary = async () => {
         ])
         allSalaries.value = salariesRes.data
         allAdvances.value = advancesRes.data
+        allSalariesOriginal.value = salariesRes.data
+        allAdvancesOriginal.value = advancesRes.data
     } catch (error) {
         console.error('Error fetching summary:', error)
     }
