@@ -61,7 +61,7 @@ class ReportController extends Controller
         $activeEmployees = \App\Models\Employee::whereIn('project_id', $projectIds)->where('is_active', true)->count();
 
         // Get stock value
-        $totalStockValue = Product::sum(DB::raw('stock_quantity * purchase_price'));
+        $totalStockValue = Product::sum(DB::raw('stock_quantity * COALESCE(buying_price, 0)'));
 
         // Get investment/loan summary
         $totalInvestment = \App\Models\InvestLoanLiability::where('type', 'investment')->sum('amount');
