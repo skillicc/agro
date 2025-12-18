@@ -64,7 +64,7 @@ class ReportController extends Controller
         $totalStockValue = Product::sum(DB::raw('stock_quantity * COALESCE(buying_price, 0)'));
 
         // Get investment/loan summary
-        $totalInvestment = \App\Models\InvestLoanLiability::where('type', 'investment')->sum('amount');
+        $totalInvestment = \App\Models\InvestLoanLiability::whereIn('type', ['partner', 'shareholder', 'investment_day_term'])->sum('amount');
         $totalLoan = \App\Models\InvestLoanLiability::where('type', 'loan')->sum('amount');
 
         // Get top selling products this month
