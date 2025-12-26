@@ -7,6 +7,10 @@
                     <v-icon left>mdi-truck-delivery</v-icon>
                     <span class="d-none d-sm-inline">To Project</span>
                 </v-btn>
+                <v-btn color="info" @click="shopTransferDialog = true" :size="$vuetify.display.xs ? 'small' : 'default'">
+                    <v-icon left>mdi-store-swap</v-icon>
+                    <span class="d-none d-sm-inline">Shop to Shop</span>
+                </v-btn>
                 <v-btn color="secondary" @click="transferDialog = true" :size="$vuetify.display.xs ? 'small' : 'default'">
                     <v-icon left>mdi-swap-horizontal</v-icon>
                     <span class="d-none d-sm-inline">Transfer</span>
@@ -252,6 +256,73 @@
             </v-card>
         </v-dialog>
 
+        <!-- Shop to Shop Transfer Dialog -->
+        <v-dialog v-model="shopTransferDialog" :max-width="$vuetify.display.xs ? '100%' : 700" :fullscreen="$vuetify.display.xs">
+            <v-card>
+                <v-card-title class="d-flex justify-space-between align-center">
+                    <span>Shop to Shop Transfer</span>
+                    <v-btn v-if="$vuetify.display.xs" icon variant="text" @click="shopTransferDialog = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-card-title>
+                <v-card-text>
+                    <v-row>
+                        <v-col cols="12" sm="6">
+                            <v-select
+                                v-model="shopTransferForm.from_project_id"
+                                :items="shopProjects"
+                                item-title="name"
+                                item-value="id"
+                                label="From Shop"
+                                required
+                                density="comfortable"
+                            ></v-select>
+                        </v-col>
+                        <v-col cols="12" sm="6">
+                            <v-select
+                                v-model="shopTransferForm.to_project_id"
+                                :items="shopProjects.filter(s => s.id !== shopTransferForm.from_project_id)"
+                                item-title="name"
+                                item-value="id"
+                                label="To Shop"
+                                required
+                                density="comfortable"
+                            ></v-select>
+                        </v-col>
+                    </v-row>
+                    <v-text-field v-model="shopTransferForm.date" label="Date" type="date" required density="comfortable"></v-text-field>
+
+                    <h4 class="mt-4 mb-2">Transfer Items</h4>
+                    <v-card v-for="(item, index) in shopTransferForm.items" :key="index" variant="outlined" class="mb-2 pa-2">
+                        <v-row dense>
+                            <v-col cols="7">
+                                <v-select v-model="item.product_id" :items="products" item-title="name" item-value="id" label="Product" density="compact" hide-details></v-select>
+                            </v-col>
+                            <v-col cols="3">
+                                <v-text-field v-model="item.quantity" label="Qty" type="number" density="compact" hide-details></v-text-field>
+                            </v-col>
+                            <v-col cols="2" class="d-flex align-center">
+                                <v-btn icon size="small" color="error" @click="removeShopTransferItem(index)" :disabled="shopTransferForm.items.length === 1">
+                                    <v-icon>mdi-delete</v-icon>
+                                </v-btn>
+                            </v-col>
+                        </v-row>
+                    </v-card>
+                    <v-btn size="small" @click="addShopTransferItem" class="mt-2">
+                        <v-icon left>mdi-plus</v-icon>
+                        Add Item
+                    </v-btn>
+
+                    <v-textarea v-model="shopTransferForm.note" label="Note" rows="2" density="comfortable" class="mt-4"></v-textarea>
+                </v-card-text>
+                <v-card-actions class="pa-4">
+                    <v-spacer></v-spacer>
+                    <v-btn @click="shopTransferDialog = false">Cancel</v-btn>
+                    <v-btn color="info" @click="transferShopToShop" :loading="transferringShop">Transfer</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <!-- Transfer to Project Dialog -->
         <v-dialog v-model="projectTransferDialog" :max-width="$vuetify.display.xs ? '100%' : 700" :fullscreen="$vuetify.display.xs">
             <v-card>
@@ -333,7 +404,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import api from '../../services/api'
 
 const warehouses = ref([])
@@ -347,6 +418,7 @@ const stockDialog = ref(false)
 const addStockDialog = ref(false)
 const transferDialog = ref(false)
 const projectTransferDialog = ref(false)
+const shopTransferDialog = ref(false)
 const deleteDialog = ref(false)
 const editMode = ref(false)
 const editStockMode = ref(false)
@@ -356,6 +428,7 @@ const savingStock = ref(false)
 const deleting = ref(false)
 const creatingTransfer = ref(false)
 const transferringToProject = ref(false)
+const transferringShop = ref(false)
 
 // Summary data
 const totalStockItems = ref(0)
@@ -400,6 +473,17 @@ const projectTransferForm = reactive({
     note: '',
     items: [{ product_id: null, quantity: 1 }],
 })
+
+const shopTransferForm = reactive({
+    from_project_id: null,
+    to_project_id: null,
+    date: new Date().toISOString().split('T')[0],
+    note: '',
+    items: [{ product_id: null, quantity: 1 }],
+})
+
+// Computed: Shop projects only
+const shopProjects = computed(() => projects.value.filter(p => p.type === 'shop'))
 
 const fetchWarehouses = async () => {
     loading.value = true
@@ -554,6 +638,36 @@ const addProjectTransferItem = () => {
 
 const removeProjectTransferItem = (index) => {
     projectTransferForm.items.splice(index, 1)
+}
+
+const addShopTransferItem = () => {
+    shopTransferForm.items.push({ product_id: null, quantity: 1 })
+}
+
+const removeShopTransferItem = (index) => {
+    shopTransferForm.items.splice(index, 1)
+}
+
+const transferShopToShop = async () => {
+    transferringShop.value = true
+    try {
+        await api.post('/stock-transfers/shop-to-shop', shopTransferForm)
+        shopTransferDialog.value = false
+        fetchWarehouses()
+        fetchSummary()
+        // Reset form
+        Object.assign(shopTransferForm, {
+            from_project_id: null,
+            to_project_id: null,
+            date: new Date().toISOString().split('T')[0],
+            note: '',
+            items: [{ product_id: null, quantity: 1 }],
+        })
+    } catch (error) {
+        console.error('Error:', error)
+        alert(error.response?.data?.message || 'Transfer failed')
+    }
+    transferringShop.value = false
 }
 
 const transferToProject = async () => {

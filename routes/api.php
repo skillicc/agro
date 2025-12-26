@@ -133,6 +133,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/stock-transfers/{transfer}/complete', [WarehouseController::class, 'completeTransfer']);
     Route::post('/stock-transfers/{transfer}/cancel', [WarehouseController::class, 'cancelTransfer']);
     Route::post('/stock-transfers/to-project', [WarehouseController::class, 'transferToProject']);
+    Route::post('/stock-transfers/shop-to-shop', [WarehouseController::class, 'shopToShopTransfer']);
 
     // Partners & Shareholders
     Route::apiResource('partners', PartnerController::class);
