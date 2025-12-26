@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\DayTermInvestmentController;
 use App\Http\Controllers\Api\AccountsReceivableController;
 use App\Http\Controllers\Api\AccountsPayableController;
 use App\Http\Controllers\Api\InvestLoanLiabilityController;
+use App\Http\Controllers\Api\AttendanceController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -108,6 +109,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/advances', [EmployeeController::class, 'storeAdvance']);
     Route::put('/advances/{advance}', [EmployeeController::class, 'updateAdvance']);
     Route::delete('/advances/{advance}', [EmployeeController::class, 'deleteAdvance']);
+
+    // Attendance
+    Route::get('/attendances', [AttendanceController::class, 'index']);
+    Route::post('/attendances/{attendance}/toggle', [AttendanceController::class, 'toggle']);
+    Route::post('/attendances/{attendance}/cancel', [AttendanceController::class, 'cancel']);
+    Route::post('/attendances/cancel-all', [AttendanceController::class, 'cancelAll']);
+    Route::post('/attendances/mark-all-present', [AttendanceController::class, 'markAllPresent']);
+    Route::get('/attendances/monthly-report', [AttendanceController::class, 'monthlyReport']);
+    Route::get('/employees/{employee}/attendance-summary', [AttendanceController::class, 'monthlySummary']);
 
     // Reports
     Route::get('/dashboard', [ReportController::class, 'dashboard']);

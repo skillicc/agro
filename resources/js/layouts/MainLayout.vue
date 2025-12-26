@@ -164,6 +164,12 @@
                 ></v-list-item>
 
                 <v-list-item
+                    prepend-icon="mdi-calendar-check"
+                    title="Attendance"
+                    :to="{ name: 'attendance' }"
+                ></v-list-item>
+
+                <v-list-item
                     prepend-icon="mdi-chart-bar"
                     title="Reports"
                     :to="{ name: 'reports' }"
