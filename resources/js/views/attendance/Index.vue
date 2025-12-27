@@ -28,7 +28,7 @@
             <v-col cols="4" sm="2" md="2">
                 <v-card color="primary" variant="tonal">
                     <v-card-text class="pa-3 text-center">
-                        <div class="text-h5">{{ summary.total }}</div>
+                        <div class="text-h5">{{ summary?.total ?? 0 }}</div>
                         <div class="text-caption">Total</div>
                     </v-card-text>
                 </v-card>
@@ -36,7 +36,7 @@
             <v-col cols="4" sm="2" md="2">
                 <v-card color="success" variant="tonal">
                     <v-card-text class="pa-3 text-center">
-                        <div class="text-h5">{{ summary.present }}</div>
+                        <div class="text-h5">{{ summary?.present ?? 0 }}</div>
                         <div class="text-caption">Present</div>
                     </v-card-text>
                 </v-card>
@@ -44,7 +44,7 @@
             <v-col cols="4" sm="2" md="2">
                 <v-card color="error" variant="tonal">
                     <v-card-text class="pa-3 text-center">
-                        <div class="text-h5">{{ summary.absent }}</div>
+                        <div class="text-h5">{{ summary?.absent ?? 0 }}</div>
                         <div class="text-caption">Absent</div>
                     </v-card-text>
                 </v-card>
@@ -155,10 +155,12 @@ const fetchAttendances = async () => {
         const response = await api.get('/attendances', {
             params: { date: selectedDate.value }
         })
-        attendances.value = response.data.attendances
-        summary.value = response.data.summary
+        attendances.value = response.data.attendances || []
+        summary.value = response.data.summary || { total: 0, present: 0, absent: 0 }
     } catch (error) {
         console.error('Error:', error)
+        attendances.value = []
+        summary.value = { total: 0, present: 0, absent: 0 }
     }
     loading.value = false
 }
