@@ -56,10 +56,6 @@
                 </v-btn>
             </v-form>
 
-            <div class="text-center mt-4 text-caption text-grey">
-                <p>Demo Credentials:</p>
-                <p>Admin: admin@bangalioagro.com / password123</p>
-            </div>
         </v-card-text>
     </v-card>
 </template>

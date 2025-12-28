@@ -173,7 +173,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import api from '../../services/api'
 
@@ -265,11 +265,17 @@ const changePassword = async () => {
     changingPassword.value = false
 }
 
-onMounted(() => {
+const populateForm = () => {
     if (user.value) {
         profileForm.name = user.value.name || ''
         profileForm.email = user.value.email || ''
         profileForm.phone = user.value.phone || ''
     }
+}
+
+watch(user, populateForm, { immediate: true })
+
+onMounted(() => {
+    populateForm()
 })
 </script>
