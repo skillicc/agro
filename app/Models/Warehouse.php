@@ -60,6 +60,11 @@ class Warehouse extends Model
         return $this->hasMany(Sale::class);
     }
 
+    public function expenses()
+    {
+        return $this->hasMany(Expense::class);
+    }
+
     // Get stock quantity for a specific product
     public function getStockQuantity($productId)
     {

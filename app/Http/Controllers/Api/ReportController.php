@@ -16,6 +16,9 @@ use App\Models\Supplier;
 use App\Models\Product;
 use App\Models\Asset;
 use App\Models\ExpenseCategory;
+use App\Models\Warehouse;
+use App\Models\WarehouseStock;
+use App\Models\StockTransfer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -459,6 +462,98 @@ class ReportController extends Controller
             'operating_profit' => $operatingProfit,
             'net_profit' => $netProfit,
 
+            'expense_breakdown' => $expenseBreakdown,
+        ]);
+    }
+
+    public function warehouseReport(Request $request)
+    {
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'warehouse_id' => 'nullable|exists:warehouses,id',
+        ]);
+
+        $startDate = $request->start_date;
+        $endDate = $request->end_date;
+
+        $warehouseQuery = Warehouse::query();
+        if ($request->warehouse_id) {
+            $warehouseQuery->where('id', $request->warehouse_id);
+        }
+
+        $warehouses = $warehouseQuery->withCount('stocks')->get()->map(function ($warehouse) use ($startDate, $endDate) {
+            // Calculate stock value
+            $stockValue = $warehouse->stocks()
+                ->join('products', 'warehouse_stocks.product_id', '=', 'products.id')
+                ->sum(DB::raw('warehouse_stocks.quantity * COALESCE(products.buying_price, 0)'));
+
+            // Calculate expenses
+            $expenseQuery = $warehouse->expenses();
+            if ($startDate && $endDate) {
+                $expenseQuery->whereBetween('date', [$startDate, $endDate]);
+            }
+            $totalExpenses = $expenseQuery->sum('amount');
+
+            // Calculate transfers
+            $transfersInQuery = StockTransfer::where('to_warehouse_id', $warehouse->id);
+            $transfersOutQuery = StockTransfer::where('from_warehouse_id', $warehouse->id);
+
+            if ($startDate && $endDate) {
+                $transfersInQuery->whereBetween('date', [$startDate, $endDate]);
+                $transfersOutQuery->whereBetween('date', [$startDate, $endDate]);
+            }
+
+            return [
+                'id' => $warehouse->id,
+                'name' => $warehouse->name,
+                'location' => $warehouse->address,
+                'stocks_count' => $warehouse->stocks_count,
+                'stock_value' => $stockValue,
+                'total_expenses' => $totalExpenses,
+                'transfers_in' => $transfersInQuery->count(),
+                'transfers_out' => $transfersOutQuery->count(),
+            ];
+        });
+
+        // Summary
+        $totalStockValue = $warehouses->sum('stock_value');
+        $totalExpenses = $warehouses->sum('total_expenses');
+        $totalTransfersIn = $warehouses->sum('transfers_in');
+        $totalTransfersOut = $warehouses->sum('transfers_out');
+        $totalStockItems = $warehouses->sum('stocks_count');
+
+        // Expense breakdown by category
+        $expenseQuery = Expense::whereNotNull('warehouse_id');
+        if ($request->warehouse_id) {
+            $expenseQuery->where('warehouse_id', $request->warehouse_id);
+        }
+        if ($startDate && $endDate) {
+            $expenseQuery->whereBetween('date', [$startDate, $endDate]);
+        }
+
+        $expenseBreakdown = $expenseQuery
+            ->with('category')
+            ->get()
+            ->groupBy('expense_category_id')
+            ->map(fn($items) => [
+                'category' => $items->first()->category->name ?? 'Unknown',
+                'total' => $items->sum('amount'),
+                'count' => $items->count(),
+            ])
+            ->values();
+
+        return response()->json([
+            'period' => ['start' => $startDate, 'end' => $endDate],
+            'summary' => [
+                'total_warehouses' => $warehouses->count(),
+                'total_stock_value' => $totalStockValue,
+                'total_expenses' => $totalExpenses,
+                'total_transfers_in' => $totalTransfersIn,
+                'total_transfers_out' => $totalTransfersOut,
+                'total_stock_items' => $totalStockItems,
+            ],
+            'warehouses' => $warehouses,
             'expense_breakdown' => $expenseBreakdown,
         ]);
     }

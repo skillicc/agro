@@ -6,6 +6,7 @@
             <v-tab value="monthly">Monthly Report</v-tab>
             <v-tab value="custom">Custom Report</v-tab>
             <v-tab value="profit-loss">Profit & Loss</v-tab>
+            <v-tab value="warehouses">Warehouses</v-tab>
         </v-tabs>
 
         <v-card>
@@ -306,6 +307,115 @@
                             </v-card>
                         </div>
                     </v-window-item>
+
+                    <!-- Warehouses Report -->
+                    <v-window-item value="warehouses">
+                        <v-row class="mb-4">
+                            <v-col cols="12" sm="6" lg="3">
+                                <v-text-field v-model="warehouseFilters.start_date" label="Start Date" type="date"></v-text-field>
+                            </v-col>
+                            <v-col cols="12" sm="6" lg="3">
+                                <v-text-field v-model="warehouseFilters.end_date" label="End Date" type="date"></v-text-field>
+                            </v-col>
+                            <v-col cols="12" sm="6" lg="3">
+                                <v-select v-model="warehouseFilters.warehouse_id" :items="warehouses" item-title="name" item-value="id" label="Warehouse" clearable></v-select>
+                            </v-col>
+                            <v-col cols="12" sm="6" lg="3">
+                                <v-btn color="primary" @click="fetchWarehouseReport" :loading="loading" class="mt-2">
+                                    Generate Report
+                                </v-btn>
+                            </v-col>
+                        </v-row>
+
+                        <div v-if="warehouseReport">
+                            <!-- Summary Cards -->
+                            <v-row class="mb-4">
+                                <v-col cols="6" sm="4" lg="2">
+                                    <v-card color="primary" variant="tonal">
+                                        <v-card-text class="text-center">
+                                            <div class="text-h6">{{ warehouseReport.summary?.total_warehouses }}</div>
+                                            <div class="text-caption">Warehouses</div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                                <v-col cols="6" sm="4" lg="2">
+                                    <v-card color="info" variant="tonal">
+                                        <v-card-text class="text-center">
+                                            <div class="text-h6">৳{{ formatNumber(warehouseReport.summary?.total_stock_value) }}</div>
+                                            <div class="text-caption">Stock Value</div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                                <v-col cols="6" sm="4" lg="2">
+                                    <v-card color="error" variant="tonal">
+                                        <v-card-text class="text-center">
+                                            <div class="text-h6">৳{{ formatNumber(warehouseReport.summary?.total_expenses) }}</div>
+                                            <div class="text-caption">Expenses</div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                                <v-col cols="6" sm="4" lg="2">
+                                    <v-card color="success" variant="tonal">
+                                        <v-card-text class="text-center">
+                                            <div class="text-h6">{{ warehouseReport.summary?.total_transfers_in }}</div>
+                                            <div class="text-caption">Transfers In</div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                                <v-col cols="6" sm="4" lg="2">
+                                    <v-card color="warning" variant="tonal">
+                                        <v-card-text class="text-center">
+                                            <div class="text-h6">{{ warehouseReport.summary?.total_transfers_out }}</div>
+                                            <div class="text-caption">Transfers Out</div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                                <v-col cols="6" sm="4" lg="2">
+                                    <v-card color="purple" variant="tonal">
+                                        <v-card-text class="text-center">
+                                            <div class="text-h6">{{ warehouseReport.summary?.total_stock_items }}</div>
+                                            <div class="text-caption">Stock Items</div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                            </v-row>
+
+                            <!-- Warehouse Details -->
+                            <v-card class="mb-4">
+                                <v-card-title>Warehouse Details</v-card-title>
+                                <v-card-text>
+                                    <v-data-table
+                                        :headers="warehouseHeaders"
+                                        :items="warehouseReport.warehouses"
+                                        density="compact"
+                                    >
+                                        <template v-slot:item.stock_value="{ item }">
+                                            ৳{{ formatNumber(item.stock_value) }}
+                                        </template>
+                                        <template v-slot:item.total_expenses="{ item }">
+                                            <span class="text-error">৳{{ formatNumber(item.total_expenses) }}</span>
+                                        </template>
+                                    </v-data-table>
+                                </v-card-text>
+                            </v-card>
+
+                            <!-- Expense Breakdown by Warehouse -->
+                            <v-card v-if="warehouseReport.expense_breakdown?.length > 0">
+                                <v-card-title>Expense Breakdown by Category</v-card-title>
+                                <v-card-text>
+                                    <v-list>
+                                        <v-list-item v-for="(expense, key) in warehouseReport.expense_breakdown" :key="key">
+                                            <v-list-item-title>{{ expense.category }}</v-list-item-title>
+                                            <template v-slot:append>
+                                                <span class="font-weight-bold text-error">৳{{ formatNumber(expense.total) }}</span>
+                                                <span class="text-caption ml-2">({{ expense.count }} entries)</span>
+                                            </template>
+                                        </v-list-item>
+                                    </v-list>
+                                </v-card-text>
+                            </v-card>
+                        </div>
+                    </v-window-item>
                 </v-window>
             </v-card-text>
         </v-card>
@@ -319,13 +429,26 @@ import api from '../../services/api'
 const tab = ref('monthly')
 const loading = ref(false)
 const projects = ref([])
+const warehouses = ref([])
 const monthlyReport = ref(null)
 const customReport = ref(null)
 const plReport = ref(null)
+const warehouseReport = ref(null)
 
 const monthlyFilters = reactive({ month: new Date().toISOString().slice(0, 7), project_id: null })
 const customFilters = reactive({ start_date: '', end_date: '', project_id: null })
 const plFilters = reactive({ start_date: '', end_date: '', project_id: null })
+const warehouseFilters = reactive({ start_date: '', end_date: '', warehouse_id: null })
+
+const warehouseHeaders = [
+    { title: 'Warehouse', key: 'name' },
+    { title: 'Location', key: 'location' },
+    { title: 'Stock Items', key: 'stocks_count' },
+    { title: 'Stock Value', key: 'stock_value' },
+    { title: 'Expenses', key: 'total_expenses' },
+    { title: 'Transfers In', key: 'transfers_in' },
+    { title: 'Transfers Out', key: 'transfers_out' },
+]
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
 
@@ -382,7 +505,32 @@ const fetchProfitLoss = async () => {
     loading.value = false
 }
 
+const fetchWarehouses = async () => {
+    try {
+        const response = await api.get('/warehouses')
+        warehouses.value = response.data
+    } catch (error) {
+        console.error('Error:', error)
+    }
+}
+
+const fetchWarehouseReport = async () => {
+    loading.value = true
+    try {
+        const params = new URLSearchParams()
+        if (warehouseFilters.start_date) params.append('start_date', warehouseFilters.start_date)
+        if (warehouseFilters.end_date) params.append('end_date', warehouseFilters.end_date)
+        if (warehouseFilters.warehouse_id) params.append('warehouse_id', warehouseFilters.warehouse_id)
+        const response = await api.get(`/reports/warehouses?${params}`)
+        warehouseReport.value = response.data
+    } catch (error) {
+        console.error('Error:', error)
+    }
+    loading.value = false
+}
+
 onMounted(() => {
     fetchProjects()
+    fetchWarehouses()
 })
 </script>
