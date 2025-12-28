@@ -14,11 +14,20 @@ class AttendanceController extends Controller
     {
         $date = $request->date ?? now()->toDateString();
 
-        // Get all active employees
-        $employees = Employee::where('is_active', true)
-            ->with(['project'])
-            ->orderBy('name')
-            ->get();
+        // Build employee query with optional filters
+        $employeeQuery = Employee::where('is_active', true);
+
+        // Filter by employee type
+        if ($request->employee_type) {
+            $employeeQuery->where('employee_type', $request->employee_type);
+        }
+
+        // Filter by project
+        if ($request->project_id) {
+            $employeeQuery->where('project_id', $request->project_id);
+        }
+
+        $employees = $employeeQuery->with(['project'])->orderBy('name')->get();
 
         // Auto-generate attendance for employees who don't have it yet
         foreach ($employees as $employee) {
@@ -31,16 +40,24 @@ class AttendanceController extends Controller
         // Get all attendances for the date with employee info
         $attendances = Attendance::with(['employee.project'])
             ->whereDate('date', $date)
-            ->whereHas('employee', function ($q) {
+            ->whereHas('employee', function ($q) use ($request) {
                 $q->where('is_active', true);
+                if ($request->employee_type) {
+                    $q->where('employee_type', $request->employee_type);
+                }
+                if ($request->project_id) {
+                    $q->where('project_id', $request->project_id);
+                }
             })
             ->get();
 
-        // Summary
+        // Summary with type breakdown
         $summary = [
             'total' => $attendances->count(),
             'present' => $attendances->where('status', 'present')->count(),
             'absent' => $attendances->where('status', 'absent')->count(),
+            'regular_count' => $attendances->filter(fn($a) => $a->employee->employee_type === 'regular')->count(),
+            'contractual_count' => $attendances->filter(fn($a) => $a->employee->employee_type === 'contractual')->count(),
         ];
 
         return response()->json([
@@ -119,21 +136,36 @@ class AttendanceController extends Controller
         $month = $request->month ?? now()->month;
         $year = $request->year ?? now()->year;
 
-        $employees = Employee::where('is_active', true)
-            ->with(['project'])
-            ->get()
+        $employeeQuery = Employee::where('is_active', true)->with(['project']);
+
+        // Filter by employee type
+        if ($request->employee_type) {
+            $employeeQuery->where('employee_type', $request->employee_type);
+        }
+
+        $employees = $employeeQuery->get()
             ->map(function ($employee) use ($month, $year) {
                 $attendances = Attendance::where('employee_id', $employee->id)
                     ->whereMonth('date', $month)
                     ->whereYear('date', $year)
                     ->get();
 
-                return [
+                $presentDays = $attendances->where('status', 'present')->count();
+
+                $result = [
                     'employee' => $employee,
                     'total_days' => $attendances->count(),
-                    'present_days' => $attendances->where('status', 'present')->count(),
+                    'present_days' => $presentDays,
                     'absent_days' => $attendances->where('status', 'absent')->count(),
                 ];
+
+                // Add salary info for contractual employees
+                if ($employee->isContractual()) {
+                    $result['daily_rate'] = $employee->daily_rate;
+                    $result['calculated_salary'] = $presentDays * floatval($employee->daily_rate);
+                }
+
+                return $result;
             });
 
         return response()->json([

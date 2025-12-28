@@ -18,38 +18,68 @@
             </div>
         </div>
 
-        <!-- Date Picker & Summary -->
+        <!-- Date Picker, Filter & Summary -->
         <v-row class="mb-4">
-            <v-col cols="12" sm="4" md="3">
+            <v-col cols="6" sm="4" md="2">
                 <v-text-field
                     v-model="selectedDate"
                     label="Date"
                     type="date"
                     density="comfortable"
+                    hide-details
                     @change="fetchAttendances"
                 ></v-text-field>
             </v-col>
-            <v-col cols="4" sm="2" md="2">
+            <v-col cols="6" sm="4" md="2">
+                <v-select
+                    v-model="filterType"
+                    :items="employeeTypes"
+                    item-title="label"
+                    item-value="value"
+                    label="Employee Type"
+                    clearable
+                    density="comfortable"
+                    hide-details
+                    @update:model-value="fetchAttendances"
+                ></v-select>
+            </v-col>
+            <v-col cols="3" sm="2" md="1">
                 <v-card color="primary" variant="tonal">
-                    <v-card-text class="pa-3 text-center">
-                        <div class="text-h5">{{ summary?.total ?? 0 }}</div>
+                    <v-card-text class="pa-2 text-center">
+                        <div class="text-h6">{{ summary?.total ?? 0 }}</div>
                         <div class="text-caption">Total</div>
                     </v-card-text>
                 </v-card>
             </v-col>
-            <v-col cols="4" sm="2" md="2">
+            <v-col cols="3" sm="2" md="1">
                 <v-card color="success" variant="tonal">
-                    <v-card-text class="pa-3 text-center">
-                        <div class="text-h5">{{ summary?.present ?? 0 }}</div>
+                    <v-card-text class="pa-2 text-center">
+                        <div class="text-h6">{{ summary?.present ?? 0 }}</div>
                         <div class="text-caption">Present</div>
                     </v-card-text>
                 </v-card>
             </v-col>
-            <v-col cols="4" sm="2" md="2">
+            <v-col cols="3" sm="2" md="1">
                 <v-card color="error" variant="tonal">
-                    <v-card-text class="pa-3 text-center">
-                        <div class="text-h5">{{ summary?.absent ?? 0 }}</div>
+                    <v-card-text class="pa-2 text-center">
+                        <div class="text-h6">{{ summary?.absent ?? 0 }}</div>
                         <div class="text-caption">Absent</div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="3" sm="2" md="1">
+                <v-card color="blue" variant="tonal">
+                    <v-card-text class="pa-2 text-center">
+                        <div class="text-h6">{{ summary?.regular_count ?? 0 }}</div>
+                        <div class="text-caption">Regular</div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="6" sm="4" md="2">
+                <v-card color="orange" variant="tonal">
+                    <v-card-text class="pa-2 text-center">
+                        <div class="text-h6">{{ summary?.contractual_count ?? 0 }}</div>
+                        <div class="text-caption">Contractual</div>
                     </v-card-text>
                 </v-card>
             </v-col>
@@ -70,8 +100,16 @@
                 <template v-slot:item.employee.name="{ item }">
                     <div>
                         <strong>{{ item.employee?.name }}</strong>
-                        <div class="text-caption text-grey">{{ item.employee?.designation }}</div>
+                        <div class="text-caption text-grey">{{ item.employee?.position }}</div>
                     </div>
+                </template>
+                <template v-slot:item.employee_type="{ item }">
+                    <v-chip
+                        :color="item.employee?.employee_type === 'regular' ? 'blue' : 'orange'"
+                        size="x-small"
+                    >
+                        {{ item.employee?.employee_type === 'regular' ? 'R' : 'C' }}
+                    </v-chip>
                 </template>
                 <template v-slot:item.employee.project="{ item }">
                     {{ item.employee?.project?.name || '-' }}
@@ -145,9 +183,17 @@ const summary = ref({
     absent: 0,
 })
 
+const employeeTypes = [
+    { value: 'regular', label: 'Regular' },
+    { value: 'contractual', label: 'Contractual' },
+]
+
+const filterType = ref(null)
+
 const headers = [
-    { title: 'SL', key: 'sl', sortable: false, width: '60px' },
+    { title: 'SL', key: 'sl', sortable: false, width: '50px' },
     { title: 'Employee', key: 'employee.name' },
+    { title: 'Type', key: 'employee_type', width: '60px' },
     { title: 'Project', key: 'employee.project' },
     { title: 'Status', key: 'status', align: 'center' },
     { title: 'Action', key: 'actions', sortable: false, align: 'center', width: '80px' },
@@ -156,15 +202,17 @@ const headers = [
 const fetchAttendances = async () => {
     loading.value = true
     try {
-        const response = await api.get('/attendances', {
-            params: { date: selectedDate.value }
-        })
+        const params = { date: selectedDate.value }
+        if (filterType.value) {
+            params.employee_type = filterType.value
+        }
+        const response = await api.get('/attendances', { params })
         attendances.value = response.data.attendances || []
-        summary.value = response.data.summary || { total: 0, present: 0, absent: 0 }
+        summary.value = response.data.summary || { total: 0, present: 0, absent: 0, regular_count: 0, contractual_count: 0 }
     } catch (error) {
         console.error('Error:', error)
         attendances.value = []
-        summary.value = { total: 0, present: 0, absent: 0 }
+        summary.value = { total: 0, present: 0, absent: 0, regular_count: 0, contractual_count: 0 }
     }
     loading.value = false
 }

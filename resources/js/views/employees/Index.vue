@@ -10,49 +10,88 @@
 
         <!-- Summary Cards -->
         <v-row class="mb-4">
-            <v-col cols="12" sm="6" lg="3">
+            <v-col cols="6" sm="4" lg="2">
                 <v-card color="primary" variant="tonal">
-                    <v-card-text class="d-flex align-center">
-                        <v-icon size="40" class="mr-3">mdi-account-group</v-icon>
+                    <v-card-text class="d-flex align-center pa-3">
+                        <v-icon size="32" class="mr-2">mdi-account-group</v-icon>
                         <div>
-                            <div class="text-h5 font-weight-bold">{{ totalEmployees }}</div>
-                            <div class="text-caption">Total Employees</div>
+                            <div class="text-h6 font-weight-bold">{{ totalEmployees }}</div>
+                            <div class="text-caption">Total</div>
                         </div>
                     </v-card-text>
                 </v-card>
             </v-col>
-            <v-col cols="12" sm="6" lg="3">
+            <v-col cols="6" sm="4" lg="2">
+                <v-card color="blue" variant="tonal">
+                    <v-card-text class="d-flex align-center pa-3">
+                        <v-icon size="32" class="mr-2">mdi-account-tie</v-icon>
+                        <div>
+                            <div class="text-h6 font-weight-bold">{{ regularCount }}</div>
+                            <div class="text-caption">Regular</div>
+                        </div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="6" sm="4" lg="2">
+                <v-card color="orange" variant="tonal">
+                    <v-card-text class="d-flex align-center pa-3">
+                        <v-icon size="32" class="mr-2">mdi-account-clock</v-icon>
+                        <div>
+                            <div class="text-h6 font-weight-bold">{{ contractualCount }}</div>
+                            <div class="text-caption">Contractual</div>
+                        </div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="6" sm="4" lg="2">
                 <v-card color="success" variant="tonal">
-                    <v-card-text class="d-flex align-center">
-                        <v-icon size="40" class="mr-3">mdi-account-check</v-icon>
+                    <v-card-text class="d-flex align-center pa-3">
+                        <v-icon size="32" class="mr-2">mdi-account-check</v-icon>
                         <div>
-                            <div class="text-h5 font-weight-bold">{{ activeEmployees }}</div>
-                            <div class="text-caption">Active Employees</div>
+                            <div class="text-h6 font-weight-bold">{{ activeEmployees }}</div>
+                            <div class="text-caption">Active</div>
                         </div>
                     </v-card-text>
                 </v-card>
             </v-col>
-            <v-col cols="12" sm="6" lg="3">
+            <v-col cols="6" sm="4" lg="2">
                 <v-card color="info" variant="tonal">
-                    <v-card-text class="d-flex align-center">
-                        <v-icon size="40" class="mr-3">mdi-cash-multiple</v-icon>
+                    <v-card-text class="d-flex align-center pa-3">
+                        <v-icon size="32" class="mr-2">mdi-cash-multiple</v-icon>
                         <div>
-                            <div class="text-h5 font-weight-bold">৳{{ formatNumber(totalMonthlySalary) }}</div>
-                            <div class="text-caption">Monthly Salary (Active)</div>
+                            <div class="text-h6 font-weight-bold">৳{{ formatNumber(totalMonthlySalary) }}</div>
+                            <div class="text-caption">Monthly</div>
                         </div>
                     </v-card-text>
                 </v-card>
             </v-col>
-            <v-col cols="12" sm="6" lg="3">
+            <v-col cols="6" sm="4" lg="2">
                 <v-card color="warning" variant="tonal" @click="showAllSummary" style="cursor: pointer;">
-                    <v-card-text class="d-flex align-center">
-                        <v-icon size="40" class="mr-3">mdi-chart-bar</v-icon>
+                    <v-card-text class="d-flex align-center pa-3">
+                        <v-icon size="32" class="mr-2">mdi-chart-bar</v-icon>
                         <div>
-                            <div class="text-h5 font-weight-bold">View All</div>
-                            <div class="text-caption">Salary & Advance Summary</div>
+                            <div class="text-h6 font-weight-bold">View</div>
+                            <div class="text-caption">Summary</div>
                         </div>
                     </v-card-text>
                 </v-card>
+            </v-col>
+        </v-row>
+
+        <!-- Filter Row -->
+        <v-row class="mb-4">
+            <v-col cols="12" sm="4" md="3">
+                <v-select
+                    v-model="filterType"
+                    :items="employeeTypes"
+                    item-title="label"
+                    item-value="value"
+                    label="Employee Type"
+                    clearable
+                    density="compact"
+                    hide-details
+                    @update:model-value="fetchEmployees"
+                ></v-select>
             </v-col>
         </v-row>
 
@@ -67,8 +106,21 @@
                     <template v-slot:item.sl="{ index }">
                         {{ index + 1 }}
                     </template>
-                    <template v-slot:item.salary_amount="{ item }">
-                        ৳{{ formatNumber(item.salary_amount) }}
+                    <template v-slot:item.employee_type="{ item }">
+                        <v-chip :color="item.employee_type === 'regular' ? 'blue' : 'orange'" size="small">
+                            {{ item.employee_type === 'regular' ? 'Regular' : 'Contractual' }}
+                        </v-chip>
+                    </template>
+                    <template v-slot:item.salary_display="{ item }">
+                        <div v-if="item.employee_type === 'regular'">
+                            ৳{{ formatNumber(item.salary_amount) }}/month
+                        </div>
+                        <div v-else>
+                            ৳{{ formatNumber(item.daily_rate) }}/day
+                            <div class="text-caption text-grey" v-if="item.present_days !== null">
+                                {{ item.present_days }} days = ৳{{ formatNumber(item.calculated_salary) }}
+                            </div>
+                        </div>
                     </template>
                     <template v-slot:item.total_paid="{ item }">
                         <span class="text-success font-weight-bold">৳{{ formatNumber(item.total_paid) }}</span>
@@ -107,11 +159,39 @@
                 <v-card-title>{{ editMode ? 'Edit Employee' : 'Add Employee' }}</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="saveEmployee">
-                        <v-select v-model="form.project_id" :items="projects" item-title="name" item-value="id" label="Project" required></v-select>
+                        <v-select
+                            v-model="form.employee_type"
+                            :items="employeeTypes"
+                            item-title="label"
+                            item-value="value"
+                            label="Employee Type"
+                            required
+                        ></v-select>
+                        <v-select
+                            v-model="form.project_id"
+                            :items="projects"
+                            item-title="name"
+                            item-value="id"
+                            :label="form.employee_type === 'regular' ? 'Project *' : 'Project (Optional)'"
+                            :clearable="form.employee_type === 'contractual'"
+                        ></v-select>
                         <v-text-field v-model="form.name" label="Name" required></v-text-field>
                         <v-text-field v-model="form.phone" label="Phone"></v-text-field>
                         <v-text-field v-model="form.position" label="Position"></v-text-field>
-                        <v-text-field v-model.number="form.salary_amount" label="Salary Amount" type="number" required></v-text-field>
+                        <v-text-field
+                            v-if="form.employee_type === 'regular'"
+                            v-model.number="form.salary_amount"
+                            label="Monthly Salary"
+                            type="number"
+                            required
+                        ></v-text-field>
+                        <v-text-field
+                            v-if="form.employee_type === 'contractual'"
+                            v-model.number="form.daily_rate"
+                            label="Daily Rate"
+                            type="number"
+                            required
+                        ></v-text-field>
                         <v-text-field v-model="form.joining_date" label="Joining Date" type="date"></v-text-field>
                         <v-switch v-model="form.is_active" label="Active" color="success"></v-switch>
                     </v-form>
@@ -125,13 +205,40 @@
         </v-dialog>
 
         <!-- Salary Dialog -->
-        <v-dialog v-model="salaryDialog" max-width="400">
+        <v-dialog v-model="salaryDialog" max-width="450">
             <v-card>
                 <v-card-title>Pay Salary - {{ selectedEmployee?.name }}</v-card-title>
                 <v-card-text>
+                    <!-- Contractual Employee Calculation Info -->
+                    <v-alert
+                        v-if="selectedEmployee?.employee_type === 'contractual'"
+                        type="info"
+                        density="compact"
+                        class="mb-4"
+                    >
+                        <div class="font-weight-bold">Contractual Employee</div>
+                        <div v-if="salaryCalculation">
+                            {{ salaryCalculation.present_days }} days x ৳{{ formatNumber(selectedEmployee.daily_rate) }} =
+                            <strong>৳{{ formatNumber(salaryCalculation.calculated_salary) }}</strong>
+                        </div>
+                        <div v-else class="text-caption">Select month to calculate</div>
+                    </v-alert>
+
                     <v-form @submit.prevent="paySalary">
-                        <v-text-field v-model.number="salaryForm.amount" label="Amount" type="number" required></v-text-field>
-                        <v-text-field v-model="salaryForm.month" label="Month (YYYY-MM)" placeholder="2025-01" required></v-text-field>
+                        <v-text-field
+                            v-model="salaryForm.month"
+                            label="Month (YYYY-MM)"
+                            placeholder="2025-01"
+                            required
+                            @change="calculateContractualSalary"
+                        ></v-text-field>
+                        <v-text-field
+                            v-model.number="salaryForm.amount"
+                            label="Amount"
+                            type="number"
+                            required
+                            :hint="selectedEmployee?.employee_type === 'contractual' ? 'Auto-calculated based on attendance' : ''"
+                        ></v-text-field>
                         <v-text-field v-model="salaryForm.payment_date" label="Payment Date" type="date" required></v-text-field>
                         <v-textarea v-model="salaryForm.note" label="Note" rows="2"></v-textarea>
                     </v-form>
@@ -484,6 +591,7 @@ const filterMonth = ref('')
 const filterEmployee = ref(null)
 const allSalariesOriginal = ref([])
 const allAdvancesOriginal = ref([])
+const salaryCalculation = ref(null)
 
 // Edit/Delete states
 const editSalaryDialog = ref(false)
@@ -502,15 +610,22 @@ const editAdvanceForm = reactive({ id: null, amount: 0, date: '', reason: '', is
 const headers = [
     { title: 'SL', key: 'sl', width: '60px' },
     { title: 'Name', key: 'name' },
+    { title: 'Type', key: 'employee_type' },
     { title: 'Project', key: 'project.name' },
     { title: 'Position', key: 'position' },
-    { title: 'Phone', key: 'phone' },
-    { title: 'Salary', key: 'salary_amount' },
+    { title: 'Salary', key: 'salary_display' },
     { title: 'Total Paid', key: 'total_paid' },
     { title: 'This Month Due', key: 'current_month_due' },
     { title: 'Status', key: 'is_active' },
     { title: 'Actions', key: 'actions', sortable: false },
 ]
+
+const employeeTypes = [
+    { value: 'regular', label: 'Regular' },
+    { value: 'contractual', label: 'Contractual' },
+]
+
+const filterType = ref(null)
 
 // Sort employees by project name
 const sortedEmployees = computed(() => {
@@ -537,7 +652,7 @@ const advanceHeaders = [
     { title: 'Deducted', key: 'is_deducted' },
 ]
 
-const form = reactive({ project_id: null, name: '', phone: '', position: '', salary_amount: 0, joining_date: '', is_active: true })
+const form = reactive({ project_id: null, employee_type: 'regular', name: '', phone: '', position: '', salary_amount: 0, daily_rate: 0, joining_date: '', is_active: true })
 const salaryForm = reactive({ amount: 0, month: '', payment_date: new Date().toISOString().split('T')[0], note: '' })
 const advanceForm = reactive({ amount: 0, date: new Date().toISOString().split('T')[0], reason: '' })
 
@@ -558,7 +673,9 @@ const getGroupTotalSalary = (items) => {
 // Computed for summary cards
 const totalEmployees = computed(() => employees.value.length)
 const activeEmployees = computed(() => employees.value.filter(e => e.is_active).length)
-const totalMonthlySalary = computed(() => employees.value.filter(e => e.is_active).reduce((sum, e) => sum + Number(e.salary_amount || 0), 0))
+const regularCount = computed(() => employees.value.filter(e => e.employee_type === 'regular').length)
+const contractualCount = computed(() => employees.value.filter(e => e.employee_type === 'contractual').length)
+const totalMonthlySalary = computed(() => employees.value.filter(e => e.is_active).reduce((sum, e) => sum + Number(e.calculated_salary || e.salary_amount || 0), 0))
 
 // Computed for individual history
 const totalSalary = computed(() => salaryHistory.value.reduce((sum, s) => sum + Number(s.amount), 0))
@@ -595,7 +712,11 @@ const applyFilters = () => {
 const fetchEmployees = async () => {
     loading.value = true
     try {
-        const response = await api.get('/employees')
+        const params = {}
+        if (filterType.value) {
+            params.employee_type = filterType.value
+        }
+        const response = await api.get('/employees', { params })
         employees.value = response.data
     } catch (error) {
         console.error('Error:', error)
@@ -618,7 +739,7 @@ const openDialog = (employee = null) => {
     if (employee) {
         Object.assign(form, employee)
     } else {
-        Object.assign(form, { project_id: null, name: '', phone: '', position: '', salary_amount: 0, joining_date: '', is_active: true })
+        Object.assign(form, { project_id: null, employee_type: 'regular', name: '', phone: '', position: '', salary_amount: 0, daily_rate: 0, joining_date: '', is_active: true })
     }
     dialog.value = true
 }
@@ -639,11 +760,37 @@ const saveEmployee = async () => {
     saving.value = false
 }
 
-const openSalaryDialog = (employee) => {
+const openSalaryDialog = async (employee) => {
     selectedEmployee.value = employee
-    salaryForm.amount = employee.salary_amount
     salaryForm.month = new Date().toISOString().slice(0, 7)
+    salaryCalculation.value = null
+
+    if (employee.employee_type === 'contractual') {
+        // Calculate salary for contractual employee
+        await calculateContractualSalary()
+    } else {
+        salaryForm.amount = employee.salary_amount
+    }
     salaryDialog.value = true
+}
+
+const calculateContractualSalary = async () => {
+    if (!selectedEmployee.value || selectedEmployee.value.employee_type !== 'contractual') {
+        return
+    }
+    if (!salaryForm.month || !/^\d{4}-\d{2}$/.test(salaryForm.month)) {
+        return
+    }
+
+    try {
+        const response = await api.get(`/employees/${selectedEmployee.value.id}/calculate-salary`, {
+            params: { month: salaryForm.month }
+        })
+        salaryCalculation.value = response.data
+        salaryForm.amount = response.data.calculated_salary
+    } catch (error) {
+        console.error('Error calculating salary:', error)
+    }
 }
 
 const paySalary = async () => {

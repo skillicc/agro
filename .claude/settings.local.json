@@ -16,7 +16,10 @@
       "Bash(npm install)",
       "Bash(npm run build:*)",
       "Bash(git config:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(grep:*)"
     ]
   }
 }

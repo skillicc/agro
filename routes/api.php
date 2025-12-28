@@ -101,6 +101,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/employees/{employee}/advance', [EmployeeController::class, 'giveAdvance']);
     Route::get('/employees/{employee}/salaries', [EmployeeController::class, 'employeeSalaries']);
     Route::get('/employees/{employee}/advances', [EmployeeController::class, 'employeeAdvances']);
+    Route::get('/employees/{employee}/calculate-salary', [EmployeeController::class, 'calculateSalary']);
     Route::get('/salaries', [EmployeeController::class, 'salaries']);
     Route::post('/salaries', [EmployeeController::class, 'storeSalary']);
     Route::put('/salaries/{salary}', [EmployeeController::class, 'updateSalary']);

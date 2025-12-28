@@ -18,6 +18,10 @@ class EmployeeController extends Controller
             $query->where('project_id', $request->project_id);
         }
 
+        if ($request->employee_type) {
+            $query->where('employee_type', $request->employee_type);
+        }
+
         $employees = $query->orderBy('name')->get();
 
         // Calculate total paid and current month due for each employee
@@ -33,8 +37,17 @@ class EmployeeController extends Controller
                 ->where('month', $currentMonth)
                 ->sum('amount');
 
-            // Current month due = monthly salary - what's paid this month
-            $employee->current_month_due = max(0, $employee->salary_amount - $currentMonthSalaryPaid);
+            // Calculate expected salary based on employee type
+            if ($employee->isContractual()) {
+                $employee->calculated_salary = $employee->calculateContractualSalary($currentMonth);
+                $employee->present_days = $employee->getPresentDaysInMonth($currentMonth);
+            } else {
+                $employee->calculated_salary = $employee->salary_amount;
+                $employee->present_days = null;
+            }
+
+            // Current month due = calculated salary - what's paid this month
+            $employee->current_month_due = max(0, $employee->calculated_salary - $currentMonthSalaryPaid);
             $employee->current_month_paid = $currentMonthSalaryPaid;
 
             // Also store individual totals
@@ -47,14 +60,24 @@ class EmployeeController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'project_id' => 'required|exists:projects,id',
+        $rules = [
+            'employee_type' => 'required|in:regular,contractual',
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'position' => 'nullable|string|max:100',
-            'salary_amount' => 'required|numeric|min:0',
             'joining_date' => 'nullable|date',
-        ]);
+        ];
+
+        // Conditional validation based on employee type
+        if ($request->employee_type === 'regular') {
+            $rules['project_id'] = 'required|exists:projects,id';
+            $rules['salary_amount'] = 'required|numeric|min:0';
+        } else {
+            $rules['project_id'] = 'nullable|exists:projects,id';
+            $rules['daily_rate'] = 'required|numeric|min:0';
+        }
+
+        $request->validate($rules);
 
         $employee = Employee::create($request->all());
 
@@ -69,14 +92,25 @@ class EmployeeController extends Controller
 
     public function update(Request $request, Employee $employee)
     {
-        $request->validate([
+        $rules = [
+            'employee_type' => 'required|in:regular,contractual',
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'position' => 'nullable|string|max:100',
-            'salary_amount' => 'required|numeric|min:0',
             'joining_date' => 'nullable|date',
             'is_active' => 'nullable|boolean',
-        ]);
+        ];
+
+        // Conditional validation based on employee type
+        if ($request->employee_type === 'regular') {
+            $rules['project_id'] = 'required|exists:projects,id';
+            $rules['salary_amount'] = 'required|numeric|min:0';
+        } else {
+            $rules['project_id'] = 'nullable|exists:projects,id';
+            $rules['daily_rate'] = 'required|numeric|min:0';
+        }
+
+        $request->validate($rules);
 
         $employee->update($request->all());
 
@@ -273,5 +307,48 @@ class EmployeeController extends Controller
     {
         $advance->delete();
         return response()->json(['message' => 'Advance deleted successfully']);
+    }
+
+    public function calculateSalary(Request $request, Employee $employee)
+    {
+        $request->validate([
+            'month' => 'required|string|regex:/^\d{4}-\d{2}$/',
+        ]);
+
+        $month = $request->month;
+
+        if ($employee->isRegular()) {
+            return response()->json([
+                'employee_type' => 'regular',
+                'salary_amount' => $employee->salary_amount,
+                'calculated_salary' => $employee->salary_amount,
+                'month' => $month,
+            ]);
+        }
+
+        // Contractual calculation
+        [$year, $monthNum] = explode('-', $month);
+
+        $presentDays = $employee->attendances()
+            ->whereMonth('date', $monthNum)
+            ->whereYear('date', $year)
+            ->where('status', 'present')
+            ->count();
+
+        $totalDays = $employee->attendances()
+            ->whereMonth('date', $monthNum)
+            ->whereYear('date', $year)
+            ->count();
+
+        $calculatedSalary = $presentDays * floatval($employee->daily_rate);
+
+        return response()->json([
+            'employee_type' => 'contractual',
+            'daily_rate' => $employee->daily_rate,
+            'present_days' => $presentDays,
+            'total_days' => $totalDays,
+            'calculated_salary' => $calculatedSalary,
+            'month' => $month,
+        ]);
     }
 }
