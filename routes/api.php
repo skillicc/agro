@@ -117,6 +117,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/attendances/cancel-all', [AttendanceController::class, 'cancelAll']);
     Route::post('/attendances/mark-all-present', [AttendanceController::class, 'markAllPresent']);
     Route::get('/attendances/monthly-report', [AttendanceController::class, 'monthlyReport']);
+    Route::get('/attendances/daily-chart', [AttendanceController::class, 'dailyChartData']);
     Route::get('/employees/{employee}/attendance-summary', [AttendanceController::class, 'monthlySummary']);
 
     // Reports

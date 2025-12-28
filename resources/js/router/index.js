@@ -40,6 +40,7 @@ import Employees from '../views/employees/Index.vue'
 
 // Attendance
 import Attendance from '../views/attendance/Index.vue'
+import AttendanceDetails from '../views/attendance/Details.vue'
 
 // Reports
 import Reports from '../views/reports/Index.vue'
@@ -141,6 +142,11 @@ const routes = [
                 path: 'attendance',
                 name: 'attendance',
                 component: Attendance,
+            },
+            {
+                path: 'attendance/details',
+                name: 'attendance-details',
+                component: AttendanceDetails,
             },
             {
                 path: 'reports',

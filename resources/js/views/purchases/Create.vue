@@ -4,49 +4,88 @@
             <v-btn icon variant="text" @click="$router.back()">
                 <v-icon>mdi-arrow-left</v-icon>
             </v-btn>
-            <h1 class="text-h4 ml-2">New Purchase</h1>
+            <h1 class="text-h5 text-md-h4 ml-2">New Purchase</h1>
         </div>
 
         <v-card>
-            <v-card-text>
+            <v-card-text class="pa-3 pa-md-4">
                 <v-form @submit.prevent="savePurchase">
-                    <v-row>
+                    <!-- Header Fields -->
+                    <v-row dense>
                         <v-col cols="12" sm="6" lg="3">
-                            <v-select v-model="form.project_id" :items="projects" item-title="name" item-value="id" label="Project *" clearable hint="Project or Warehouse required" persistent-hint></v-select>
+                            <v-select
+                                v-model="form.project_id"
+                                :items="projects"
+                                item-title="name"
+                                item-value="id"
+                                label="Project *"
+                                clearable
+                                density="comfortable"
+                                hint="Project or Warehouse required"
+                                persistent-hint
+                            ></v-select>
                         </v-col>
                         <v-col cols="12" sm="6" lg="3">
-                            <v-select v-model="form.warehouse_id" :items="warehouses" item-title="name" item-value="id" label="Warehouse *" clearable hint="Project or Warehouse required" persistent-hint></v-select>
+                            <v-select
+                                v-model="form.warehouse_id"
+                                :items="warehouses"
+                                item-title="name"
+                                item-value="id"
+                                label="Warehouse *"
+                                clearable
+                                density="comfortable"
+                                hint="Project or Warehouse required"
+                                persistent-hint
+                            ></v-select>
+                        </v-col>
+                        <v-col cols="12" sm="4" lg="2">
+                            <v-select
+                                v-model="form.supplier_id"
+                                :items="suppliers"
+                                item-title="name"
+                                item-value="id"
+                                label="Supplier"
+                                clearable
+                                density="comfortable"
+                            ></v-select>
                         </v-col>
                         <v-col cols="6" sm="4" lg="2">
-                            <v-select v-model="form.supplier_id" :items="suppliers" item-title="name" item-value="id" label="Supplier" clearable></v-select>
+                            <v-text-field
+                                v-model="form.invoice_no"
+                                label="Invoice No."
+                                density="comfortable"
+                            ></v-text-field>
                         </v-col>
                         <v-col cols="6" sm="4" lg="2">
-                            <v-text-field v-model="form.invoice_no" label="Invoice No."></v-text-field>
-                        </v-col>
-                        <v-col cols="6" sm="4" lg="2">
-                            <v-text-field v-model="form.date" label="Date" type="date" required></v-text-field>
+                            <v-text-field
+                                v-model="form.date"
+                                label="Date"
+                                type="date"
+                                required
+                                density="comfortable"
+                            ></v-text-field>
                         </v-col>
                     </v-row>
 
                     <v-divider class="my-4"></v-divider>
 
-                    <h3 class="mb-4">Items</h3>
+                    <h3 class="mb-3 text-subtitle-1 text-md-h6">Items</h3>
 
-                    <!-- Desktop View -->
+                    <!-- Desktop View - xl screens only -->
                     <div class="d-none d-xl-block">
-                        <v-table density="compact">
+                        <v-table density="compact" class="items-table">
                             <thead>
-                                <tr class="text-caption">
-                                    <th style="width: 180px">Product</th>
-                                    <th style="width: 80px">Size</th>
-                                    <th style="width: 70px">Pkg Qty</th>
-                                    <th style="width: 70px">Unit/Pkg</th>
-                                    <th style="width: 80px">Pkg Price</th>
-                                    <th style="width: 70px">Total Qty</th>
-                                    <th style="width: 80px">Unit (TP)</th>
-                                    <th style="width: 80px">Unit (MRP)</th>
-                                    <th style="width: 90px">Total (TP)</th>
-                                    <th style="width: 90px">Total (MRP)</th>
+                                <tr>
+                                    <th class="text-left" style="min-width: 160px">Product</th>
+                                    <th class="text-left" style="min-width: 70px">Size</th>
+                                    <th class="text-center" style="min-width: 70px">Pkg Qty</th>
+                                    <th class="text-center" style="min-width: 70px">Unit/Pkg</th>
+                                    <th class="text-right" style="min-width: 80px">Pkg Price</th>
+                                    <th class="text-center" style="min-width: 70px">Total Qty</th>
+                                    <th class="text-right" style="min-width: 80px">Unit TP</th>
+                                    <th class="text-right" style="min-width: 80px">Unit MRP</th>
+                                    <th class="text-right" style="min-width: 90px">Total TP</th>
+                                    <th class="text-right" style="min-width: 90px">Total MRP</th>
                                     <th style="width: 50px"></th>
                                 </tr>
                             </thead>
@@ -86,22 +125,22 @@
                                         <v-text-field v-model.number="item.package_price" type="number" density="compact" hide-details variant="outlined" @update:model-value="calculateFromPackage(index)"></v-text-field>
                                     </td>
                                     <td>
-                                        <v-text-field v-model.number="item.quantity" type="number" density="compact" hide-details variant="outlined" readonly></v-text-field>
+                                        <v-text-field v-model.number="item.quantity" type="number" density="compact" hide-details variant="outlined" readonly bg-color="grey-lighten-4"></v-text-field>
                                     </td>
                                     <td>
-                                        <v-text-field v-model.number="item.unit_price" type="number" density="compact" hide-details variant="outlined" readonly></v-text-field>
+                                        <v-text-field v-model.number="item.unit_price" type="number" density="compact" hide-details variant="outlined" readonly bg-color="grey-lighten-4"></v-text-field>
                                     </td>
                                     <td>
                                         <v-text-field v-model.number="item.unit_mrp" type="number" density="compact" hide-details variant="outlined" @update:model-value="calculateMrpTotal(index)"></v-text-field>
                                     </td>
                                     <td>
-                                        <v-text-field :model-value="formatNumber(item.quantity * item.unit_price)" density="compact" hide-details variant="outlined" readonly class="text-primary"></v-text-field>
+                                        <v-text-field :model-value="formatNumber(item.quantity * item.unit_price)" density="compact" hide-details variant="outlined" readonly class="text-primary font-weight-medium" bg-color="blue-lighten-5"></v-text-field>
                                     </td>
                                     <td>
-                                        <v-text-field :model-value="formatNumber(item.total_mrp)" density="compact" hide-details variant="outlined" readonly class="text-success"></v-text-field>
+                                        <v-text-field :model-value="formatNumber(item.total_mrp)" density="compact" hide-details variant="outlined" readonly class="text-success font-weight-medium" bg-color="green-lighten-5"></v-text-field>
                                     </td>
                                     <td>
-                                        <v-btn icon color="error" size="x-small" @click="removeItem(index)" :disabled="form.items.length === 1">
+                                        <v-btn icon color="error" size="x-small" variant="text" @click="removeItem(index)" :disabled="form.items.length === 1">
                                             <v-icon>mdi-delete</v-icon>
                                         </v-btn>
                                     </td>
@@ -110,17 +149,39 @@
                         </v-table>
                     </div>
 
-                    <!-- Mobile View -->
+                    <!-- Card View - For smaller screens (mobile, tablet, laptop) -->
                     <div class="d-xl-none">
-                        <v-card v-for="(item, index) in form.items" :key="index" class="mb-4" variant="outlined">
-                            <v-card-text>
+                        <v-card
+                            v-for="(item, index) in form.items"
+                            :key="index"
+                            class="mb-3"
+                            variant="outlined"
+                            :class="{ 'border-primary': item.product_id }"
+                        >
+                            <v-card-title class="py-2 px-3 bg-grey-lighten-4 d-flex justify-space-between align-center">
+                                <span class="text-body-2 font-weight-medium">Item {{ index + 1 }}</span>
+                                <v-btn
+                                    icon
+                                    color="error"
+                                    size="x-small"
+                                    variant="text"
+                                    @click="removeItem(index)"
+                                    :disabled="form.items.length === 1"
+                                >
+                                    <v-icon size="small">mdi-delete</v-icon>
+                                </v-btn>
+                            </v-card-title>
+                            <v-card-text class="pa-3">
+                                <!-- Product Selection -->
                                 <v-autocomplete
                                     v-model="item.product_id"
                                     :items="products"
                                     item-title="name"
                                     item-value="id"
-                                    label="Product"
+                                    label="Product *"
+                                    density="comfortable"
                                     required
+                                    class="mb-2"
                                     @update:model-value="updatePrice(index)"
                                 >
                                     <template v-slot:item="{ props, item }">
@@ -131,128 +192,201 @@
                                         </v-list-item>
                                     </template>
                                 </v-autocomplete>
-                                <v-row>
-                                    <v-col cols="6">
-                                        <v-text-field v-model="item.size" label="Size"></v-text-field>
+
+                                <!-- Input Fields Row 1 -->
+                                <v-row dense>
+                                    <v-col cols="6" sm="3">
+                                        <v-text-field
+                                            v-model="item.size"
+                                            label="Size"
+                                            density="comfortable"
+                                            hide-details
+                                        ></v-text-field>
                                     </v-col>
-                                    <v-col cols="6">
+                                    <v-col cols="6" sm="3">
                                         <v-text-field
                                             v-model.number="item.package_qty"
-                                            label="Package Qty"
+                                            label="Pkg Qty"
                                             type="number"
+                                            density="comfortable"
+                                            hide-details
                                             @update:model-value="calculateFromPackage(index)"
                                         ></v-text-field>
                                     </v-col>
-                                </v-row>
-                                <v-row>
-                                    <v-col cols="6">
+                                    <v-col cols="6" sm="3">
                                         <v-text-field
                                             v-model.number="item.unit_per_package"
-                                            :label="`${getProductUnit(item.product_id).toUpperCase()} Per Package`"
+                                            label="Unit/Pkg"
                                             type="number"
+                                            density="comfortable"
+                                            hide-details
                                             @update:model-value="calculateFromPackage(index)"
                                         ></v-text-field>
                                     </v-col>
-                                    <v-col cols="6">
+                                    <v-col cols="6" sm="3">
                                         <v-text-field
                                             v-model.number="item.package_price"
-                                            label="Package Price"
+                                            label="Pkg Price"
                                             type="number"
-                                            prefix="৳"
+                                            density="comfortable"
+                                            hide-details
                                             @update:model-value="calculateFromPackage(index)"
                                         ></v-text-field>
                                     </v-col>
                                 </v-row>
-                                <v-row>
-                                    <v-col cols="6">
+
+                                <!-- Calculated Fields Row 2 -->
+                                <v-row dense class="mt-2">
+                                    <v-col cols="6" sm="3">
                                         <v-text-field
                                             v-model.number="item.quantity"
                                             label="Total Qty"
                                             type="number"
+                                            density="comfortable"
+                                            hide-details
                                             readonly
+                                            bg-color="grey-lighten-4"
                                         ></v-text-field>
                                     </v-col>
-                                    <v-col cols="6">
+                                    <v-col cols="6" sm="3">
                                         <v-text-field
                                             v-model.number="item.unit_price"
-                                            label="Unit (TP)"
+                                            label="Unit TP"
                                             type="number"
-                                            prefix="৳"
+                                            density="comfortable"
+                                            hide-details
                                             readonly
+                                            bg-color="grey-lighten-4"
                                         ></v-text-field>
                                     </v-col>
-                                </v-row>
-                                <v-row>
-                                    <v-col cols="6">
+                                    <v-col cols="6" sm="3">
                                         <v-text-field
                                             v-model.number="item.unit_mrp"
-                                            label="Unit (MRP)"
+                                            label="Unit MRP"
                                             type="number"
-                                            prefix="৳"
+                                            density="comfortable"
+                                            hide-details
                                             @update:model-value="calculateMrpTotal(index)"
                                         ></v-text-field>
                                     </v-col>
-                                    <v-col cols="6">
+                                    <v-col cols="6" sm="3">
                                         <v-text-field
                                             :model-value="formatNumber(item.quantity * item.unit_price)"
-                                            label="Total (TP)"
+                                            label="Total TP"
+                                            density="comfortable"
+                                            hide-details
                                             readonly
-                                            class="text-primary"
+                                            class="text-primary font-weight-bold"
+                                            bg-color="blue-lighten-5"
                                         ></v-text-field>
                                     </v-col>
                                 </v-row>
-                                <v-row>
-                                    <v-col cols="12">
+
+                                <!-- Total MRP Row -->
+                                <v-row dense class="mt-2">
+                                    <v-col cols="12" sm="6">
                                         <v-text-field
                                             :model-value="formatNumber(item.total_mrp)"
-                                            label="Total (MRP)"
+                                            label="Total MRP"
+                                            density="comfortable"
+                                            hide-details
                                             readonly
-                                            class="text-success"
+                                            class="text-success font-weight-bold"
+                                            bg-color="green-lighten-5"
                                         ></v-text-field>
                                     </v-col>
                                 </v-row>
-                                <v-btn color="error" variant="outlined" block @click="removeItem(index)" :disabled="form.items.length === 1">
-                                    <v-icon left>mdi-delete</v-icon> Remove
-                                </v-btn>
                             </v-card-text>
                         </v-card>
                     </div>
 
-                    <v-btn color="secondary" @click="addItem" class="mt-2">
-                        <v-icon left>mdi-plus</v-icon>
+                    <v-btn color="secondary" variant="tonal" @click="addItem" class="mt-2">
+                        <v-icon start>mdi-plus</v-icon>
                         Add Item
                     </v-btn>
 
                     <v-divider class="my-4"></v-divider>
 
-                    <v-row>
-                        <v-col cols="12" lg="6">
-                            <v-textarea v-model="form.note" label="Note" rows="2"></v-textarea>
+                    <!-- Summary Section -->
+                    <v-row dense>
+                        <v-col cols="12" md="6">
+                            <v-textarea
+                                v-model="form.note"
+                                label="Note"
+                                rows="2"
+                                density="comfortable"
+                            ></v-textarea>
                         </v-col>
-                        <v-col cols="12" lg="6">
-                            <v-row>
+                        <v-col cols="12" md="6">
+                            <v-row dense>
                                 <v-col cols="6">
-                                    <v-text-field :model-value="formatNumber(subtotalTP)" label="Subtotal (TP)" readonly class="text-primary"></v-text-field>
+                                    <v-text-field
+                                        :model-value="formatNumber(subtotalTP)"
+                                        label="Subtotal (TP)"
+                                        readonly
+                                        class="text-primary"
+                                        density="comfortable"
+                                        bg-color="blue-lighten-5"
+                                    ></v-text-field>
                                 </v-col>
                                 <v-col cols="6">
-                                    <v-text-field :model-value="formatNumber(subtotalMRP)" label="Subtotal (MRP)" readonly class="text-success"></v-text-field>
+                                    <v-text-field
+                                        :model-value="formatNumber(subtotalMRP)"
+                                        label="Subtotal (MRP)"
+                                        readonly
+                                        class="text-success"
+                                        density="comfortable"
+                                        bg-color="green-lighten-5"
+                                    ></v-text-field>
                                 </v-col>
                             </v-row>
-                            <v-text-field v-model.number="form.discount" label="Discount" type="number"></v-text-field>
-                            <v-row>
+                            <v-text-field
+                                v-model.number="form.discount"
+                                label="Discount"
+                                type="number"
+                                density="comfortable"
+                            ></v-text-field>
+                            <v-row dense>
                                 <v-col cols="6">
-                                    <v-text-field :model-value="formatNumber(totalTP)" label="Total (TP)" readonly class="text-h6 text-primary"></v-text-field>
+                                    <v-text-field
+                                        :model-value="formatNumber(totalTP)"
+                                        label="Total (TP)"
+                                        readonly
+                                        class="text-primary font-weight-bold"
+                                        density="comfortable"
+                                        bg-color="blue-lighten-4"
+                                    ></v-text-field>
                                 </v-col>
                                 <v-col cols="6">
-                                    <v-text-field :model-value="formatNumber(totalMRP)" label="Total (MRP)" readonly class="text-h6 text-success"></v-text-field>
+                                    <v-text-field
+                                        :model-value="formatNumber(totalMRP)"
+                                        label="Total (MRP)"
+                                        readonly
+                                        class="text-success font-weight-bold"
+                                        density="comfortable"
+                                        bg-color="green-lighten-4"
+                                    ></v-text-field>
                                 </v-col>
                             </v-row>
-                            <v-text-field v-model.number="form.paid" label="Paid Amount" type="number"></v-text-field>
-                            <v-text-field :model-value="formatNumber(totalTP - form.paid)" label="Due" readonly :class="{ 'text-error': totalTP - form.paid > 0 }"></v-text-field>
+                            <v-text-field
+                                v-model.number="form.paid"
+                                label="Paid Amount"
+                                type="number"
+                                density="comfortable"
+                            ></v-text-field>
+                            <v-text-field
+                                :model-value="formatNumber(totalTP - form.paid)"
+                                label="Due"
+                                readonly
+                                :class="{ 'text-error font-weight-bold': totalTP - form.paid > 0 }"
+                                density="comfortable"
+                                :bg-color="totalTP - form.paid > 0 ? 'red-lighten-5' : ''"
+                            ></v-text-field>
                         </v-col>
                     </v-row>
 
                     <v-btn color="primary" type="submit" :loading="saving" size="large" class="mt-4">
+                        <v-icon start>mdi-content-save</v-icon>
                         Save Purchase
                     </v-btn>
                 </v-form>
@@ -319,28 +453,21 @@ const removeItem = (index) => form.items.splice(index, 1)
 const updatePrice = (index) => {
     const product = products.value.find(p => p.id === form.items[index].product_id)
     if (product) {
-        // Set package price from product buying price initially
         form.items[index].package_price = product.buying_price
-        // Set unit MRP from product selling price
         form.items[index].unit_mrp = product.selling_price
         calculateFromPackage(index)
     }
 }
 
-// Calculate quantity and unit price from package inputs
 const calculateFromPackage = (index) => {
     const item = form.items[index]
-    // Total Quantity = Package Qty × Unit Per Package
     item.quantity = (item.package_qty || 1) * (item.unit_per_package || 1)
-    // Unit Price (TP) = Package Price / Unit Per Package
     if (item.unit_per_package > 0) {
         item.unit_price = (item.package_price || 0) / item.unit_per_package
     }
-    // Total MRP = Quantity × Unit MRP
     item.total_mrp = item.quantity * (item.unit_mrp || 0)
 }
 
-// Calculate MRP total when unit MRP changes
 const calculateMrpTotal = (index) => {
     const item = form.items[index]
     item.total_mrp = item.quantity * (item.unit_mrp || 0)
@@ -365,7 +492,6 @@ const fetchData = async () => {
         suppliers.value = suppliersRes.data
         products.value = productsRes.data
 
-        // Set project_id from query parameter if provided
         if (route.query.project_id) {
             form.project_id = parseInt(route.query.project_id)
         }
@@ -395,3 +521,11 @@ const savePurchase = async () => {
 
 onMounted(() => fetchData())
 </script>
+
+<style scoped>
+.items-table th {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    white-space: nowrap;
+}
+</style>

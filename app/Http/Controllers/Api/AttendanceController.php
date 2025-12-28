@@ -142,4 +142,44 @@ class AttendanceController extends Controller
             'report' => $employees,
         ]);
     }
+
+    // Get daily attendance data for charts (for a specific month)
+    public function dailyChartData(Request $request)
+    {
+        $month = $request->month ?? now()->month;
+        $year = $request->year ?? now()->year;
+
+        // Get all dates with attendance records for the month
+        $attendances = Attendance::whereMonth('date', $month)
+            ->whereYear('date', $year)
+            ->whereHas('employee', function ($q) {
+                $q->where('is_active', true);
+            })
+            ->get()
+            ->groupBy(function ($attendance) {
+                return $attendance->date->format('Y-m-d');
+            });
+
+        $dailyData = [];
+        foreach ($attendances as $date => $records) {
+            $dailyData[] = [
+                'date' => $date,
+                'day' => (int) date('d', strtotime($date)),
+                'total' => $records->count(),
+                'present' => $records->where('status', 'present')->count(),
+                'absent' => $records->where('status', 'absent')->count(),
+            ];
+        }
+
+        // Sort by date
+        usort($dailyData, function ($a, $b) {
+            return strtotime($a['date']) - strtotime($b['date']);
+        });
+
+        return response()->json([
+            'month' => $month,
+            'year' => $year,
+            'daily_data' => $dailyData,
+        ]);
+    }
 }
