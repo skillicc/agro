@@ -122,6 +122,9 @@
                             </div>
                         </div>
                     </template>
+                    <template v-slot:item.total_advance_paid="{ item }">
+                        <span class="text-warning font-weight-bold">৳{{ formatNumber(item.total_advance_paid) }}</span>
+                    </template>
                     <template v-slot:item.total_paid="{ item }">
                         <span class="text-success font-weight-bold">৳{{ formatNumber(item.total_paid) }}</span>
                     </template>
@@ -614,6 +617,7 @@ const headers = [
     { title: 'Project', key: 'project.name' },
     { title: 'Position', key: 'position' },
     { title: 'Salary', key: 'salary_display' },
+    { title: 'Advance', key: 'total_advance_paid' },
     { title: 'Total Paid', key: 'total_paid' },
     { title: 'This Month Due', key: 'current_month_due' },
     { title: 'Status', key: 'is_active' },
