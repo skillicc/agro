@@ -60,15 +60,18 @@ class ReportController extends Controller
         $monthlyProfit = $monthlySales - $monthlyPurchases - $monthlyExpenses - $monthlySalaries;
 
         // Get employee count
-        $totalEmployees = \App\Models\Employee::whereIn('project_id', $projectIds)->count();
-        $activeEmployees = \App\Models\Employee::whereIn('project_id', $projectIds)->where('is_active', true)->count();
+        $employeeQuery = \App\Models\Employee::where(function ($q) use ($projectIds) {
+            $q->whereIn('project_id', $projectIds)->orWhereNull('project_id');
+        });
+        $totalEmployees = (clone $employeeQuery)->count();
+        $activeEmployees = (clone $employeeQuery)->where('is_active', true)->count();
 
         // Get stock value
         $totalStockValue = Product::sum(DB::raw('stock_quantity * COALESCE(buying_price, 0)'));
 
         // Get investment/loan summary
-        $totalInvestment = \App\Models\InvestLoanLiability::whereIn('type', ['partner', 'shareholder', 'investment_day_term'])->sum('amount');
-        $totalLoan = \App\Models\InvestLoanLiability::where('type', 'loan')->sum('amount');
+        $totalInvestment = \App\Models\InvestLoanLiability::whereIn('type', ['investor', 'partner', 'shareholder', 'investment_day_term'])->where('status', 'active')->sum('amount');
+        $totalLoan = \App\Models\InvestLoanLiability::where('type', 'loan')->where('status', 'active')->sum('amount');
 
         // Get top selling products this month
         $topProducts = DB::table('sale_items')
