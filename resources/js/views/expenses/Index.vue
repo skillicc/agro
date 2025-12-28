@@ -84,7 +84,27 @@
                             required
                             @update:model-value="loadCategories"
                         ></v-select>
-                        <v-select v-model="form.expense_category_id" :items="categories" item-title="name" item-value="id" label="Category" required></v-select>
+                        <div class="d-flex ga-2 align-center">
+                            <v-select
+                                v-model="form.expense_category_id"
+                                :items="categories"
+                                item-title="name"
+                                item-value="id"
+                                label="Category"
+                                required
+                                class="flex-grow-1"
+                            ></v-select>
+                            <v-btn
+                                icon
+                                size="small"
+                                color="primary"
+                                variant="tonal"
+                                @click="openCategoryDialog"
+                                title="Add New Category"
+                            >
+                                <v-icon>mdi-plus</v-icon>
+                            </v-btn>
+                        </div>
                         <v-text-field v-model="form.bill_no" label="Bill No."></v-text-field>
                         <v-text-field v-model.number="form.amount" label="Amount" type="number" required></v-text-field>
                         <v-text-field v-model="form.date" label="Date" type="date" required></v-text-field>
@@ -111,6 +131,27 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <!-- Add Category Dialog -->
+        <v-dialog v-model="categoryDialog" max-width="400">
+            <v-card>
+                <v-card-title>Add New Category</v-card-title>
+                <v-card-text>
+                    <v-text-field
+                        v-model="newCategoryName"
+                        label="Category Name"
+                        required
+                        autofocus
+                        @keyup.enter="saveCategory"
+                    ></v-text-field>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="categoryDialog = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="saveCategory" :loading="savingCategory">Save</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </div>
 </template>
 
@@ -129,6 +170,9 @@ const editMode = ref(false)
 const selectedExpense = ref(null)
 const saving = ref(false)
 const deleting = ref(false)
+const categoryDialog = ref(false)
+const newCategoryName = ref('')
+const savingCategory = ref(false)
 
 const filters = reactive({ project_id: null, warehouse_id: null, start_date: '', end_date: '' })
 const form = reactive({ expense_type: 'project', project_id: null, warehouse_id: null, expense_category_id: null, bill_no: '', amount: 0, date: new Date().toISOString().split('T')[0], description: '' })
@@ -249,6 +293,26 @@ const deleteExpense = async () => {
         console.error('Error:', error)
     }
     deleting.value = false
+}
+
+const openCategoryDialog = () => {
+    newCategoryName.value = ''
+    categoryDialog.value = true
+}
+
+const saveCategory = async () => {
+    if (!newCategoryName.value.trim()) return
+
+    savingCategory.value = true
+    try {
+        const response = await api.post('/expense-categories', { name: newCategoryName.value.trim() })
+        categoryDialog.value = false
+        await loadCategories()
+        form.expense_category_id = response.data.id
+    } catch (error) {
+        console.error('Error:', error)
+    }
+    savingCategory.value = false
 }
 
 onMounted(() => {
