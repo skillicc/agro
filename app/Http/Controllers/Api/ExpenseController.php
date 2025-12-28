@@ -12,10 +12,14 @@ class ExpenseController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Expense::with(['project', 'category', 'creator']);
+        $query = Expense::with(['project', 'warehouse', 'category', 'creator']);
 
         if ($request->project_id) {
             $query->where('project_id', $request->project_id);
+        }
+
+        if ($request->warehouse_id) {
+            $query->where('warehouse_id', $request->warehouse_id);
         }
 
         if ($request->category_id) {
@@ -33,20 +37,31 @@ class ExpenseController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'project_id' => 'required|exists:projects,id',
+        $rules = [
             'expense_category_id' => 'required|exists:expense_categories,id',
             'amount' => 'required|numeric|min:0',
             'date' => 'required|date',
             'description' => 'nullable|string',
-        ]);
+            'bill_no' => 'nullable|string',
+        ];
+
+        // Either project_id or warehouse_id is required
+        if ($request->warehouse_id) {
+            $rules['warehouse_id'] = 'required|exists:warehouses,id';
+            $rules['project_id'] = 'nullable|exists:projects,id';
+        } else {
+            $rules['project_id'] = 'required|exists:projects,id';
+            $rules['warehouse_id'] = 'nullable|exists:warehouses,id';
+        }
+
+        $request->validate($rules);
 
         $expense = Expense::create([
             ...$request->all(),
             'created_by' => $request->user()->id,
         ]);
 
-        return response()->json($expense->load(['project', 'category', 'creator']), 201);
+        return response()->json($expense->load(['project', 'warehouse', 'category', 'creator']), 201);
     }
 
     public function show(Expense $expense)
@@ -56,17 +71,27 @@ class ExpenseController extends Controller
 
     public function update(Request $request, Expense $expense)
     {
-        $request->validate([
-            'project_id' => 'required|exists:projects,id',
+        $rules = [
             'expense_category_id' => 'required|exists:expense_categories,id',
             'amount' => 'required|numeric|min:0',
             'date' => 'required|date',
             'description' => 'nullable|string',
-        ]);
+            'bill_no' => 'nullable|string',
+        ];
+
+        // Either project_id or warehouse_id is required
+        if ($request->warehouse_id || $expense->warehouse_id) {
+            $rules['warehouse_id'] = 'nullable|exists:warehouses,id';
+            $rules['project_id'] = 'nullable|exists:projects,id';
+        } else {
+            $rules['project_id'] = 'required|exists:projects,id';
+        }
+
+        $request->validate($rules);
 
         $expense->update($request->all());
 
-        return response()->json($expense->load(['project', 'category', 'creator']));
+        return response()->json($expense->load(['project', 'warehouse', 'category', 'creator']));
     }
 
     public function destroy(Expense $expense)
@@ -90,10 +115,15 @@ class ExpenseController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'project_type' => 'required|in:field,nursery,shop,all',
+            'project_type' => 'nullable|in:field,nursery,shop,warehouse,all',
         ]);
 
-        $category = ExpenseCategory::create($request->all());
+        $data = $request->all();
+        if (!isset($data['project_type'])) {
+            $data['project_type'] = 'all';
+        }
+
+        $category = ExpenseCategory::create($data);
 
         return response()->json($category, 201);
     }

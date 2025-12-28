@@ -31,14 +31,27 @@
                 <v-card-title>{{ editMode ? 'Edit Expense' : 'Add Expense' }}</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="saveExpense">
-                        <v-select
-                            v-model="form.expense_category_id"
-                            :items="categories"
-                            item-title="name"
-                            item-value="id"
-                            label="Category"
-                            required
-                        ></v-select>
+                        <div class="d-flex ga-2 align-center">
+                            <v-select
+                                v-model="form.expense_category_id"
+                                :items="categories"
+                                item-title="name"
+                                item-value="id"
+                                label="Category"
+                                required
+                                class="flex-grow-1"
+                            ></v-select>
+                            <v-btn
+                                icon
+                                size="small"
+                                color="primary"
+                                variant="tonal"
+                                @click="openCategoryDialog"
+                                title="Add New Category"
+                            >
+                                <v-icon>mdi-plus</v-icon>
+                            </v-btn>
+                        </div>
                         <v-text-field
                             v-model="form.bill_no"
                             label="Bill No."
@@ -83,6 +96,27 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <!-- Add Category Dialog -->
+        <v-dialog v-model="categoryDialog" max-width="400">
+            <v-card>
+                <v-card-title>Add New Category</v-card-title>
+                <v-card-text>
+                    <v-text-field
+                        v-model="newCategoryName"
+                        label="Category Name"
+                        required
+                        autofocus
+                        @keyup.enter="saveCategory"
+                    ></v-text-field>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="categoryDialog = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="saveCategory" :loading="savingCategory">Save</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </div>
 </template>
 
@@ -91,7 +125,8 @@ import { ref, reactive, onMounted } from 'vue'
 import api from '../services/api'
 
 const props = defineProps({
-    projectId: { type: [Number, String], required: true }
+    projectId: { type: [Number, String], default: null },
+    warehouseId: { type: [Number, String], default: null }
 })
 
 const expenses = ref([])
@@ -103,6 +138,9 @@ const editMode = ref(false)
 const selectedExpense = ref(null)
 const saving = ref(false)
 const deleting = ref(false)
+const categoryDialog = ref(false)
+const newCategoryName = ref('')
+const savingCategory = ref(false)
 
 const headers = [
     { title: 'Date', key: 'date' },
@@ -124,7 +162,10 @@ const form = reactive({
 const fetchExpenses = async () => {
     loading.value = true
     try {
-        const response = await api.get(`/expenses?project_id=${props.projectId}`)
+        const params = props.warehouseId
+            ? { warehouse_id: props.warehouseId }
+            : { project_id: props.projectId }
+        const response = await api.get('/expenses', { params })
         expenses.value = response.data
     } catch (error) {
         console.error('Error:', error)
@@ -167,7 +208,12 @@ const openDialog = (expense = null) => {
 const saveExpense = async () => {
     saving.value = true
     try {
-        const data = { ...form, project_id: props.projectId }
+        const data = { ...form }
+        if (props.warehouseId) {
+            data.warehouse_id = props.warehouseId
+        } else {
+            data.project_id = props.projectId
+        }
         if (editMode.value) {
             await api.put(`/expenses/${selectedExpense.value.id}`, data)
         } else {
@@ -196,6 +242,27 @@ const deleteExpense = async () => {
         console.error('Error:', error)
     }
     deleting.value = false
+}
+
+const openCategoryDialog = () => {
+    newCategoryName.value = ''
+    categoryDialog.value = true
+}
+
+const saveCategory = async () => {
+    if (!newCategoryName.value.trim()) return
+
+    savingCategory.value = true
+    try {
+        const response = await api.post('/expense-categories', { name: newCategoryName.value.trim() })
+        categoryDialog.value = false
+        await fetchCategories()
+        // Auto-select the newly created category
+        form.expense_category_id = response.data.id
+    } catch (error) {
+        console.error('Error:', error)
+    }
+    savingCategory.value = false
 }
 
 onMounted(() => {

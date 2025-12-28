@@ -16,6 +16,9 @@
                         <v-select v-model="filters.project_id" :items="projects" item-title="name" item-value="id" label="Project" clearable @update:model-value="fetchExpenses"></v-select>
                     </v-col>
                     <v-col cols="12" sm="6" lg="3">
+                        <v-select v-model="filters.warehouse_id" :items="warehouses" item-title="name" item-value="id" label="Warehouse" clearable @update:model-value="fetchExpenses"></v-select>
+                    </v-col>
+                    <v-col cols="12" sm="6" lg="3">
                         <v-text-field v-model="filters.start_date" label="Start Date" type="date" @update:model-value="fetchExpenses"></v-text-field>
                     </v-col>
                     <v-col cols="12" sm="6" lg="3">
@@ -30,6 +33,11 @@
                 <v-data-table :headers="headers" :items="expenses" :loading="loading">
                     <template v-slot:item.sl="{ index }">
                         {{ index + 1 }}
+                    </template>
+                    <template v-slot:item.source="{ item }">
+                        <span v-if="item.project">{{ item.project.name }}</span>
+                        <span v-else-if="item.warehouse" class="text-warning">{{ item.warehouse.name }}</span>
+                        <span v-else>-</span>
                     </template>
                     <template v-slot:item.amount="{ item }">
                         ৳{{ formatNumber(item.amount) }}
@@ -52,7 +60,30 @@
                 <v-card-title>{{ editMode ? 'Edit Expense' : 'Add Expense' }}</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="saveExpense">
-                        <v-select v-model="form.project_id" :items="projects" item-title="name" item-value="id" label="Project" required @update:model-value="loadCategories"></v-select>
+                        <v-radio-group v-model="form.expense_type" inline class="mb-2">
+                            <v-radio label="Project" value="project"></v-radio>
+                            <v-radio label="Warehouse" value="warehouse"></v-radio>
+                        </v-radio-group>
+                        <v-select
+                            v-if="form.expense_type === 'project'"
+                            v-model="form.project_id"
+                            :items="projects"
+                            item-title="name"
+                            item-value="id"
+                            label="Project"
+                            required
+                            @update:model-value="loadCategories"
+                        ></v-select>
+                        <v-select
+                            v-else
+                            v-model="form.warehouse_id"
+                            :items="warehouses"
+                            item-title="name"
+                            item-value="id"
+                            label="Warehouse"
+                            required
+                            @update:model-value="loadCategories"
+                        ></v-select>
                         <v-select v-model="form.expense_category_id" :items="categories" item-title="name" item-value="id" label="Category" required></v-select>
                         <v-text-field v-model="form.bill_no" label="Bill No."></v-text-field>
                         <v-text-field v-model.number="form.amount" label="Amount" type="number" required></v-text-field>
@@ -89,6 +120,7 @@ import api from '../../services/api'
 
 const expenses = ref([])
 const projects = ref([])
+const warehouses = ref([])
 const categories = ref([])
 const loading = ref(false)
 const dialog = ref(false)
@@ -98,14 +130,14 @@ const selectedExpense = ref(null)
 const saving = ref(false)
 const deleting = ref(false)
 
-const filters = reactive({ project_id: null, start_date: '', end_date: '' })
-const form = reactive({ project_id: null, expense_category_id: null, bill_no: '', amount: 0, date: new Date().toISOString().split('T')[0], description: '' })
+const filters = reactive({ project_id: null, warehouse_id: null, start_date: '', end_date: '' })
+const form = reactive({ expense_type: 'project', project_id: null, warehouse_id: null, expense_category_id: null, bill_no: '', amount: 0, date: new Date().toISOString().split('T')[0], description: '' })
 
 const headers = [
     { title: 'SL', key: 'sl', width: '60px' },
     { title: 'Date', key: 'date' },
     { title: 'Bill No.', key: 'bill_no' },
-    { title: 'Project', key: 'project.name' },
+    { title: 'Source', key: 'source' },
     { title: 'Category', key: 'category.name' },
     { title: 'Amount', key: 'amount' },
     { title: 'Created By', key: 'creator.name' },
@@ -119,6 +151,7 @@ const fetchExpenses = async () => {
     try {
         const params = new URLSearchParams()
         if (filters.project_id) params.append('project_id', filters.project_id)
+        if (filters.warehouse_id) params.append('warehouse_id', filters.warehouse_id)
         if (filters.start_date) params.append('start_date', filters.start_date)
         if (filters.end_date) params.append('end_date', filters.end_date)
         const response = await api.get(`/expenses?${params}`)
@@ -127,6 +160,15 @@ const fetchExpenses = async () => {
         console.error('Error:', error)
     }
     loading.value = false
+}
+
+const fetchWarehouses = async () => {
+    try {
+        const response = await api.get('/warehouses')
+        warehouses.value = response.data
+    } catch (error) {
+        console.error('Error:', error)
+    }
 }
 
 const fetchProjects = async () => {
@@ -153,10 +195,11 @@ const openDialog = (expense = null) => {
     editMode.value = !!expense
     selectedExpense.value = expense
     if (expense) {
-        Object.assign(form, expense)
+        const expenseType = expense.warehouse_id ? 'warehouse' : 'project'
+        Object.assign(form, { ...expense, expense_type: expenseType })
         loadCategories()
     } else {
-        Object.assign(form, { project_id: null, expense_category_id: null, bill_no: '', amount: 0, date: new Date().toISOString().split('T')[0], description: '' })
+        Object.assign(form, { expense_type: 'project', project_id: null, warehouse_id: null, expense_category_id: null, bill_no: '', amount: 0, date: new Date().toISOString().split('T')[0], description: '' })
     }
     dialog.value = true
 }
@@ -164,10 +207,19 @@ const openDialog = (expense = null) => {
 const saveExpense = async () => {
     saving.value = true
     try {
-        if (editMode.value) {
-            await api.put(`/expenses/${selectedExpense.value.id}`, form)
+        const data = { ...form }
+        // Clear the unused field based on expense type
+        if (form.expense_type === 'project') {
+            data.warehouse_id = null
         } else {
-            await api.post('/expenses', form)
+            data.project_id = null
+        }
+        delete data.expense_type
+
+        if (editMode.value) {
+            await api.put(`/expenses/${selectedExpense.value.id}`, data)
+        } else {
+            await api.post('/expenses', data)
         }
         dialog.value = false
         fetchExpenses()
@@ -196,6 +248,7 @@ const deleteExpense = async () => {
 
 onMounted(() => {
     fetchProjects()
+    fetchWarehouses()
     fetchExpenses()
 })
 </script>

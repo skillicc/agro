@@ -94,6 +94,10 @@
                             <v-icon left size="small">mdi-package-variant</v-icon>
                             Stock
                         </v-btn>
+                        <v-btn size="small" variant="text" color="warning" @click="viewExpenses(warehouse)">
+                            <v-icon left size="small">mdi-cash</v-icon>
+                            Expense
+                        </v-btn>
                         <v-spacer></v-spacer>
                         <v-btn icon size="x-small" variant="text" @click="openDialog(warehouse)">
                             <v-icon>mdi-pencil</v-icon>
@@ -400,12 +404,32 @@
             </v-card>
         </v-dialog>
 
+        <!-- Expenses Dialog -->
+        <v-dialog v-model="expenseDialog" :max-width="$vuetify.display.xs ? '100%' : 900" :fullscreen="$vuetify.display.xs">
+            <v-card>
+                <v-card-title class="d-flex justify-space-between align-center">
+                    <span>{{ selectedWarehouse?.name }} - Expenses</span>
+                    <v-btn v-if="$vuetify.display.xs" icon variant="text" @click="expenseDialog = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-card-title>
+                <v-card-text class="pa-2 pa-sm-4">
+                    <ExpensesList v-if="selectedWarehouse" :warehouse-id="selectedWarehouse.id" />
+                </v-card-text>
+                <v-card-actions class="pa-4">
+                    <v-spacer></v-spacer>
+                    <v-btn @click="expenseDialog = false">Close</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
     </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import api from '../../services/api'
+import ExpensesList from '../../components/ExpensesList.vue'
 
 const warehouses = ref([])
 const projects = ref([])
@@ -420,6 +444,7 @@ const transferDialog = ref(false)
 const projectTransferDialog = ref(false)
 const shopTransferDialog = ref(false)
 const deleteDialog = ref(false)
+const expenseDialog = ref(false)
 const editMode = ref(false)
 const editStockMode = ref(false)
 const selectedWarehouse = ref(null)
@@ -703,6 +728,11 @@ const deleteWarehouse = async () => {
         console.error('Error:', error)
     }
     deleting.value = false
+}
+
+const viewExpenses = (warehouse) => {
+    selectedWarehouse.value = warehouse
+    expenseDialog.value = true
 }
 
 onMounted(() => {
