@@ -3,6 +3,10 @@
         <div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center mb-4 ga-2">
             <h1 class="text-h5 text-sm-h4">Attendance</h1>
             <div class="d-flex ga-2">
+                <v-btn color="info" :to="{ name: 'attendance-details' }" :size="$vuetify.display.xs ? 'small' : 'default'">
+                    <v-icon left>mdi-chart-bar</v-icon>
+                    <span class="d-none d-sm-inline ms-1">Details</span>
+                </v-btn>
                 <v-btn color="success" @click="markAllPresent" :loading="marking" :size="$vuetify.display.xs ? 'small' : 'default'">
                     <v-icon left>mdi-check-all</v-icon>
                     <span class="d-none d-sm-inline">All Present</span>
