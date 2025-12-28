@@ -18,7 +18,7 @@ class InvestLoanLiabilityController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|in:partner,shareholder,investment_day_term,loan,account_payable,account_receivable',
+            'type' => 'required|in:investor,partner,shareholder,investment_day_term,loan,account_payable,account_receivable',
             'amount' => 'required|numeric|min:0',
             'date' => 'required|date',
             'due_date' => 'nullable|date',
@@ -40,7 +40,7 @@ class InvestLoanLiabilityController extends Controller
     {
         $request->validate([
             'name' => 'nullable|string|max:255',
-            'type' => 'nullable|in:partner,shareholder,investment_day_term,loan,account_payable,account_receivable',
+            'type' => 'nullable|in:investor,partner,shareholder,investment_day_term,loan,account_payable,account_receivable',
             'amount' => 'nullable|numeric|min:0',
             'date' => 'nullable|date',
             'due_date' => 'nullable|date',
@@ -62,6 +62,7 @@ class InvestLoanLiabilityController extends Controller
     public function summary()
     {
         $summary = [
+            'investor' => InvestLoanLiability::where('type', 'investor')->where('status', 'active')->sum('amount'),
             'partner' => InvestLoanLiability::where('type', 'partner')->where('status', 'active')->sum('amount'),
             'shareholder' => InvestLoanLiability::where('type', 'shareholder')->where('status', 'active')->sum('amount'),
             'investment_day_term' => InvestLoanLiability::where('type', 'investment_day_term')->where('status', 'active')->sum('amount'),

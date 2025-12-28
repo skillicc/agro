@@ -37,8 +37,8 @@ class ReportController extends Controller
 
         $today = today();
         $thisMonth = $today->format('Y-m');
-        $startOfMonth = $today->startOfMonth()->format('Y-m-d');
-        $endOfMonth = $today->endOfMonth()->format('Y-m-d');
+        $startOfMonth = $today->copy()->startOfMonth()->format('Y-m-d');
+        $endOfMonth = $today->copy()->endOfMonth()->format('Y-m-d');
 
         // Calculate monthly profit
         $monthlySales = Sale::whereIn('project_id', $projectIds)

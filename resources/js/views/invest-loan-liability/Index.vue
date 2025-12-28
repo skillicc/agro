@@ -28,6 +28,10 @@
                     <v-icon start>mdi-format-list-bulleted</v-icon>
                     All ({{ items.length }})
                 </v-tab>
+                <v-tab value="investor">
+                    <v-icon start>mdi-cash-multiple</v-icon>
+                    Investor ({{ getTypeCount('investor') }})
+                </v-tab>
                 <v-tab value="partner">
                     <v-icon start>mdi-handshake</v-icon>
                     Partner ({{ getTypeCount('partner') }})
@@ -169,6 +173,7 @@ const deleting = ref(false)
 const activeTab = ref('all')
 
 const typeOptions = [
+    { title: 'Investor', value: 'investor' },
     { title: 'Partner', value: 'partner' },
     { title: 'Shareholder', value: 'shareholder' },
     { title: 'Investment Day Term', value: 'investment_day_term' },
@@ -184,6 +189,7 @@ const statusOptions = [
 ]
 
 const summaryCards = [
+    { type: 'investor', label: 'Investor', color: 'deep-purple', icon: 'mdi-cash-multiple' },
     { type: 'partner', label: 'Partner', color: 'primary', icon: 'mdi-handshake' },
     { type: 'shareholder', label: 'Shareholder', color: 'info', icon: 'mdi-account-group' },
     { type: 'investment_day_term', label: 'Day Term', color: 'success', icon: 'mdi-calendar-clock' },
@@ -204,7 +210,7 @@ const headers = [
 
 const form = reactive({
     name: '',
-    type: 'partner',
+    type: 'investor',
     amount: 0,
     date: new Date().toISOString().split('T')[0],
     due_date: '',
@@ -235,6 +241,7 @@ const getTypeLabel = (type) => {
 
 const getTypeColor = (type) => {
     const colors = {
+        investor: 'deep-purple',
         partner: 'primary',
         shareholder: 'info',
         investment_day_term: 'success',
@@ -289,7 +296,7 @@ const openDialog = (item = null) => {
         })
     } else {
         // Pre-select the type based on active tab
-        const defaultType = activeTab.value !== 'all' ? activeTab.value : 'partner'
+        const defaultType = activeTab.value !== 'all' ? activeTab.value : 'investor'
         Object.assign(form, {
             name: '',
             type: defaultType,
