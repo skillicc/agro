@@ -11,13 +11,13 @@
             <v-card-text>
                 <v-form @submit.prevent="saveSale">
                     <v-row>
-                        <v-col cols="12" md="3">
+                        <v-col cols="12" sm="6" lg="3">
                             <v-select v-model="form.project_id" :items="projects" item-title="name" item-value="id" label="Project *" clearable hint="Project or Warehouse required" persistent-hint></v-select>
                         </v-col>
-                        <v-col cols="12" md="3">
+                        <v-col cols="12" sm="6" lg="3">
                             <v-select v-model="form.warehouse_id" :items="warehouses" item-title="name" item-value="id" label="Warehouse *" clearable hint="Project or Warehouse required" persistent-hint></v-select>
                         </v-col>
-                        <v-col cols="12" md="2">
+                        <v-col cols="6" sm="4" lg="2">
                             <v-select v-model="form.customer_id" :items="customers" item-title="name" item-value="id" label="Customer" clearable>
                                 <template v-slot:append>
                                     <v-btn icon size="small" color="primary" @click="showCustomerDialog = true">
@@ -26,10 +26,10 @@
                                 </template>
                             </v-select>
                         </v-col>
-                        <v-col cols="12" md="2">
+                        <v-col cols="6" sm="4" lg="2">
                             <v-text-field v-model="form.challan_no" label="Challan No."></v-text-field>
                         </v-col>
-                        <v-col cols="12" md="2">
+                        <v-col cols="6" sm="4" lg="2">
                             <v-text-field v-model="form.date" label="Date" type="date" required></v-text-field>
                         </v-col>
                     </v-row>
@@ -38,7 +38,7 @@
 
                     <h3 class="mb-4">Items</h3>
                     <v-row v-for="(item, index) in form.items" :key="index" align="center">
-                        <v-col cols="12" md="4">
+                        <v-col cols="12" sm="6" lg="4">
                             <v-autocomplete v-model="item.product_id" :items="products" item-title="name" item-value="id" label="Product" required @update:model-value="updatePrice(index)">
                                 <template v-slot:item="{ props, item }">
                                     <v-list-item v-bind="props">
@@ -49,16 +49,16 @@
                                 </template>
                             </v-autocomplete>
                         </v-col>
-                        <v-col cols="12" md="2">
+                        <v-col cols="6" sm="4" lg="2">
                             <v-text-field v-model.number="item.quantity" :label="`Qty (${getProductUnit(item.product_id).toUpperCase()})`" type="number" min="1" step="0.01" required></v-text-field>
                         </v-col>
-                        <v-col cols="12" md="2">
+                        <v-col cols="6" sm="4" lg="2">
                             <v-text-field v-model.number="item.unit_price" label="Unit Price" type="number" required></v-text-field>
                         </v-col>
-                        <v-col cols="12" md="2">
+                        <v-col cols="6" sm="4" lg="2">
                             <v-text-field :model-value="formatNumber(item.quantity * item.unit_price)" label="Total" readonly></v-text-field>
                         </v-col>
-                        <v-col cols="12" md="2">
+                        <v-col cols="6" sm="4" lg="2">
                             <v-btn icon color="error" @click="removeItem(index)" :disabled="form.items.length === 1">
                                 <v-icon>mdi-delete</v-icon>
                             </v-btn>
@@ -73,10 +73,10 @@
                     <v-divider class="my-4"></v-divider>
 
                     <v-row>
-                        <v-col cols="12" md="6">
+                        <v-col cols="12" lg="6">
                             <v-textarea v-model="form.note" label="Note" rows="2"></v-textarea>
                         </v-col>
-                        <v-col cols="12" md="6">
+                        <v-col cols="12" lg="6">
                             <v-text-field :model-value="formatNumber(subtotal)" label="Subtotal" readonly></v-text-field>
                             <v-text-field v-model.number="form.discount" label="Discount" type="number"></v-text-field>
                             <v-text-field :model-value="formatNumber(total)" label="Total" readonly class="text-h6"></v-text-field>

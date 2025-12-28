@@ -77,12 +77,12 @@
                     </v-table>
                     <v-divider class="my-4"></v-divider>
                     <v-row>
-                        <v-col cols="12" md="6">
+                        <v-col cols="12" lg="6">
                             <div class="d-flex justify-space-between"><span>Subtotal (TP):</span> <span class="text-primary">৳{{ formatNumber(selectedPurchase.subtotal) }}</span></div>
                             <div class="d-flex justify-space-between"><span>Subtotal (MRP):</span> <span class="text-success">৳{{ formatNumber(calculateTotalMRP(selectedPurchase.items)) }}</span></div>
                             <div class="d-flex justify-space-between"><span>Discount:</span> <span>৳{{ formatNumber(selectedPurchase.discount) }}</span></div>
                         </v-col>
-                        <v-col cols="12" md="6">
+                        <v-col cols="12" lg="6">
                             <div class="d-flex justify-space-between text-h6"><span>Total (TP):</span> <span class="text-primary">৳{{ formatNumber(selectedPurchase.total) }}</span></div>
                             <div class="d-flex justify-space-between text-h6"><span>Total (MRP):</span> <span class="text-success">৳{{ formatNumber(calculateTotalMRP(selectedPurchase.items)) }}</span></div>
                             <v-divider class="my-2"></v-divider>

@@ -10,7 +10,7 @@
 
         <!-- Summary Cards -->
         <v-row class="mb-4">
-            <v-col cols="12" md="4" lg="2" v-for="card in summaryCards" :key="card.type">
+            <v-col cols="6" sm="4" lg="2" v-for="card in summaryCards" :key="card.type">
                 <v-card :color="card.color" variant="tonal">
                     <v-card-text class="text-center">
                         <v-icon :icon="card.icon" size="32" class="mb-2"></v-icon>
@@ -97,10 +97,10 @@
                 <v-card-text>
                     <v-form @submit.prevent="save">
                         <v-row>
-                            <v-col cols="12" md="6">
+                            <v-col cols="12" lg="6">
                                 <v-text-field v-model="form.name" label="Name / Title" required></v-text-field>
                             </v-col>
-                            <v-col cols="12" md="6">
+                            <v-col cols="12" lg="6">
                                 <v-select
                                     v-model="form.type"
                                     :items="typeOptions"
@@ -108,16 +108,16 @@
                                     required
                                 ></v-select>
                             </v-col>
-                            <v-col cols="12" md="6">
+                            <v-col cols="12" lg="6">
                                 <v-text-field v-model.number="form.amount" label="Amount" type="number" prefix="৳" required></v-text-field>
                             </v-col>
-                            <v-col cols="12" md="6">
+                            <v-col cols="12" lg="6">
                                 <v-text-field v-model="form.date" label="Date" type="date" required></v-text-field>
                             </v-col>
-                            <v-col cols="12" md="6">
+                            <v-col cols="12" lg="6">
                                 <v-text-field v-model="form.due_date" label="Due Date (Optional)" type="date"></v-text-field>
                             </v-col>
-                            <v-col cols="12" md="6">
+                            <v-col cols="12" lg="6">
                                 <v-select
                                     v-model="form.status"
                                     :items="statusOptions"

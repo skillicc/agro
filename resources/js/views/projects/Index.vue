@@ -18,7 +18,7 @@
         </div>
 
         <v-row>
-            <v-col v-for="project in filteredProjects" :key="project.id" cols="12" md="4">
+            <v-col v-for="project in filteredProjects" :key="project.id" cols="12" sm="6" lg="4">
                 <v-card :to="{ name: 'project-show', params: { id: project.id } }" :class="{ 'opacity-60': !project.is_active }">
                     <v-card-title>
                         <v-icon class="mr-2" :color="getProjectColor(project.type)">

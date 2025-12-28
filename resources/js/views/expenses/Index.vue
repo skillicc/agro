@@ -12,13 +12,13 @@
         <v-card class="mb-4">
             <v-card-text>
                 <v-row>
-                    <v-col cols="12" md="3">
+                    <v-col cols="12" sm="6" lg="3">
                         <v-select v-model="filters.project_id" :items="projects" item-title="name" item-value="id" label="Project" clearable @update:model-value="fetchExpenses"></v-select>
                     </v-col>
-                    <v-col cols="12" md="3">
+                    <v-col cols="12" sm="6" lg="3">
                         <v-text-field v-model="filters.start_date" label="Start Date" type="date" @update:model-value="fetchExpenses"></v-text-field>
                     </v-col>
-                    <v-col cols="12" md="3">
+                    <v-col cols="12" sm="6" lg="3">
                         <v-text-field v-model="filters.end_date" label="End Date" type="date" @update:model-value="fetchExpenses"></v-text-field>
                     </v-col>
                 </v-row>

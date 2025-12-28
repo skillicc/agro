@@ -14,13 +14,13 @@
                     <!-- Monthly Report -->
                     <v-window-item value="monthly">
                         <v-row class="mb-4">
-                            <v-col cols="12" md="4">
+                            <v-col cols="12" sm="6" lg="4">
                                 <v-text-field v-model="monthlyFilters.month" label="Month (YYYY-MM)" placeholder="2025-01"></v-text-field>
                             </v-col>
-                            <v-col cols="12" md="4">
+                            <v-col cols="12" sm="6" lg="4">
                                 <v-select v-model="monthlyFilters.project_id" :items="projects" item-title="name" item-value="id" label="Project" clearable></v-select>
                             </v-col>
-                            <v-col cols="12" md="4">
+                            <v-col cols="12" sm="6" lg="4">
                                 <v-btn color="primary" @click="fetchMonthlyReport" :loading="loading" class="mt-2">
                                     Generate Report
                                 </v-btn>
@@ -28,7 +28,7 @@
                         </v-row>
 
                         <v-row v-if="monthlyReport">
-                            <v-col cols="12" md="3">
+                            <v-col cols="12" sm="6" lg="3">
                                 <v-card color="error" variant="tonal">
                                     <v-card-text class="text-center">
                                         <div class="text-h5">৳{{ formatNumber(monthlyReport.total_expenses) }}</div>
@@ -36,7 +36,7 @@
                                     </v-card-text>
                                 </v-card>
                             </v-col>
-                            <v-col cols="12" md="3">
+                            <v-col cols="12" sm="6" lg="3">
                                 <v-card color="info" variant="tonal">
                                     <v-card-text class="text-center">
                                         <div class="text-h5">৳{{ formatNumber(monthlyReport.total_purchases) }}</div>
@@ -44,7 +44,7 @@
                                     </v-card-text>
                                 </v-card>
                             </v-col>
-                            <v-col cols="12" md="3">
+                            <v-col cols="12" sm="6" lg="3">
                                 <v-card color="success" variant="tonal">
                                     <v-card-text class="text-center">
                                         <div class="text-h5">৳{{ formatNumber(monthlyReport.total_sales) }}</div>
@@ -52,7 +52,7 @@
                                     </v-card-text>
                                 </v-card>
                             </v-col>
-                            <v-col cols="12" md="3">
+                            <v-col cols="12" sm="6" lg="3">
                                 <v-card color="warning" variant="tonal">
                                     <v-card-text class="text-center">
                                         <div class="text-h5">৳{{ formatNumber(monthlyReport.total_salaries) }}</div>
@@ -81,16 +81,16 @@
                     <!-- Custom Report -->
                     <v-window-item value="custom">
                         <v-row class="mb-4">
-                            <v-col cols="12" md="3">
+                            <v-col cols="12" sm="6" lg="3">
                                 <v-text-field v-model="customFilters.start_date" label="Start Date" type="date"></v-text-field>
                             </v-col>
-                            <v-col cols="12" md="3">
+                            <v-col cols="12" sm="6" lg="3">
                                 <v-text-field v-model="customFilters.end_date" label="End Date" type="date"></v-text-field>
                             </v-col>
-                            <v-col cols="12" md="3">
+                            <v-col cols="12" sm="6" lg="3">
                                 <v-select v-model="customFilters.project_id" :items="projects" item-title="name" item-value="id" label="Project" clearable></v-select>
                             </v-col>
-                            <v-col cols="12" md="3">
+                            <v-col cols="12" sm="6" lg="3">
                                 <v-btn color="primary" @click="fetchCustomReport" :loading="loading" class="mt-2">
                                     Generate Report
                                 </v-btn>
@@ -98,7 +98,7 @@
                         </v-row>
 
                         <v-row v-if="customReport">
-                            <v-col cols="12" md="2">
+                            <v-col cols="6" sm="4" lg="2">
                                 <v-card color="error" variant="tonal">
                                     <v-card-text class="text-center">
                                         <div class="text-h6">৳{{ formatNumber(customReport.summary?.total_expenses) }}</div>
@@ -106,7 +106,7 @@
                                     </v-card-text>
                                 </v-card>
                             </v-col>
-                            <v-col cols="12" md="2">
+                            <v-col cols="6" sm="4" lg="2">
                                 <v-card color="info" variant="tonal">
                                     <v-card-text class="text-center">
                                         <div class="text-h6">৳{{ formatNumber(customReport.summary?.total_purchases) }}</div>
@@ -114,7 +114,7 @@
                                     </v-card-text>
                                 </v-card>
                             </v-col>
-                            <v-col cols="12" md="2">
+                            <v-col cols="6" sm="4" lg="2">
                                 <v-card color="success" variant="tonal">
                                     <v-card-text class="text-center">
                                         <div class="text-h6">৳{{ formatNumber(customReport.summary?.total_sales) }}</div>
@@ -122,7 +122,7 @@
                                     </v-card-text>
                                 </v-card>
                             </v-col>
-                            <v-col cols="12" md="2">
+                            <v-col cols="6" sm="4" lg="2">
                                 <v-card color="warning" variant="tonal">
                                     <v-card-text class="text-center">
                                         <div class="text-h6">৳{{ formatNumber(customReport.summary?.total_damages) }}</div>
@@ -130,7 +130,7 @@
                                     </v-card-text>
                                 </v-card>
                             </v-col>
-                            <v-col cols="12" md="4">
+                            <v-col cols="12" sm="6" lg="4">
                                 <v-card :color="customReport.summary?.gross_profit >= 0 ? 'success' : 'error'" variant="tonal">
                                     <v-card-text class="text-center">
                                         <div class="text-h6">৳{{ formatNumber(customReport.summary?.gross_profit) }}</div>
@@ -144,16 +144,16 @@
                     <!-- Profit & Loss Report -->
                     <v-window-item value="profit-loss">
                         <v-row class="mb-4">
-                            <v-col cols="12" md="3">
+                            <v-col cols="12" sm="6" lg="3">
                                 <v-text-field v-model="plFilters.start_date" label="Start Date" type="date"></v-text-field>
                             </v-col>
-                            <v-col cols="12" md="3">
+                            <v-col cols="12" sm="6" lg="3">
                                 <v-text-field v-model="plFilters.end_date" label="End Date" type="date"></v-text-field>
                             </v-col>
-                            <v-col cols="12" md="3">
+                            <v-col cols="12" sm="6" lg="3">
                                 <v-select v-model="plFilters.project_id" :items="projects" item-title="name" item-value="id" label="Project" clearable></v-select>
                             </v-col>
-                            <v-col cols="12" md="3">
+                            <v-col cols="12" sm="6" lg="3">
                                 <v-btn color="primary" @click="fetchProfitLoss" :loading="loading" class="mt-2">
                                     Generate P&L Report
                                 </v-btn>
@@ -259,7 +259,7 @@
 
                             <!-- Profit/Loss Summary -->
                             <v-row>
-                                <v-col cols="12" md="4">
+                                <v-col cols="12" sm="6" lg="4">
                                     <v-card color="success" variant="tonal">
                                         <v-card-text class="text-center">
                                             <div class="text-h4">৳{{ formatNumber(plReport.gross_profit) }}</div>
@@ -268,7 +268,7 @@
                                         </v-card-text>
                                     </v-card>
                                 </v-col>
-                                <v-col cols="12" md="4">
+                                <v-col cols="12" sm="6" lg="4">
                                     <v-card color="info" variant="tonal">
                                         <v-card-text class="text-center">
                                             <div class="text-h4">৳{{ formatNumber(plReport.operating_profit) }}</div>
@@ -277,7 +277,7 @@
                                         </v-card-text>
                                     </v-card>
                                 </v-col>
-                                <v-col cols="12" md="4">
+                                <v-col cols="12" sm="6" lg="4">
                                     <v-card :color="plReport.net_profit >= 0 ? 'success' : 'error'">
                                         <v-card-text class="text-center text-white">
                                             <div class="text-h4">৳{{ formatNumber(plReport.net_profit) }}</div>
@@ -293,7 +293,7 @@
                                 <v-card-title>Expense Breakdown by Category</v-card-title>
                                 <v-card-text>
                                     <v-row>
-                                        <v-col v-for="(expense, key) in plReport.expense_breakdown" :key="key" cols="12" md="4">
+                                        <v-col v-for="(expense, key) in plReport.expense_breakdown" :key="key" cols="12" sm="6" lg="4">
                                             <v-list-item>
                                                 <v-list-item-title>{{ expense.category }}</v-list-item-title>
                                                 <template v-slot:append>

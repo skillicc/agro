@@ -11,19 +11,19 @@
             <v-card-text>
                 <v-form @submit.prevent="savePurchase">
                     <v-row>
-                        <v-col cols="12" md="3">
+                        <v-col cols="12" sm="6" lg="3">
                             <v-select v-model="form.project_id" :items="projects" item-title="name" item-value="id" label="Project *" clearable hint="Project or Warehouse required" persistent-hint></v-select>
                         </v-col>
-                        <v-col cols="12" md="3">
+                        <v-col cols="12" sm="6" lg="3">
                             <v-select v-model="form.warehouse_id" :items="warehouses" item-title="name" item-value="id" label="Warehouse *" clearable hint="Project or Warehouse required" persistent-hint></v-select>
                         </v-col>
-                        <v-col cols="12" md="2">
+                        <v-col cols="6" sm="4" lg="2">
                             <v-select v-model="form.supplier_id" :items="suppliers" item-title="name" item-value="id" label="Supplier" clearable></v-select>
                         </v-col>
-                        <v-col cols="12" md="2">
+                        <v-col cols="6" sm="4" lg="2">
                             <v-text-field v-model="form.invoice_no" label="Invoice No."></v-text-field>
                         </v-col>
-                        <v-col cols="12" md="2">
+                        <v-col cols="6" sm="4" lg="2">
                             <v-text-field v-model="form.date" label="Date" type="date" required></v-text-field>
                         </v-col>
                     </v-row>
@@ -33,7 +33,7 @@
                     <h3 class="mb-4">Items</h3>
 
                     <!-- Desktop View -->
-                    <div class="d-none d-md-block">
+                    <div class="d-none d-xl-block">
                         <v-table density="compact">
                             <thead>
                                 <tr class="text-caption">
@@ -111,7 +111,7 @@
                     </div>
 
                     <!-- Mobile View -->
-                    <div class="d-md-none">
+                    <div class="d-xl-none">
                         <v-card v-for="(item, index) in form.items" :key="index" class="mb-4" variant="outlined">
                             <v-card-text>
                                 <v-autocomplete
@@ -226,10 +226,10 @@
                     <v-divider class="my-4"></v-divider>
 
                     <v-row>
-                        <v-col cols="12" md="6">
+                        <v-col cols="12" lg="6">
                             <v-textarea v-model="form.note" label="Note" rows="2"></v-textarea>
                         </v-col>
-                        <v-col cols="12" md="6">
+                        <v-col cols="12" lg="6">
                             <v-row>
                                 <v-col cols="6">
                                     <v-text-field :model-value="formatNumber(subtotalTP)" label="Subtotal (TP)" readonly class="text-primary"></v-text-field>

@@ -6,7 +6,7 @@
 
         <v-row>
             <!-- Profile Info Card -->
-            <v-col cols="12" md="4">
+            <v-col cols="12" sm="6" lg="4">
                 <v-card>
                     <v-card-text class="text-center">
                         <v-avatar size="120" color="primary" class="mb-4">

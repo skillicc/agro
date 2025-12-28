@@ -10,7 +10,7 @@
 
         <!-- Summary Cards -->
         <v-row class="mb-4">
-            <v-col cols="12" md="3">
+            <v-col cols="12" sm="6" lg="3">
                 <v-card color="primary" variant="tonal">
                     <v-card-text class="d-flex align-center">
                         <v-icon size="40" class="mr-3">mdi-account-group</v-icon>
@@ -21,7 +21,7 @@
                     </v-card-text>
                 </v-card>
             </v-col>
-            <v-col cols="12" md="3">
+            <v-col cols="12" sm="6" lg="3">
                 <v-card color="success" variant="tonal">
                     <v-card-text class="d-flex align-center">
                         <v-icon size="40" class="mr-3">mdi-account-check</v-icon>
@@ -32,7 +32,7 @@
                     </v-card-text>
                 </v-card>
             </v-col>
-            <v-col cols="12" md="3">
+            <v-col cols="12" sm="6" lg="3">
                 <v-card color="info" variant="tonal">
                     <v-card-text class="d-flex align-center">
                         <v-icon size="40" class="mr-3">mdi-cash-multiple</v-icon>
@@ -43,7 +43,7 @@
                     </v-card-text>
                 </v-card>
             </v-col>
-            <v-col cols="12" md="3">
+            <v-col cols="12" sm="6" lg="3">
                 <v-card color="warning" variant="tonal" @click="showAllSummary" style="cursor: pointer;">
                     <v-card-text class="d-flex align-center">
                         <v-icon size="40" class="mr-3">mdi-chart-bar</v-icon>
@@ -354,7 +354,7 @@
                 <v-card-text>
                     <!-- Date Filters -->
                     <v-row class="mb-4">
-                        <v-col cols="12" md="4">
+                        <v-col cols="12" sm="6" lg="4">
                             <v-text-field
                                 v-model="filterMonth"
                                 label="Filter by Month (YYYY-MM)"
@@ -364,7 +364,7 @@
                                 hide-details
                             ></v-text-field>
                         </v-col>
-                        <v-col cols="12" md="4">
+                        <v-col cols="12" sm="6" lg="4">
                             <v-select
                                 v-model="filterEmployee"
                                 :items="employeeFilterOptions"
@@ -376,7 +376,7 @@
                                 hide-details
                             ></v-select>
                         </v-col>
-                        <v-col cols="12" md="4">
+                        <v-col cols="12" sm="6" lg="4">
                             <v-btn color="primary" @click="applyFilters" block>
                                 <v-icon left>mdi-filter</v-icon>
                                 Apply Filter
