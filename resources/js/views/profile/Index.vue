@@ -175,7 +175,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '../../stores/auth'
-import api from '../../services/api'
 
 const authStore = useAuthStore()
 const user = computed(() => authStore.user)
@@ -228,8 +227,7 @@ const updateProfile = async () => {
     errors.value = {}
 
     try {
-        const response = await api.put('/profile', profileForm)
-        authStore.setUser(response.data)
+        await authStore.updateProfile(profileForm)
         showSnackbar('Profile updated successfully!')
     } catch (error) {
         if (error.response?.data?.errors) {
@@ -246,7 +244,7 @@ const changePassword = async () => {
     errors.value = {}
 
     try {
-        await api.put('/change-password', passwordForm)
+        await authStore.changePassword(passwordForm)
         showSnackbar('Password changed successfully!')
         // Reset password form
         passwordForm.current_password = ''
