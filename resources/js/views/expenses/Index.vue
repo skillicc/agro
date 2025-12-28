@@ -60,7 +60,7 @@
                 <v-card-title>{{ editMode ? 'Edit Expense' : 'Add Expense' }}</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="saveExpense">
-                        <v-radio-group v-model="form.expense_type" inline class="mb-2">
+                        <v-radio-group v-model="form.expense_type" inline class="mb-2" @update:model-value="loadCategories">
                             <v-radio label="Project" value="project"></v-radio>
                             <v-radio label="Warehouse" value="warehouse"></v-radio>
                         </v-radio-group>
@@ -181,10 +181,15 @@ const fetchProjects = async () => {
 }
 
 const loadCategories = async () => {
-    if (!form.project_id) return
-    const project = projects.value.find(p => p.id === form.project_id)
     try {
-        const response = await api.get(`/expense-categories?project_type=${project?.type || 'all'}`)
+        let projectType = 'all'
+        if (form.expense_type === 'project' && form.project_id) {
+            const project = projects.value.find(p => p.id === form.project_id)
+            projectType = project?.type || 'all'
+        } else if (form.expense_type === 'warehouse') {
+            projectType = 'warehouse'
+        }
+        const response = await api.get(`/expense-categories?project_type=${projectType}`)
         categories.value = response.data
     } catch (error) {
         console.error('Error:', error)
@@ -197,10 +202,10 @@ const openDialog = (expense = null) => {
     if (expense) {
         const expenseType = expense.warehouse_id ? 'warehouse' : 'project'
         Object.assign(form, { ...expense, expense_type: expenseType })
-        loadCategories()
     } else {
         Object.assign(form, { expense_type: 'project', project_id: null, warehouse_id: null, expense_category_id: null, bill_no: '', amount: 0, date: new Date().toISOString().split('T')[0], description: '' })
     }
+    loadCategories()
     dialog.value = true
 }
 
