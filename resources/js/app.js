@@ -10,11 +10,14 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import '@mdi/font/css/materialdesignicons.css'
 
+// Get saved theme or default to light
+const savedTheme = localStorage.getItem('theme') || 'light'
+
 const vuetify = createVuetify({
     components,
     directives,
     theme: {
-        defaultTheme: 'light',
+        defaultTheme: savedTheme,
         themes: {
             light: {
                 colors: {
@@ -25,6 +28,17 @@ const vuetify = createVuetify({
                     warning: '#ff9800',
                     info: '#2196F3',
                     success: '#4CAF50',
+                },
+            },
+            dark: {
+                colors: {
+                    primary: '#66BB6A',
+                    secondary: '#9CCC65',
+                    accent: '#D4E157',
+                    error: '#EF5350',
+                    warning: '#FFA726',
+                    info: '#42A5F5',
+                    success: '#66BB6A',
                 },
             },
         },

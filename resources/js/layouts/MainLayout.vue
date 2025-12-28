@@ -6,6 +6,12 @@
             <v-toolbar-title class="text-body-1 text-sm-h6">Bangalio Agro</v-toolbar-title>
             <v-spacer></v-spacer>
 
+            <!-- Theme Toggle -->
+            <v-btn icon @click="toggleTheme" :size="$vuetify.display.smAndDown ? 'small' : 'default'" class="mr-1">
+                <v-icon>{{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
+                <v-tooltip activator="parent" location="bottom">{{ isDark ? 'Light Mode' : 'Dark Mode' }}</v-tooltip>
+            </v-btn>
+
             <!-- Show user name on larger screens -->
             <span v-if="$vuetify.display.mdAndUp" class="text-body-2 mr-2">{{ authStore.user?.name }}</span>
 
@@ -202,9 +208,9 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useDisplay } from 'vuetify'
+import { useDisplay, useTheme } from 'vuetify'
 import { useAuthStore } from '../stores/auth'
 
 const drawer = ref(false)
@@ -212,6 +218,16 @@ const rail = ref(false)
 const router = useRouter()
 const authStore = useAuthStore()
 const display = useDisplay()
+const theme = useTheme()
+
+// Theme toggle
+const isDark = computed(() => theme.global.current.value.dark)
+
+const toggleTheme = () => {
+    const newTheme = isDark.value ? 'light' : 'dark'
+    theme.global.name.value = newTheme
+    localStorage.setItem('theme', newTheme)
+}
 
 // Auto-open drawer on large screens
 watch(() => display.lgAndUp.value, (isLarge) => {
