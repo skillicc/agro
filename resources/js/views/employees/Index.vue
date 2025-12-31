@@ -741,7 +741,10 @@ const openDialog = (employee = null) => {
     editMode.value = !!employee
     selectedEmployee.value = employee
     if (employee) {
-        Object.assign(form, employee)
+        Object.assign(form, {
+            ...employee,
+            joining_date: employee.joining_date ? employee.joining_date.split('T')[0] : ''
+        })
     } else {
         Object.assign(form, { project_id: null, employee_type: 'regular', name: '', phone: '', position: '', salary_amount: 0, daily_rate: 0, joining_date: '', is_active: true })
     }
