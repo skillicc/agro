@@ -725,8 +725,11 @@ const salaryMonthOptions = computed(() => {
     // Add last 6 months including current
     for (let i = 5; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-        const value = d.toISOString().slice(0, 7) // YYYY-MM
-        const label = `${monthNames[d.getMonth()]}'${String(d.getFullYear()).slice(2)} (${value})`
+        // Use local date formatting instead of toISOString (which uses UTC)
+        const year = d.getFullYear()
+        const month = String(d.getMonth() + 1).padStart(2, '0')
+        const value = `${year}-${month}` // YYYY-MM
+        const label = `${monthNames[d.getMonth()]}'${String(year).slice(2)} (${value})`
         months.push({ value, label })
     }
 
