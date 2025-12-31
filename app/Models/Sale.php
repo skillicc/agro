@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use DateTimeInterface;
 
 class Sale extends Model
 {
@@ -70,5 +71,13 @@ class Sale extends Model
         $this->total = $this->subtotal - $this->discount;
         $this->due = $this->total - $this->paid;
         $this->save();
+    }
+
+    /**
+     * Prepare a date for array / JSON serialization.
+     */
+    protected function serializeDate(DateTimeInterface $date): string
+    {
+        return $date->format('Y-m-d');
     }
 }

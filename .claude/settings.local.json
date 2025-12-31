@@ -19,7 +19,10 @@
       "Bash(npm install:*)",
       "Bash(dir:*)",
       "Bash(findstr:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(php -r:*)",
+      "Bash(php update_models.php:*)"
     ]
   }
 }

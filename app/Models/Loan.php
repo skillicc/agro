@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use DateTimeInterface;
 
 class Loan extends Model
 {
@@ -48,5 +49,13 @@ class Loan extends Model
         $this->outstanding_balance = $this->principal_amount - $this->total_paid;
         $this->status = $this->outstanding_balance <= 0 ? 'paid' : 'active';
         $this->save();
+    }
+
+    /**
+     * Prepare a date for array / JSON serialization.
+     */
+    protected function serializeDate(DateTimeInterface $date): string
+    {
+        return $date->format('Y-m-d');
     }
 }

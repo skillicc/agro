@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use DateTimeInterface;
 
 class Partner extends Model
 {
@@ -38,5 +39,13 @@ class Partner extends Model
         $this->total_withdrawn = $this->investments()->where('type', 'withdrawal')->sum('amount');
         $this->current_balance = $this->total_investment - $this->total_withdrawn;
         $this->save();
+    }
+
+    /**
+     * Prepare a date for array / JSON serialization.
+     */
+    protected function serializeDate(DateTimeInterface $date): string
+    {
+        return $date->format('Y-m-d');
     }
 }

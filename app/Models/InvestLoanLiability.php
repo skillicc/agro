@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use DateTimeInterface;
 
 class InvestLoanLiability extends Model
 {
@@ -21,4 +22,12 @@ class InvestLoanLiability extends Model
         'date' => 'date',
         'due_date' => 'date',
     ];
+
+    /**
+     * Prepare a date for array / JSON serialization.
+     */
+    protected function serializeDate(DateTimeInterface $date): string
+    {
+        return $date->format('Y-m-d');
+    }
 }

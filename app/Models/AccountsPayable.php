@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use DateTimeInterface;
 
 class AccountsPayable extends Model
 {
@@ -66,5 +67,13 @@ class AccountsPayable extends Model
         static::updated(function ($model) {
             $model->supplier->updateTotals();
         });
+    }
+
+    /**
+     * Prepare a date for array / JSON serialization.
+     */
+    protected function serializeDate(DateTimeInterface $date): string
+    {
+        return $date->format('Y-m-d');
     }
 }

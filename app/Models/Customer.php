@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use DateTimeInterface;
 
 class Customer extends Model
 {
@@ -56,5 +57,13 @@ class Customer extends Model
         $this->total_paid = $this->accountsReceivable()->sum('paid_amount');
         $this->total_due = $this->accountsReceivable()->sum('outstanding_amount');
         $this->save();
+    }
+
+    /**
+     * Prepare a date for array / JSON serialization.
+     */
+    protected function serializeDate(DateTimeInterface $date): string
+    {
+        return $date->format('Y-m-d');
     }
 }

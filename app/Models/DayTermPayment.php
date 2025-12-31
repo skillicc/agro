@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use DateTimeInterface;
 
 class DayTermPayment extends Model
 {
@@ -39,5 +40,13 @@ class DayTermPayment extends Model
         static::deleted(function ($payment) {
             $payment->dayTermInvestment->updatePaidAmount();
         });
+    }
+
+    /**
+     * Prepare a date for array / JSON serialization.
+     */
+    protected function serializeDate(DateTimeInterface $date): string
+    {
+        return $date->format('Y-m-d');
     }
 }

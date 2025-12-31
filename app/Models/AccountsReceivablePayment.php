@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use DateTimeInterface;
 
 class AccountsReceivablePayment extends Model
 {
@@ -40,5 +41,13 @@ class AccountsReceivablePayment extends Model
         static::deleted(function ($model) {
             $model->accountsReceivable->updateBalance();
         });
+    }
+
+    /**
+     * Prepare a date for array / JSON serialization.
+     */
+    protected function serializeDate(DateTimeInterface $date): string
+    {
+        return $date->format('Y-m-d');
     }
 }
