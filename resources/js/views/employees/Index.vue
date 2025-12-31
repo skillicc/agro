@@ -664,15 +664,7 @@ const deletingAdvance = ref(false)
 const editSalaryForm = reactive({ id: null, amount: 0, month: '', payment_date: '', note: '' })
 const editAdvanceForm = reactive({ id: null, amount: 0, date: '', reason: '', is_deducted: false })
 
-// Get previous month name for Due column header
-const getPreviousMonthName = () => {
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    const now = new Date()
-    const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    return monthNames[prevMonth.getMonth()]
-}
-
-const headers = computed(() => [
+const headers = [
     { title: '#', key: 'sl', width: '50px' },
     { title: 'Name', key: 'name' },
     { title: 'Type', key: 'employee_type' },
@@ -681,10 +673,10 @@ const headers = computed(() => [
     { title: 'Salary', key: 'salary_display' },
     { title: 'Advance', key: 'total_advance_paid' },
     { title: 'Paid', key: 'total_paid' },
-    { title: `${getPreviousMonthName()} Due`, key: 'current_month_due' },
+    { title: 'Due', key: 'current_month_due' },
     { title: 'Status', key: 'is_active' },
     { title: 'Actions', key: 'actions', sortable: false },
-])
+]
 
 const employeeTypes = [
     { value: 'regular', label: 'Regular' },

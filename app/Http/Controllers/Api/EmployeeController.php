@@ -35,12 +35,7 @@ class EmployeeController extends Controller
             $totalAdvancePaid = $employee->advances()->sum('amount');
             $employee->total_paid = $totalSalaryPaid + $totalAdvancePaid;
 
-            // Check if previous month salary is paid (Nov salary paid in Dec)
-            $previousMonthSalaryPaid = $employee->salaries()
-                ->where('month', $previousMonth)
-                ->sum('amount');
-
-            // Calculate expected salary based on employee type for previous month
+            // Calculate expected salary based on employee type
             if ($employee->isContractual()) {
                 $employee->calculated_salary = $employee->calculateContractualSalary($previousMonth);
                 $employee->present_days = $employee->getPresentDaysInMonth($previousMonth);
@@ -49,8 +44,15 @@ class EmployeeController extends Controller
                 $employee->present_days = null;
             }
 
-            // Due = previous month salary - what's paid for that month
-            $employee->current_month_due = max(0, $employee->calculated_salary - $previousMonthSalaryPaid);
+            // Check if previous month salary is paid
+            $previousMonthSalaryPaid = $employee->salaries()
+                ->where('month', $previousMonth)
+                ->sum('amount');
+
+            // Due = this month's salary - (salary paid for this month + total advance not yet deducted)
+            // Advance reduces the due amount
+            $undeductedAdvance = $employee->advances()->where('is_deducted', false)->sum('amount');
+            $employee->current_month_due = max(0, $employee->calculated_salary - $previousMonthSalaryPaid - $undeductedAdvance);
             $employee->current_month_paid = $previousMonthSalaryPaid;
 
             // Also store individual totals
@@ -353,5 +355,26 @@ class EmployeeController extends Controller
             'calculated_salary' => $calculatedSalary,
             'month' => $month,
         ]);
+    }
+
+    /**
+     * Calculate number of months worked (from joining to previous month)
+     * Previous month because current month salary is not due yet
+     */
+    private function getMonthsWorked($employee)
+    {
+        if (!$employee->joining_date) {
+            return 0;
+        }
+
+        $joiningDate = \Carbon\Carbon::parse($employee->joining_date)->startOfMonth();
+        // Previous month (salary is paid next month)
+        $currentMonth = now()->subMonthNoOverflow()->startOfMonth();
+
+        if ($joiningDate > $currentMonth) {
+            return 0;
+        }
+
+        return $joiningDate->diffInMonths($currentMonth) + 1;
     }
 }
