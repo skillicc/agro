@@ -531,38 +531,37 @@
                         <!-- Salary Matrix -->
                         <v-window-item value="matrix">
                             <div class="mt-4">
-                                <v-table density="compact" class="salary-matrix">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-left" style="position: sticky; left: 0; background: #fff; z-index: 1;">Employee</th>
-                                            <th v-for="month in salaryMatrixMonths" :key="month" class="text-center" style="min-width: 80px;">
-                                                {{ formatMonthShort(month) }}
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="emp in activeEmployeesList" :key="emp.id">
-                                            <td style="position: sticky; left: 0; background: #fff; z-index: 1;">
-                                                <div class="font-weight-medium">{{ emp.name }}</div>
-                                                <div class="text-caption text-grey">{{ emp.project?.name || 'No Project' }}</div>
-                                            </td>
-                                            <td v-for="month in salaryMatrixMonths" :key="month" class="text-center">
-                                                <v-chip
-                                                    :color="getSalaryStatus(emp.id, month).color"
-                                                    size="small"
+                                <div class="d-flex ga-4 mb-3">
+                                    <div class="d-flex align-center"><div class="status-box bg-success mr-2"></div> Paid</div>
+                                    <div class="d-flex align-center"><div class="status-box bg-error mr-2"></div> Not Paid</div>
+                                    <div class="d-flex align-center"><div class="status-box bg-grey mr-2"></div> Not Joined</div>
+                                </div>
+                                <div class="salary-matrix-container">
+                                    <table class="salary-matrix-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="employee-col">Employee</th>
+                                                <th v-for="month in salaryMatrixMonths" :key="month">
+                                                    {{ formatMonthShort(month) }}
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="emp in activeEmployeesList" :key="emp.id">
+                                                <td class="employee-col">
+                                                    <div class="emp-name">{{ emp.name }}</div>
+                                                    <div class="emp-project">{{ emp.project?.name || '-' }}</div>
+                                                </td>
+                                                <td
+                                                    v-for="month in salaryMatrixMonths"
+                                                    :key="month"
+                                                    :class="getSalaryStatusClass(emp.id, month)"
                                                     :title="getSalaryStatus(emp.id, month).tooltip"
                                                 >
-                                                    <v-icon v-if="getSalaryStatus(emp.id, month).paid" size="small">mdi-check</v-icon>
-                                                    <v-icon v-else size="small">mdi-close</v-icon>
-                                                </v-chip>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </v-table>
-                                <div class="mt-4 d-flex ga-4">
-                                    <v-chip color="success" size="small"><v-icon size="small" class="mr-1">mdi-check</v-icon> Paid</v-chip>
-                                    <v-chip color="error" size="small"><v-icon size="small" class="mr-1">mdi-close</v-icon> Not Paid</v-chip>
-                                    <v-chip color="grey" size="small"><v-icon size="small" class="mr-1">mdi-minus</v-icon> Not Joined</v-chip>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </v-window-item>
@@ -758,21 +757,26 @@ const getSalaryStatus = (employeeId, month) => {
 
     // Check if employee was joined before this month
     if (emp?.joining_date) {
-        const joiningMonth = emp.joining_date.slice(0, 7)
+        const joiningMonth = emp.joining_date.split('T')[0].slice(0, 7)
         if (month < joiningMonth) {
-            return { paid: false, color: 'grey', tooltip: 'Not yet joined' }
+            return { paid: false, status: 'not-joined', tooltip: 'Not yet joined' }
         }
     }
 
     // Check if salary was paid for this month
-    const paid = allSalariesOriginal.value.some(s => s.employee_id === employeeId && s.month === month)
+    const salary = allSalariesOriginal.value.find(s => s.employee_id === employeeId && s.month === month)
 
-    if (paid) {
-        const salary = allSalariesOriginal.value.find(s => s.employee_id === employeeId && s.month === month)
-        return { paid: true, color: 'success', tooltip: `Paid: ৳${formatNumber(salary.amount)}` }
+    if (salary) {
+        return { paid: true, status: 'paid', tooltip: `Paid: ৳${formatNumber(salary.amount)}` }
     }
 
-    return { paid: false, color: 'error', tooltip: 'Not paid' }
+    return { paid: false, status: 'not-paid', tooltip: 'Not paid' }
+}
+
+// Get CSS class for salary status
+const getSalaryStatusClass = (employeeId, month) => {
+    const status = getSalaryStatus(employeeId, month)
+    return `status-cell status-${status.status}`
 }
 
 // Apply filters function
@@ -1083,11 +1087,79 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.salary-matrix {
-    overflow-x: auto;
+.status-box {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
 }
-.salary-matrix th,
-.salary-matrix td {
+.bg-success { background-color: #4CAF50; }
+.bg-error { background-color: #F44336; }
+.bg-grey { background-color: #9E9E9E; }
+
+.salary-matrix-container {
+    overflow-x: auto;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.salary-matrix-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.salary-matrix-table th,
+.salary-matrix-table td {
+    border: 1px solid #e0e0e0;
+    padding: 8px 4px;
+    text-align: center;
     white-space: nowrap;
+}
+
+.salary-matrix-table th {
+    background: #f5f5f5;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.salary-matrix-table .employee-col {
+    text-align: left;
+    min-width: 150px;
+    position: sticky;
+    left: 0;
+    background: #fff;
+    z-index: 1;
+}
+
+.salary-matrix-table th.employee-col {
+    z-index: 3;
+}
+
+.emp-name {
+    font-weight: 600;
+}
+
+.emp-project {
+    font-size: 11px;
+    color: #666;
+}
+
+.status-cell {
+    width: 60px;
+    min-width: 60px;
+}
+
+.status-paid {
+    background-color: #4CAF50 !important;
+}
+
+.status-not-paid {
+    background-color: #F44336 !important;
+}
+
+.status-not-joined {
+    background-color: #9E9E9E !important;
 }
 </style>
