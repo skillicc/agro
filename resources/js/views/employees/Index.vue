@@ -1140,7 +1140,7 @@ onMounted(() => {
 .bg-success { background-color: #4CAF50; }
 .bg-error { background-color: #F44336; }
 .bg-warning { background-color: #FF9800; }
-.bg-grey { background-color: #9E9E9E; }
+.bg-grey { background-color: #4CAF50; }
 
 .salary-matrix-container {
     overflow-x: auto;
@@ -1206,7 +1206,7 @@ onMounted(() => {
 }
 
 .status-not-joined {
-    background-color: #9E9E9E !important;
+    background-color: #4CAF50 !important;
 }
 
 .status-pending {
