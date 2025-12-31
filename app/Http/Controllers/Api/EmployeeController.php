@@ -24,31 +24,33 @@ class EmployeeController extends Controller
 
         $employees = $query->orderBy('name')->get();
 
-        // Calculate total paid and current month due for each employee
+        // Calculate total paid and due for each employee
+        // Due is for PREVIOUS month (salary for Nov is paid in Dec)
         $currentMonth = now()->format('Y-m');
+        $previousMonth = now()->subMonth()->format('Y-m');
 
-        $employees->each(function ($employee) use ($currentMonth) {
+        $employees->each(function ($employee) use ($currentMonth, $previousMonth) {
             $totalSalaryPaid = $employee->salaries()->sum('amount');
             $totalAdvancePaid = $employee->advances()->sum('amount');
             $employee->total_paid = $totalSalaryPaid + $totalAdvancePaid;
 
-            // Check if current month salary is paid
-            $currentMonthSalaryPaid = $employee->salaries()
-                ->where('month', $currentMonth)
+            // Check if previous month salary is paid (Nov salary paid in Dec)
+            $previousMonthSalaryPaid = $employee->salaries()
+                ->where('month', $previousMonth)
                 ->sum('amount');
 
-            // Calculate expected salary based on employee type
+            // Calculate expected salary based on employee type for previous month
             if ($employee->isContractual()) {
-                $employee->calculated_salary = $employee->calculateContractualSalary($currentMonth);
-                $employee->present_days = $employee->getPresentDaysInMonth($currentMonth);
+                $employee->calculated_salary = $employee->calculateContractualSalary($previousMonth);
+                $employee->present_days = $employee->getPresentDaysInMonth($previousMonth);
             } else {
                 $employee->calculated_salary = $employee->salary_amount;
                 $employee->present_days = null;
             }
 
-            // Current month due = calculated salary - what's paid this month
-            $employee->current_month_due = max(0, $employee->calculated_salary - $currentMonthSalaryPaid);
-            $employee->current_month_paid = $currentMonthSalaryPaid;
+            // Due = previous month salary - what's paid for that month
+            $employee->current_month_due = max(0, $employee->calculated_salary - $previousMonthSalaryPaid);
+            $employee->current_month_paid = $previousMonthSalaryPaid;
 
             // Also store individual totals
             $employee->total_salary_paid = $totalSalaryPaid;
