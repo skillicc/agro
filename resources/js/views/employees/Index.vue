@@ -228,13 +228,15 @@
                     </v-alert>
 
                     <v-form @submit.prevent="paySalary">
-                        <v-text-field
+                        <v-select
                             v-model="salaryForm.month"
-                            label="Month (YYYY-MM)"
-                            placeholder="2025-01"
+                            :items="salaryMonthOptions"
+                            item-title="label"
+                            item-value="value"
+                            label="Salary For"
                             required
-                            @change="calculateContractualSalary"
-                        ></v-text-field>
+                            @update:model-value="calculateContractualSalary"
+                        ></v-select>
                         <v-text-field
                             v-model.number="salaryForm.amount"
                             label="Amount"
@@ -291,18 +293,18 @@
                             <v-table density="compact" class="mt-4">
                                 <thead>
                                     <tr>
-                                        <th>Month</th>
+                                        <th>Salary For</th>
                                         <th>Amount</th>
-                                        <th>Payment Date</th>
+                                        <th>Paid On</th>
                                         <th>Note</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr v-for="salary in salaryHistory" :key="salary.id">
-                                        <td>{{ salary.month }}</td>
+                                        <td>{{ formatMonthShort(salary.month) }}</td>
                                         <td>৳{{ formatNumber(salary.amount) }}</td>
-                                        <td>{{ salary.payment_date }}</td>
+                                        <td>{{ formatDate(salary.payment_date) }}</td>
                                         <td>{{ salary.note || '-' }}</td>
                                         <td>
                                             <v-btn icon size="x-small" color="primary" @click="editSalary(salary)" title="Edit">
@@ -387,7 +389,14 @@
                 <v-card-text>
                     <v-form @submit.prevent="updateSalary">
                         <v-text-field v-model.number="editSalaryForm.amount" label="Amount" type="number" required></v-text-field>
-                        <v-text-field v-model="editSalaryForm.month" label="Month (YYYY-MM)" placeholder="2025-01" required></v-text-field>
+                        <v-select
+                            v-model="editSalaryForm.month"
+                            :items="salaryMonthOptions"
+                            item-title="label"
+                            item-value="value"
+                            label="Salary For"
+                            required
+                        ></v-select>
                         <v-text-field v-model="editSalaryForm.payment_date" label="Payment Date" type="date" required></v-text-field>
                         <v-textarea v-model="editSalaryForm.note" label="Note" rows="2"></v-textarea>
                     </v-form>
@@ -573,8 +582,14 @@
                                 density="compact"
                                 class="mt-2"
                             >
+                                <template v-slot:item.month="{ item }">
+                                    {{ formatMonthShort(item.month) }}
+                                </template>
                                 <template v-slot:item.amount="{ item }">
                                     ৳{{ formatNumber(item.amount) }}
+                                </template>
+                                <template v-slot:item.payment_date="{ item }">
+                                    {{ formatDate(item.payment_date) }}
                                 </template>
                             </v-data-table>
                         </v-window-item>
@@ -681,9 +696,9 @@ const sortedEmployees = computed(() => {
 
 const salaryHeaders = [
     { title: 'Employee', key: 'employee.name' },
-    { title: 'Month', key: 'month' },
+    { title: 'Salary For', key: 'month' },
     { title: 'Amount', key: 'amount' },
-    { title: 'Payment Date', key: 'payment_date' },
+    { title: 'Paid On', key: 'payment_date' },
     { title: 'Note', key: 'note' },
 ]
 
@@ -700,6 +715,23 @@ const salaryForm = reactive({ amount: 0, month: '', payment_date: new Date().toI
 const advanceForm = reactive({ amount: 0, date: new Date().toISOString().split('T')[0], reason: '' })
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
+
+// Generate salary month options (last 6 months + current month)
+const salaryMonthOptions = computed(() => {
+    const months = []
+    const now = new Date()
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+    // Add last 6 months including current
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        const value = d.toISOString().slice(0, 7) // YYYY-MM
+        const label = `${monthNames[d.getMonth()]}'${String(d.getFullYear()).slice(2)} (${value})`
+        months.push({ value, label })
+    }
+
+    return months
+})
 
 // Format date
 const formatDate = (dateStr) => {
