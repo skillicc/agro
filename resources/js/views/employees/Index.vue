@@ -522,11 +522,50 @@
                     </v-row>
 
                     <v-tabs v-model="summaryTab" color="primary">
+                        <v-tab value="matrix">Salary Matrix</v-tab>
                         <v-tab value="salaries">All Salaries</v-tab>
                         <v-tab value="advances">All Advances</v-tab>
                     </v-tabs>
 
                     <v-window v-model="summaryTab">
+                        <!-- Salary Matrix -->
+                        <v-window-item value="matrix">
+                            <div class="mt-4">
+                                <v-table density="compact" class="salary-matrix">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-left" style="position: sticky; left: 0; background: #fff; z-index: 1;">Employee</th>
+                                            <th v-for="month in salaryMatrixMonths" :key="month" class="text-center" style="min-width: 80px;">
+                                                {{ formatMonthShort(month) }}
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="emp in activeEmployeesList" :key="emp.id">
+                                            <td style="position: sticky; left: 0; background: #fff; z-index: 1;">
+                                                <div class="font-weight-medium">{{ emp.name }}</div>
+                                                <div class="text-caption text-grey">{{ emp.project?.name || 'No Project' }}</div>
+                                            </td>
+                                            <td v-for="month in salaryMatrixMonths" :key="month" class="text-center">
+                                                <v-chip
+                                                    :color="getSalaryStatus(emp.id, month).color"
+                                                    size="small"
+                                                    :title="getSalaryStatus(emp.id, month).tooltip"
+                                                >
+                                                    <v-icon v-if="getSalaryStatus(emp.id, month).paid" size="small">mdi-check</v-icon>
+                                                    <v-icon v-else size="small">mdi-close</v-icon>
+                                                </v-chip>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </v-table>
+                                <div class="mt-4 d-flex ga-4">
+                                    <v-chip color="success" size="small"><v-icon size="small" class="mr-1">mdi-check</v-icon> Paid</v-chip>
+                                    <v-chip color="error" size="small"><v-icon size="small" class="mr-1">mdi-close</v-icon> Not Paid</v-chip>
+                                    <v-chip color="grey" size="small"><v-icon size="small" class="mr-1">mdi-minus</v-icon> Not Joined</v-chip>
+                                </div>
+                            </div>
+                        </v-window-item>
                         <v-window-item value="salaries">
                             <v-data-table
                                 :headers="salaryHeaders"
@@ -580,7 +619,7 @@ const advanceDialog = ref(false)
 const historyDialog = ref(false)
 const summaryDialog = ref(false)
 const historyTab = ref('salaries')
-const summaryTab = ref('salaries')
+const summaryTab = ref('matrix')
 const editMode = ref(false)
 const selectedEmployee = ref(null)
 const saving = ref(false)
@@ -691,6 +730,50 @@ const allTotalAdvanceGiven = computed(() => allAdvances.value.reduce((sum, a) =>
 
 // Employee filter options
 const employeeFilterOptions = computed(() => employees.value.map(e => ({ id: e.id, name: e.name })))
+
+// Active employees list for matrix
+const activeEmployeesList = computed(() => employees.value.filter(e => e.is_active))
+
+// Generate last 12 months for salary matrix
+const salaryMatrixMonths = computed(() => {
+    const months = []
+    const now = new Date()
+    for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        months.push(d.toISOString().slice(0, 7)) // YYYY-MM format
+    }
+    return months
+})
+
+// Format month short (e.g., "Dec'24")
+const formatMonthShort = (monthStr) => {
+    const [year, month] = monthStr.split('-')
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    return `${monthNames[parseInt(month) - 1]}'${year.slice(2)}`
+}
+
+// Get salary status for an employee in a specific month
+const getSalaryStatus = (employeeId, month) => {
+    const emp = employees.value.find(e => e.id === employeeId)
+
+    // Check if employee was joined before this month
+    if (emp?.joining_date) {
+        const joiningMonth = emp.joining_date.slice(0, 7)
+        if (month < joiningMonth) {
+            return { paid: false, color: 'grey', tooltip: 'Not yet joined' }
+        }
+    }
+
+    // Check if salary was paid for this month
+    const paid = allSalariesOriginal.value.some(s => s.employee_id === employeeId && s.month === month)
+
+    if (paid) {
+        const salary = allSalariesOriginal.value.find(s => s.employee_id === employeeId && s.month === month)
+        return { paid: true, color: 'success', tooltip: `Paid: ৳${formatNumber(salary.amount)}` }
+    }
+
+    return { paid: false, color: 'error', tooltip: 'Not paid' }
+}
 
 // Apply filters function
 const applyFilters = () => {
@@ -998,3 +1081,13 @@ onMounted(() => {
     fetchProjects()
 })
 </script>
+
+<style scoped>
+.salary-matrix {
+    overflow-x: auto;
+}
+.salary-matrix th,
+.salary-matrix td {
+    white-space: nowrap;
+}
+</style>
