@@ -665,15 +665,15 @@ const editSalaryForm = reactive({ id: null, amount: 0, month: '', payment_date: 
 const editAdvanceForm = reactive({ id: null, amount: 0, date: '', reason: '', is_deducted: false })
 
 const headers = [
-    { title: 'SL', key: 'sl', width: '60px' },
+    { title: '#', key: 'sl', width: '50px' },
     { title: 'Name', key: 'name' },
     { title: 'Type', key: 'employee_type' },
     { title: 'Project', key: 'project.name' },
     { title: 'Position', key: 'position' },
     { title: 'Salary', key: 'salary_display' },
     { title: 'Advance', key: 'total_advance_paid' },
-    { title: 'Total Paid', key: 'total_paid' },
-    { title: 'This Month Due', key: 'current_month_due' },
+    { title: 'Paid', key: 'total_paid' },
+    { title: 'Due', key: 'current_month_due' },
     { title: 'Status', key: 'is_active' },
     { title: 'Actions', key: 'actions', sortable: false },
 ]
