@@ -27,7 +27,8 @@ class EmployeeController extends Controller
         // Calculate total paid and due for each employee
         // Due is for PREVIOUS month (salary for Nov is paid in Dec)
         $currentMonth = now()->format('Y-m');
-        $previousMonth = now()->subMonth()->format('Y-m');
+        // Use subMonthNoOverflow to handle month-end dates correctly (Dec 31 -> Nov 30, not Dec 1)
+        $previousMonth = now()->subMonthNoOverflow()->format('Y-m');
 
         $employees->each(function ($employee) use ($currentMonth, $previousMonth) {
             $totalSalaryPaid = $employee->salaries()->sum('amount');
