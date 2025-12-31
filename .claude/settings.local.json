@@ -22,7 +22,8 @@
       "Bash(grep:*)",
       "Bash(ls:*)",
       "Bash(php -r:*)",
-      "Bash(php update_models.php:*)"
+      "Bash(php update_models.php:*)",
+      "Bash(php check_idris.php:*)"
     ]
   }
 }

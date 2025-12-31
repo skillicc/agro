@@ -534,6 +534,7 @@
                                 <div class="d-flex ga-4 mb-3">
                                     <div class="d-flex align-center"><div class="status-box bg-success mr-2"></div> Paid</div>
                                     <div class="d-flex align-center"><div class="status-box bg-error mr-2"></div> Not Paid</div>
+                                    <div class="d-flex align-center"><div class="status-box bg-warning mr-2"></div> Pending</div>
                                     <div class="d-flex align-center"><div class="status-box bg-grey mr-2"></div> Not Joined</div>
                                 </div>
                                 <div class="salary-matrix-container">
@@ -757,7 +758,7 @@ const getSalaryStatus = (employeeId, month) => {
 
     // Check if employee was joined before this month
     if (emp?.joining_date) {
-        const joiningMonth = emp.joining_date.split('T')[0].slice(0, 7)
+        const joiningMonth = emp.joining_date.slice(0, 7)
         if (month < joiningMonth) {
             return { paid: false, status: 'not-joined', tooltip: 'Not yet joined' }
         }
@@ -768,6 +769,15 @@ const getSalaryStatus = (employeeId, month) => {
 
     if (salary) {
         return { paid: true, status: 'paid', tooltip: `Paid: ৳${formatNumber(salary.amount)}` }
+    }
+
+    // Salary is paid in the next month, so current month's salary is not due yet
+    // e.g., Jan salary is paid in Feb, so if we're in Jan, Jan salary is "pending"
+    const now = new Date()
+    const currentMonth = now.toISOString().slice(0, 7) // YYYY-MM
+
+    if (month >= currentMonth) {
+        return { paid: false, status: 'pending', tooltip: 'Salary not due yet' }
     }
 
     return { paid: false, status: 'not-paid', tooltip: 'Not paid' }
@@ -1094,6 +1104,7 @@ onMounted(() => {
 }
 .bg-success { background-color: #4CAF50; }
 .bg-error { background-color: #F44336; }
+.bg-warning { background-color: #FF9800; }
 .bg-grey { background-color: #9E9E9E; }
 
 .salary-matrix-container {
@@ -1161,5 +1172,9 @@ onMounted(() => {
 
 .status-not-joined {
     background-color: #9E9E9E !important;
+}
+
+.status-pending {
+    background-color: #FF9800 !important;
 }
 </style>
