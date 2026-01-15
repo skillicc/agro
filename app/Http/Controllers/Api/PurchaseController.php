@@ -126,15 +126,75 @@ class PurchaseController extends Controller
     public function update(Request $request, Purchase $purchase)
     {
         $request->validate([
+            'project_id' => 'nullable|exists:projects,id',
+            'warehouse_id' => 'nullable|exists:warehouses,id',
+            'supplier_id' => 'nullable|exists:suppliers,id',
+            'date' => 'required|date',
             'discount' => 'nullable|numeric|min:0',
+            'paid' => 'nullable|numeric|min:0',
             'note' => 'nullable|string',
-            'status' => 'nullable|in:pending,completed,cancelled',
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.size' => 'nullable|string|max:255',
+            'items.*.package_qty' => 'nullable|integer|min:1',
+            'items.*.unit_per_package' => 'nullable|integer|min:1',
+            'items.*.package_price' => 'nullable|numeric|min:0',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.unit_mrp' => 'nullable|numeric|min:0',
+            'items.*.total_mrp' => 'nullable|numeric|min:0',
         ]);
 
-        $purchase->update($request->only(['discount', 'note', 'status']));
-        $purchase->calculateTotals();
+        // Validate that at least one of project_id or warehouse_id is provided
+        if (!$request->project_id && !$request->warehouse_id) {
+            return response()->json([
+                'message' => 'Either Project or Warehouse must be selected',
+                'errors' => [
+                    'project_id' => ['Either Project or Warehouse is required'],
+                    'warehouse_id' => ['Either Project or Warehouse is required'],
+                ]
+            ], 422);
+        }
 
-        return response()->json($purchase->load(['project', 'supplier', 'items.product', 'creator']));
+        DB::beginTransaction();
+        try {
+            $purchase->update([
+                'project_id' => $request->project_id,
+                'warehouse_id' => $request->warehouse_id,
+                'supplier_id' => $request->supplier_id,
+                'date' => $request->date,
+                'discount' => $request->discount ?? 0,
+                'paid' => $request->paid ?? 0,
+                'note' => $request->note,
+            ]);
+
+            // Delete old items and create new ones
+            $purchase->items()->delete();
+
+            foreach ($request->items as $item) {
+                PurchaseItem::create([
+                    'purchase_id' => $purchase->id,
+                    'product_id' => $item['product_id'],
+                    'size' => $item['size'] ?? null,
+                    'package_qty' => $item['package_qty'] ?? 1,
+                    'unit_per_package' => $item['unit_per_package'] ?? 1,
+                    'package_price' => $item['package_price'] ?? 0,
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $item['unit_price'],
+                    'unit_mrp' => $item['unit_mrp'] ?? 0,
+                    'total' => $item['quantity'] * $item['unit_price'],
+                    'total_mrp' => $item['total_mrp'] ?? 0,
+                ]);
+            }
+
+            $purchase->calculateTotals();
+            DB::commit();
+
+            return response()->json($purchase->load(['project', 'warehouse', 'supplier', 'items.product', 'creator']));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Error updating purchase: ' . $e->getMessage()], 500);
+        }
     }
 
     public function destroy(Purchase $purchase)

@@ -114,15 +114,63 @@ class SaleController extends Controller
     public function update(Request $request, Sale $sale)
     {
         $request->validate([
+            'project_id' => 'nullable|exists:projects,id',
+            'warehouse_id' => 'nullable|exists:warehouses,id',
+            'customer_id' => 'nullable|exists:customers,id',
+            'date' => 'required|date',
             'discount' => 'nullable|numeric|min:0',
+            'paid' => 'nullable|numeric|min:0',
             'note' => 'nullable|string',
-            'status' => 'nullable|in:pending,completed,cancelled',
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.unit_price' => 'required|numeric|min:0',
         ]);
 
-        $sale->update($request->only(['discount', 'note', 'status']));
-        $sale->calculateTotals();
+        // Validate that at least one of project_id or warehouse_id is provided
+        if (!$request->project_id && !$request->warehouse_id) {
+            return response()->json([
+                'message' => 'Either Project or Warehouse must be selected',
+                'errors' => [
+                    'project_id' => ['Either Project or Warehouse is required'],
+                    'warehouse_id' => ['Either Project or Warehouse is required'],
+                ]
+            ], 422);
+        }
 
-        return response()->json($sale->load(['project', 'customer', 'items.product', 'creator']));
+        DB::beginTransaction();
+        try {
+            $sale->update([
+                'project_id' => $request->project_id,
+                'warehouse_id' => $request->warehouse_id,
+                'customer_id' => $request->customer_id,
+                'date' => $request->date,
+                'discount' => $request->discount ?? 0,
+                'paid' => $request->paid ?? 0,
+                'note' => $request->note,
+            ]);
+
+            // Delete old items and create new ones
+            $sale->items()->delete();
+
+            foreach ($request->items as $item) {
+                SaleItem::create([
+                    'sale_id' => $sale->id,
+                    'product_id' => $item['product_id'],
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $item['unit_price'],
+                    'total' => $item['quantity'] * $item['unit_price'],
+                ]);
+            }
+
+            $sale->calculateTotals();
+            DB::commit();
+
+            return response()->json($sale->load(['project', 'warehouse', 'customer', 'items.product', 'creator']));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Error updating sale: ' . $e->getMessage()], 500);
+        }
     }
 
     public function destroy(Sale $sale)

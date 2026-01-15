@@ -30,10 +30,12 @@ import Expenses from '../views/expenses/Index.vue'
 // Purchases
 import Purchases from '../views/purchases/Index.vue'
 import PurchaseCreate from '../views/purchases/Create.vue'
+import PurchaseEdit from '../views/purchases/Edit.vue'
 
 // Sales
 import Sales from '../views/sales/Index.vue'
 import SaleCreate from '../views/sales/Create.vue'
+import SaleEdit from '../views/sales/Edit.vue'
 
 // Employees
 import Employees from '../views/employees/Index.vue'
@@ -124,6 +126,11 @@ const routes = [
                 component: PurchaseCreate,
             },
             {
+                path: 'purchases/:id/edit',
+                name: 'purchase-edit',
+                component: PurchaseEdit,
+            },
+            {
                 path: 'sales',
                 name: 'sales',
                 component: Sales,
@@ -132,6 +139,11 @@ const routes = [
                 path: 'sales/create',
                 name: 'sale-create',
                 component: SaleCreate,
+            },
+            {
+                path: 'sales/:id/edit',
+                name: 'sale-edit',
+                component: SaleEdit,
             },
             {
                 path: 'employees',

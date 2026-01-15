@@ -26,6 +26,9 @@
                         <v-btn icon size="small" @click="viewPurchase(item)">
                             <v-icon>mdi-eye</v-icon>
                         </v-btn>
+                        <v-btn icon size="small" color="primary" :to="{ name: 'purchase-edit', params: { id: item.id } }">
+                            <v-icon>mdi-pencil</v-icon>
+                        </v-btn>
                     </template>
                 </v-data-table>
             </v-card-text>

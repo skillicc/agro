@@ -23,7 +23,9 @@
       "Bash(ls:*)",
       "Bash(php -r:*)",
       "Bash(php update_models.php:*)",
-      "Bash(php check_idris.php:*)"
+      "Bash(php check_idris.php:*)",
+      "Bash(ssh -o StrictHostKeyChecking=no root@159.198.36.249 -p 22 \"cd /home/smart/web/agro.tishohagh.com/public_html && git pull origin main && php artisan migrate --force\")",
+      "Bash(ssh root@159.198.36.249 'cd /home/smart/web/agro.tishohagh.com/public_html && php -r \"\"\nrequire \\\\\"\"vendor/autoload.php\\\\\"\";\n\\\\$app = require_once \\\\\"\"bootstrap/app.php\\\\\"\";\n\\\\$app->make\\(\\\\\"\"Illuminate\\\\\\\\Contracts\\\\\\\\Console\\\\\\\\Kernel\\\\\"\"\\)->bootstrap\\(\\);\n\n\\\\$employees = App\\\\\\\\Models\\\\\\\\Employee::with\\([\\\\\"\"salaries\\\\\"\", \\\\\"\"advances\\\\\"\"]\\)->where\\(\\\\\"\"is_active\\\\\"\", true\\)->get\\(\\);\nforeach \\(\\\\$employees as \\\\$emp\\) {\n    echo \\\\\"\"=== \\\\\"\" . \\\\$emp->name . \\\\\"\" ===\\\\\\\\n\\\\\"\";\n    echo \\\\\"\"Joining: \\\\\"\" . \\\\$emp->joining_date . \\\\\"\"\\\\\\\\n\\\\\"\";\n    echo \\\\\"\"Monthly Salary: \\\\\"\" . \\\\$emp->salary_amount . \\\\\"\"\\\\\\\\n\\\\\"\";\n    \n    echo \\\\\"\"Salaries:\\\\\\\\n\\\\\"\";\n    foreach \\(\\\\$emp->salaries as \\\\$s\\) {\n        echo \\\\\"\"  - Month: \\\\\"\" . \\\\$s->month . \\\\\"\", Amount: \\\\\"\" . \\\\$s->amount . \\\\\"\"\\\\\\\\n\\\\\"\";\n    }\n    \n    echo \\\\\"\"Advances:\\\\\\\\n\\\\\"\";\n    foreach \\(\\\\$emp->advances as \\\\$a\\) {\n        echo \\\\\"\"  - Date: \\\\\"\" . \\\\$a->date . \\\\\"\", Amount: \\\\\"\" . \\\\$a->amount . \\\\\"\", Deducted: \\\\\"\" . \\(\\\\$a->is_deducted ? \\\\\"\"Yes\\\\\"\" : \\\\\"\"No\\\\\"\"\\) . \\\\\"\"\\\\\\\\n\\\\\"\";\n    }\n    echo \\\\\"\"\\\\\\\\n\\\\\"\";\n}\n\"\"')"
     ]
   }
 }
