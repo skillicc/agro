@@ -438,7 +438,8 @@ const savePurchase = async () => {
 
     saving.value = true
     try {
-        await api.put(`/purchases/${route.params.id}`, form)
+        const response = await api.put(`/purchases/${route.params.id}`, form)
+        alert('Purchase updated successfully!')
         router.push({ name: 'purchases' })
     } catch (error) {
         console.error('Error:', error)
