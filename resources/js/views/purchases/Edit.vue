@@ -438,13 +438,38 @@ const savePurchase = async () => {
 
     saving.value = true
     try {
-        const response = await api.put(`/purchases/${route.params.id}`, form)
+        // Prepare data - ensure null values are properly handled
+        const data = {
+            project_id: form.project_id || null,
+            warehouse_id: form.warehouse_id || null,
+            supplier_id: form.supplier_id || null,
+            invoice_no: form.invoice_no,
+            date: form.date,
+            discount: form.discount || 0,
+            paid: form.paid || 0,
+            note: form.note || '',
+            items: form.items.map(item => ({
+                product_id: item.product_id,
+                size: item.size || '',
+                package_qty: item.package_qty || 1,
+                unit_per_package: item.unit_per_package || 1,
+                package_price: item.package_price || 0,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                unit_mrp: item.unit_mrp || 0,
+                total_mrp: item.total_mrp || 0,
+            }))
+        }
+
+        const response = await api.put(`/purchases/${route.params.id}`, data)
         alert('Purchase updated successfully!')
         router.push({ name: 'purchases' })
     } catch (error) {
         console.error('Error:', error)
         if (error.response?.data?.message) {
             alert(error.response.data.message)
+        } else {
+            alert('Error updating purchase. Please try again.')
         }
     }
     saving.value = false

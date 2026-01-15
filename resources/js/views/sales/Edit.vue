@@ -181,12 +181,32 @@ const saveSale = async () => {
 
     saving.value = true
     try {
-        await api.put(`/sales/${route.params.id}`, form)
+        // Prepare data - ensure null values are properly handled
+        const data = {
+            project_id: form.project_id || null,
+            warehouse_id: form.warehouse_id || null,
+            customer_id: form.customer_id || null,
+            challan_no: form.challan_no,
+            date: form.date,
+            discount: form.discount || 0,
+            paid: form.paid || 0,
+            note: form.note || '',
+            items: form.items.map(item => ({
+                product_id: item.product_id,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+            }))
+        }
+
+        await api.put(`/sales/${route.params.id}`, data)
+        alert('Sale updated successfully!')
         router.push({ name: 'sales' })
     } catch (error) {
         console.error('Error:', error)
         if (error.response?.data?.message) {
             alert(error.response.data.message)
+        } else {
+            alert('Error updating sale. Please try again.')
         }
     }
     saving.value = false
