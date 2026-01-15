@@ -13,7 +13,7 @@ class PurchaseController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Purchase::with(['project', 'supplier', 'creator']);
+        $query = Purchase::with(['project', 'warehouse', 'supplier', 'creator']);
 
         if ($request->project_id) {
             $query->where('project_id', $request->project_id);
@@ -120,7 +120,7 @@ class PurchaseController extends Controller
 
     public function show(Purchase $purchase)
     {
-        return response()->json($purchase->load(['project', 'supplier', 'items.product', 'payments', 'creator']));
+        return response()->json($purchase->load(['project', 'warehouse', 'supplier', 'items.product', 'payments', 'creator']));
     }
 
     public function update(Request $request, Purchase $purchase)

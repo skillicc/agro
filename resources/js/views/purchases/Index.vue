@@ -47,7 +47,10 @@
                             <strong>Supplier:</strong> {{ selectedPurchase.supplier?.name || 'N/A' }}
                         </v-col>
                         <v-col cols="6">
-                            <strong>Project:</strong> {{ selectedPurchase.project?.name }}
+                            <strong>Project:</strong> {{ selectedPurchase.project?.name || '-' }}
+                        </v-col>
+                        <v-col cols="6">
+                            <strong>Warehouse:</strong> {{ selectedPurchase.warehouse?.name || '-' }}
                         </v-col>
                         <v-col cols="6">
                             <strong>Created By:</strong> {{ selectedPurchase.creator?.name }}
@@ -117,6 +120,7 @@ const headers = [
     { title: 'Invoice', key: 'invoice_no' },
     { title: 'Date', key: 'date' },
     { title: 'Project', key: 'project.name' },
+    { title: 'Warehouse', key: 'warehouse.name' },
     { title: 'Supplier', key: 'supplier.name' },
     { title: 'Total', key: 'total' },
     { title: 'Due', key: 'due' },
