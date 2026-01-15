@@ -29,6 +29,9 @@
                         <v-btn icon size="small" color="primary" :to="{ name: 'sale-edit', params: { id: item.id } }">
                             <v-icon>mdi-pencil</v-icon>
                         </v-btn>
+                        <v-btn icon size="small" color="error" @click="confirmDelete(item)">
+                            <v-icon>mdi-delete</v-icon>
+                        </v-btn>
                     </template>
                 </v-data-table>
             </v-card-text>
@@ -89,6 +92,24 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <!-- Delete Confirmation Dialog -->
+        <v-dialog v-model="deleteDialog" max-width="400">
+            <v-card>
+                <v-card-title class="text-error">Delete Sale</v-card-title>
+                <v-card-text>
+                    Are you sure you want to delete this sale?
+                    <div v-if="saleToDelete" class="mt-2">
+                        <strong>{{ saleToDelete.challan_no }}</strong>
+                    </div>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="deleteDialog = false">Cancel</v-btn>
+                    <v-btn color="error" @click="deleteSale" :loading="deleting">Delete</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </div>
 </template>
 
@@ -100,6 +121,9 @@ const sales = ref([])
 const loading = ref(false)
 const viewDialog = ref(false)
 const selectedSale = ref(null)
+const deleteDialog = ref(false)
+const saleToDelete = ref(null)
+const deleting = ref(false)
 
 const headers = [
     { title: 'SL', key: 'sl', width: '60px' },
@@ -133,6 +157,25 @@ const viewSale = async (sale) => {
     } catch (error) {
         console.error('Error:', error)
     }
+}
+
+const confirmDelete = (sale) => {
+    saleToDelete.value = sale
+    deleteDialog.value = true
+}
+
+const deleteSale = async () => {
+    deleting.value = true
+    try {
+        await api.delete(`/sales/${saleToDelete.value.id}`)
+        sales.value = sales.value.filter(s => s.id !== saleToDelete.value.id)
+        deleteDialog.value = false
+        saleToDelete.value = null
+    } catch (error) {
+        console.error('Error:', error)
+        alert('Error deleting sale')
+    }
+    deleting.value = false
 }
 
 onMounted(() => fetchSales())

@@ -29,6 +29,9 @@
                         <v-btn icon size="small" color="primary" :to="{ name: 'purchase-edit', params: { id: item.id } }">
                             <v-icon>mdi-pencil</v-icon>
                         </v-btn>
+                        <v-btn icon size="small" color="error" @click="confirmDelete(item)">
+                            <v-icon>mdi-delete</v-icon>
+                        </v-btn>
                     </template>
                 </v-data-table>
             </v-card-text>
@@ -103,6 +106,24 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <!-- Delete Confirmation Dialog -->
+        <v-dialog v-model="deleteDialog" max-width="400">
+            <v-card>
+                <v-card-title class="text-error">Delete Purchase</v-card-title>
+                <v-card-text>
+                    Are you sure you want to delete this purchase?
+                    <div v-if="purchaseToDelete" class="mt-2">
+                        <strong>{{ purchaseToDelete.invoice_no }}</strong>
+                    </div>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="deleteDialog = false">Cancel</v-btn>
+                    <v-btn color="error" @click="deletePurchase" :loading="deleting">Delete</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </div>
 </template>
 
@@ -114,6 +135,9 @@ const purchases = ref([])
 const loading = ref(false)
 const viewDialog = ref(false)
 const selectedPurchase = ref(null)
+const deleteDialog = ref(false)
+const purchaseToDelete = ref(null)
+const deleting = ref(false)
 
 const headers = [
     { title: 'SL', key: 'sl', width: '60px' },
@@ -153,6 +177,25 @@ const viewPurchase = async (purchase) => {
     } catch (error) {
         console.error('Error:', error)
     }
+}
+
+const confirmDelete = (purchase) => {
+    purchaseToDelete.value = purchase
+    deleteDialog.value = true
+}
+
+const deletePurchase = async () => {
+    deleting.value = true
+    try {
+        await api.delete(`/purchases/${purchaseToDelete.value.id}`)
+        purchases.value = purchases.value.filter(p => p.id !== purchaseToDelete.value.id)
+        deleteDialog.value = false
+        purchaseToDelete.value = null
+    } catch (error) {
+        console.error('Error:', error)
+        alert('Error deleting purchase')
+    }
+    deleting.value = false
 }
 
 onMounted(() => fetchPurchases())
