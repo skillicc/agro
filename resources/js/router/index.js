@@ -1,63 +1,33 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
-// Layouts
+// Only import layouts and login eagerly (needed immediately)
 import MainLayout from '../layouts/MainLayout.vue'
 import AuthLayout from '../layouts/AuthLayout.vue'
-
-// Auth Views
 import Login from '../views/auth/Login.vue'
 
-// Dashboard
-import Dashboard from '../views/Dashboard.vue'
-
-// Projects
-import Projects from '../views/projects/Index.vue'
-import ProjectShow from '../views/projects/Show.vue'
-
-// Suppliers
-import Suppliers from '../views/suppliers/Index.vue'
-
-// Customers
-import Customers from '../views/customers/Index.vue'
-
-// Products
-import Products from '../views/products/Index.vue'
-
-// Expenses
-import Expenses from '../views/expenses/Index.vue'
-
-// Purchases
-import Purchases from '../views/purchases/Index.vue'
-import PurchaseCreate from '../views/purchases/Create.vue'
-import PurchaseEdit from '../views/purchases/Edit.vue'
-
-// Sales
-import Sales from '../views/sales/Index.vue'
-import SaleCreate from '../views/sales/Create.vue'
-import SaleEdit from '../views/sales/Edit.vue'
-
-// Employees
-import Employees from '../views/employees/Index.vue'
-
-// Attendance
-import Attendance from '../views/attendance/Index.vue'
-import AttendanceDetails from '../views/attendance/Details.vue'
-
-// Reports
-import Reports from '../views/reports/Index.vue'
-
-// Users (Admin)
-import Users from '../views/users/Index.vue'
-
-// Warehouses
-import Warehouses from '../views/warehouses/Index.vue'
-
-// Invest, Loan & Liability
-import InvestLoanLiability from '../views/invest-loan-liability/Index.vue'
-
-// Profile
-import Profile from '../views/profile/Index.vue'
+// Lazy load all other views (loaded on demand)
+const Dashboard = () => import('../views/Dashboard.vue')
+const Projects = () => import('../views/projects/Index.vue')
+const ProjectShow = () => import('../views/projects/Show.vue')
+const Suppliers = () => import('../views/suppliers/Index.vue')
+const Customers = () => import('../views/customers/Index.vue')
+const Products = () => import('../views/products/Index.vue')
+const Expenses = () => import('../views/expenses/Index.vue')
+const Purchases = () => import('../views/purchases/Index.vue')
+const PurchaseCreate = () => import('../views/purchases/Create.vue')
+const PurchaseEdit = () => import('../views/purchases/Edit.vue')
+const Sales = () => import('../views/sales/Index.vue')
+const SaleCreate = () => import('../views/sales/Create.vue')
+const SaleEdit = () => import('../views/sales/Edit.vue')
+const Employees = () => import('../views/employees/Index.vue')
+const Attendance = () => import('../views/attendance/Index.vue')
+const AttendanceDetails = () => import('../views/attendance/Details.vue')
+const Reports = () => import('../views/reports/Index.vue')
+const Users = () => import('../views/users/Index.vue')
+const Warehouses = () => import('../views/warehouses/Index.vue')
+const InvestLoanLiability = () => import('../views/invest-loan-liability/Index.vue')
+const Profile = () => import('../views/profile/Index.vue')
 
 const routes = [
     {

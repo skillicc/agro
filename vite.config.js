@@ -22,4 +22,15 @@ export default defineConfig({
             vue: 'vue/dist/vue.esm-bundler.js',
         },
     },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'vuetify': ['vuetify'],
+                    'vendor': ['vue', 'vue-router', 'pinia', 'axios'],
+                },
+            },
+        },
+        chunkSizeWarningLimit: 600,
+    },
 });
