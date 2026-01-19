@@ -122,6 +122,9 @@
                             </div>
                         </div>
                     </template>
+                    <template v-slot:item.earn_leave="{ item }">
+                        <span>{{ item.earn_leave || 0 }}</span>
+                    </template>
                     <template v-slot:item.total_advance_paid="{ item }">
                         <span class="text-warning font-weight-bold">৳{{ formatNumber(item.total_advance_paid) }}</span>
                     </template>
@@ -196,6 +199,7 @@
                             required
                         ></v-text-field>
                         <v-text-field v-model="form.joining_date" label="Joining Date" type="date"></v-text-field>
+                        <v-text-field v-model.number="form.earn_leave" label="Earn Leave (EL)" type="number" step="0.5"></v-text-field>
                         <v-switch v-model="form.is_active" label="Active" color="success"></v-switch>
                     </v-form>
                 </v-card-text>
@@ -671,6 +675,7 @@ const headers = [
     { title: 'Project', key: 'project.name' },
     { title: 'Position', key: 'position' },
     { title: 'Salary', key: 'salary_display' },
+    { title: 'EL', key: 'earn_leave' },
     { title: 'Advance', key: 'total_advance_paid' },
     { title: 'Paid', key: 'total_paid' },
     { title: 'Due', key: 'current_month_due' },
@@ -685,12 +690,20 @@ const employeeTypes = [
 
 const filterType = ref(null)
 
-// Sort employees by project name
+// Sort employees by project name (Administration separate from Central)
 const sortedEmployees = computed(() => {
     return [...employees.value].sort((a, b) => {
         const projectA = a.project?.name || ''
         const projectB = b.project?.name || ''
-        return projectA.localeCompare(projectB)
+
+        // Custom sort order - Administration comes after Central
+        const getProjectOrder = (name) => {
+            if (name === 'Administration') return 'ZZZZ_Administration' // Put at end
+            if (name === 'Central') return 'ZZZZ_Central' // Put near end
+            return name
+        }
+
+        return getProjectOrder(projectA).localeCompare(getProjectOrder(projectB))
     })
 })
 
@@ -710,7 +723,7 @@ const advanceHeaders = [
     { title: 'Deducted', key: 'is_deducted' },
 ]
 
-const form = reactive({ project_id: null, employee_type: 'regular', name: '', phone: '', position: '', salary_amount: 0, daily_rate: 0, joining_date: '', is_active: true })
+const form = reactive({ project_id: null, employee_type: 'regular', name: '', phone: '', position: '', salary_amount: 0, daily_rate: 0, joining_date: '', earn_leave: 0, is_active: true })
 const salaryForm = reactive({ amount: 0, month: '', payment_date: new Date().toISOString().split('T')[0], note: '' })
 const advanceForm = reactive({ amount: 0, date: new Date().toISOString().split('T')[0], reason: '' })
 
@@ -878,7 +891,7 @@ const openDialog = (employee = null) => {
             joining_date: employee.joining_date ? employee.joining_date.split('T')[0] : ''
         })
     } else {
-        Object.assign(form, { project_id: null, employee_type: 'regular', name: '', phone: '', position: '', salary_amount: 0, daily_rate: 0, joining_date: '', is_active: true })
+        Object.assign(form, { project_id: null, employee_type: 'regular', name: '', phone: '', position: '', salary_amount: 0, daily_rate: 0, joining_date: '', earn_leave: 0, is_active: true })
     }
     dialog.value = true
 }

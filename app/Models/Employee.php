@@ -19,12 +19,14 @@ class Employee extends Model
         'salary_amount',
         'daily_rate',
         'joining_date',
+        'earn_leave',
         'is_active',
     ];
 
     protected $casts = [
         'salary_amount' => 'decimal:2',
         'daily_rate' => 'decimal:2',
+        'earn_leave' => 'decimal:2',
         'joining_date' => 'date',
         'is_active' => 'boolean',
     ];
