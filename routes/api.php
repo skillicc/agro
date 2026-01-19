@@ -102,6 +102,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/employees/{employee}/salaries', [EmployeeController::class, 'employeeSalaries']);
     Route::get('/employees/{employee}/advances', [EmployeeController::class, 'employeeAdvances']);
     Route::get('/employees/{employee}/calculate-salary', [EmployeeController::class, 'calculateSalary']);
+    Route::post('/employees/calculate-el', [EmployeeController::class, 'calculateEarnLeave']);
     Route::get('/salaries', [EmployeeController::class, 'salaries']);
     Route::post('/salaries', [EmployeeController::class, 'storeSalary']);
     Route::put('/salaries/{salary}', [EmployeeController::class, 'updateSalary']);
@@ -111,9 +112,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/advances/{advance}', [EmployeeController::class, 'updateAdvance']);
     Route::delete('/advances/{advance}', [EmployeeController::class, 'deleteAdvance']);
 
+    // Salary Adjustments
+    Route::post('/employees/{employee}/adjust-salary', [EmployeeController::class, 'adjustSalary']);
+    Route::get('/employees/{employee}/salary-adjustments', [EmployeeController::class, 'salaryAdjustments']);
+
+    // Bonuses & Incentives
+    Route::post('/employees/{employee}/bonus', [EmployeeController::class, 'giveBonus']);
+    Route::get('/employees/{employee}/bonuses', [EmployeeController::class, 'employeeBonuses']);
+    Route::get('/bonuses', [EmployeeController::class, 'allBonuses']);
+    Route::delete('/bonuses/{bonus}', [EmployeeController::class, 'deleteBonus']);
+
     // Attendance
     Route::get('/attendances', [AttendanceController::class, 'index']);
     Route::post('/attendances/{attendance}/toggle', [AttendanceController::class, 'toggle']);
+    Route::put('/attendances/{attendance}/status', [AttendanceController::class, 'updateStatus']);
     Route::post('/attendances/{attendance}/cancel', [AttendanceController::class, 'cancel']);
     Route::post('/attendances/cancel-all', [AttendanceController::class, 'cancelAll']);
     Route::post('/attendances/mark-all-present', [AttendanceController::class, 'markAllPresent']);
@@ -180,4 +192,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Invest, Loan & Liability
     Route::apiResource('invest-loan-liabilities', InvestLoanLiabilityController::class);
     Route::get('/invest-loan-liabilities-summary', [InvestLoanLiabilityController::class, 'summary']);
+    Route::post('/invest-loan-liabilities/{investLoanLiability}/payment', [InvestLoanLiabilityController::class, 'addPayment']);
+    Route::get('/invest-loan-liabilities/{investLoanLiability}/payments', [InvestLoanLiabilityController::class, 'getPayments']);
+    Route::delete('/invest-loan-liability-payments/{payment}', [InvestLoanLiabilityController::class, 'deletePayment']);
 });

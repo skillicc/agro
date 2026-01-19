@@ -51,6 +51,16 @@ class Employee extends Model
         return $this->hasMany(Attendance::class);
     }
 
+    public function salaryAdjustments()
+    {
+        return $this->hasMany(SalaryAdjustment::class);
+    }
+
+    public function bonuses()
+    {
+        return $this->hasMany(EmployeeBonus::class);
+    }
+
     public function isRegular(): bool
     {
         return $this->employee_type === 'regular';

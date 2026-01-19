@@ -11,18 +11,34 @@
         <!-- Summary Cards -->
         <v-row class="mb-4">
             <v-col cols="6" sm="4" lg="2" v-for="card in summaryCards" :key="card.type">
-                <v-card :color="card.color" variant="tonal">
-                    <v-card-text class="text-center">
-                        <v-icon :icon="card.icon" size="32" class="mb-2"></v-icon>
+                <v-card :color="card.color" variant="tonal" @click="activeTab = card.type" style="cursor: pointer;">
+                    <v-card-text class="text-center pa-3">
+                        <v-icon :icon="card.icon" size="28" class="mb-1"></v-icon>
                         <div class="text-caption">{{ card.label }}</div>
-                        <div class="text-h6 font-weight-bold">৳{{ formatNumber(summary[card.type] || 0) }}</div>
+                        <div class="text-subtitle-1 font-weight-bold">৳{{ formatNumber(summary[card.type] || 0) }}</div>
+                        <div class="text-caption">({{ getTypeCount(card.type) }})</div>
                     </v-card-text>
                 </v-card>
             </v-col>
         </v-row>
 
-        <!-- Filter Tabs -->
+        <!-- Search and Filter -->
         <v-card class="mb-4">
+            <v-card-text class="pa-3">
+                <v-row dense align="center">
+                    <v-col cols="12" sm="6" md="4">
+                        <v-text-field
+                            v-model="searchQuery"
+                            label="Search by Name"
+                            prepend-inner-icon="mdi-magnify"
+                            clearable
+                            hide-details
+                            density="compact"
+                            @input="fetchItems"
+                        ></v-text-field>
+                    </v-col>
+                </v-row>
+            </v-card-text>
             <v-tabs v-model="activeTab" color="primary" show-arrows>
                 <v-tab value="all">
                     <v-icon start>mdi-format-list-bulleted</v-icon>
@@ -30,69 +46,171 @@
                 </v-tab>
                 <v-tab value="investor">
                     <v-icon start>mdi-cash-multiple</v-icon>
-                    Investor ({{ getTypeCount('investor') }})
+                    Investor
                 </v-tab>
                 <v-tab value="partner">
                     <v-icon start>mdi-handshake</v-icon>
-                    Partner ({{ getTypeCount('partner') }})
+                    Partner
                 </v-tab>
                 <v-tab value="shareholder">
                     <v-icon start>mdi-account-group</v-icon>
-                    Shareholder ({{ getTypeCount('shareholder') }})
+                    Shareholder
                 </v-tab>
                 <v-tab value="investment_day_term">
                     <v-icon start>mdi-calendar-clock</v-icon>
-                    Day Term ({{ getTypeCount('investment_day_term') }})
+                    Day Term
                 </v-tab>
                 <v-tab value="loan">
                     <v-icon start>mdi-bank</v-icon>
-                    Loan ({{ getTypeCount('loan') }})
+                    Loan
                 </v-tab>
                 <v-tab value="account_payable">
                     <v-icon start>mdi-arrow-up-circle</v-icon>
-                    Payable ({{ getTypeCount('account_payable') }})
+                    Payable
                 </v-tab>
                 <v-tab value="account_receivable">
                     <v-icon start>mdi-arrow-down-circle</v-icon>
-                    Receivable ({{ getTypeCount('account_receivable') }})
+                    Receivable
                 </v-tab>
             </v-tabs>
         </v-card>
 
-        <!-- Data Table -->
-        <v-card>
-            <v-card-text>
-                <v-data-table :headers="headers" :items="filteredItems" :loading="loading">
-                    <template v-slot:item.type="{ item }">
-                        <v-chip :color="getTypeColor(item.type)" size="small">
-                            {{ getTypeLabel(item.type) }}
-                        </v-chip>
-                    </template>
-                    <template v-slot:item.amount="{ item }">
-                        ৳{{ formatNumber(item.amount) }}
-                    </template>
-                    <template v-slot:item.date="{ item }">
-                        {{ formatDate(item.date) }}
-                    </template>
-                    <template v-slot:item.due_date="{ item }">
-                        {{ item.due_date ? formatDate(item.due_date) : '-' }}
-                    </template>
-                    <template v-slot:item.status="{ item }">
-                        <v-chip :color="getStatusColor(item.status)" size="small">
+        <!-- Grid View -->
+        <v-row>
+            <v-col v-for="item in filteredItems" :key="item.id" cols="12" sm="6" lg="4" xl="3">
+                <v-card :class="{ 'border-left-thick': true }" :style="{ borderLeftColor: getTypeColorHex(item.type) }">
+                    <v-card-title class="d-flex align-center">
+                        <v-icon :color="getTypeColor(item.type)" class="mr-2">{{ getTypeIcon(item.type) }}</v-icon>
+                        <span class="text-truncate">{{ item.name }}</span>
+                        <v-spacer></v-spacer>
+                        <v-chip :color="getStatusColor(item.status)" size="x-small">
                             {{ item.status }}
                         </v-chip>
-                    </template>
-                    <template v-slot:item.actions="{ item }">
-                        <v-btn icon size="small" @click="openDialog(item)">
+                    </v-card-title>
+                    <v-card-subtitle>
+                        <v-chip :color="getTypeColor(item.type)" size="small" variant="tonal">
+                            {{ getTypeLabel(item.type) }}
+                        </v-chip>
+                    </v-card-subtitle>
+                    <v-card-text>
+                        <v-row dense>
+                            <v-col cols="6">
+                                <div class="text-caption text-grey">Amount</div>
+                                <div class="text-subtitle-1 font-weight-bold">৳{{ formatNumber(item.amount) }}</div>
+                            </v-col>
+                            <v-col cols="6">
+                                <div class="text-caption text-grey">Date</div>
+                                <div class="text-subtitle-2">{{ formatDate(item.date) }}</div>
+                            </v-col>
+                        </v-row>
+                        <!-- Investor specific fields -->
+                        <v-row dense class="mt-2" v-if="item.type === 'investor' && item.invest_period">
+                            <v-col cols="6">
+                                <div class="text-caption text-grey">Invest Period</div>
+                                <div class="text-subtitle-2">{{ item.invest_period }} Months</div>
+                            </v-col>
+                        </v-row>
+                        <!-- Share Value - for shareholder/partner -->
+                        <v-row dense class="mt-2" v-if="['shareholder', 'partner'].includes(item.type) && item.share_value">
+                            <v-col cols="6">
+                                <div class="text-caption text-grey">Share Value</div>
+                                <div class="text-subtitle-2">৳{{ formatNumber(item.share_value) }}</div>
+                            </v-col>
+                        </v-row>
+                        <!-- Honorarium - only for partner -->
+                        <v-row dense class="mt-2" v-if="item.type === 'partner' && item.honorarium">
+                            <v-col cols="6">
+                                <div class="text-caption text-grey">Honorarium ({{ item.honorarium_type }})</div>
+                                <div class="text-subtitle-2">৳{{ formatNumber(item.honorarium) }}</div>
+                            </v-col>
+                        </v-row>
+                        <!-- Share Paid & Profit Withdrawn -->
+                        <v-row dense class="mt-2" v-if="['shareholder', 'partner', 'investor'].includes(item.type)">
+                            <v-col cols="6" v-if="item.total_share_paid">
+                                <div class="text-caption text-grey">Total Share Paid</div>
+                                <div class="text-subtitle-2 text-success">৳{{ formatNumber(item.total_share_paid) }}</div>
+                            </v-col>
+                            <v-col cols="6" v-if="item.total_profit_withdrawn">
+                                <div class="text-caption text-grey">Profit Withdrawn</div>
+                                <div class="text-subtitle-2 text-warning">৳{{ formatNumber(item.total_profit_withdrawn) }}</div>
+                            </v-col>
+                        </v-row>
+                        <!-- Loan specific fields -->
+                        <v-row dense class="mt-2" v-if="item.type === 'loan'">
+                            <v-col cols="6">
+                                <div class="text-caption text-grey">Loan Type</div>
+                                <div class="text-subtitle-2">{{ item.loan_type === 'with_profit' ? 'With Profit' : 'Without Profit' }}</div>
+                            </v-col>
+                            <v-col cols="6" v-if="item.loan_type === 'with_profit'">
+                                <div class="text-caption text-grey">Received Amount</div>
+                                <div class="text-subtitle-2">৳{{ formatNumber(item.received_amount) }}</div>
+                            </v-col>
+                        </v-row>
+                        <v-row dense class="mt-2" v-if="item.type === 'loan' && item.loan_type === 'with_profit'">
+                            <v-col cols="6">
+                                <div class="text-caption text-grey">Total Payable</div>
+                                <div class="text-subtitle-2">৳{{ formatNumber(item.total_payable) }}</div>
+                            </v-col>
+                            <v-col cols="6" v-if="item.receive_date">
+                                <div class="text-caption text-grey">Receive Date</div>
+                                <div class="text-subtitle-2">{{ formatDate(item.receive_date) }}</div>
+                            </v-col>
+                        </v-row>
+                        <v-row dense class="mt-2" v-if="item.type === 'loan'">
+                            <v-col cols="6">
+                                <div class="text-caption text-grey">Paid Amount</div>
+                                <div class="text-subtitle-2 text-success">৳{{ formatNumber(item.total_loan_paid || 0) }}</div>
+                            </v-col>
+                            <v-col cols="6">
+                                <div class="text-caption text-grey">Rest Amount</div>
+                                <div class="text-subtitle-2 text-error">৳{{ formatNumber(item.loan_rest_amount || 0) }}</div>
+                            </v-col>
+                        </v-row>
+                        <v-row dense class="mt-2" v-if="item.appoint_date || item.due_date">
+                            <v-col cols="6" v-if="item.appoint_date">
+                                <div class="text-caption text-grey">Appoint Date</div>
+                                <div class="text-subtitle-2">{{ formatDate(item.appoint_date) }}</div>
+                            </v-col>
+                            <v-col cols="6" v-if="item.due_date">
+                                <div class="text-caption text-grey">Due Date</div>
+                                <div class="text-subtitle-2">{{ formatDate(item.due_date) }}</div>
+                            </v-col>
+                        </v-row>
+                        <div v-if="item.description" class="mt-2 text-caption text-truncate">
+                            {{ item.description }}
+                        </div>
+                    </v-card-text>
+                    <v-card-actions>
+                        <!-- Payment buttons for shareholders/partners/investors/loans -->
+                        <v-btn
+                            v-if="['shareholder', 'partner', 'investor', 'loan'].includes(item.type)"
+                            size="small"
+                            color="success"
+                            variant="tonal"
+                            @click="openPaymentDialog(item)"
+                            title="Add Payment"
+                        >
+                            <v-icon left>mdi-cash-plus</v-icon>
+                            {{ item.type === 'loan' ? 'Pay' : 'Payment' }}
+                        </v-btn>
+                        <v-spacer></v-spacer>
+                        <v-btn icon size="small" @click="viewPayments(item)" title="View Payments" v-if="['shareholder', 'partner', 'investor', 'loan'].includes(item.type)">
+                            <v-icon>mdi-history</v-icon>
+                        </v-btn>
+                        <v-btn icon size="small" @click="openDialog(item)" title="Edit">
                             <v-icon>mdi-pencil</v-icon>
                         </v-btn>
-                        <v-btn icon size="small" color="error" @click="confirmDelete(item)">
+                        <v-btn icon size="small" color="error" @click="confirmDelete(item)" title="Delete">
                             <v-icon>mdi-delete</v-icon>
                         </v-btn>
-                    </template>
-                </v-data-table>
-            </v-card-text>
-        </v-card>
+                    </v-card-actions>
+                </v-card>
+            </v-col>
+        </v-row>
+
+        <v-alert v-if="filteredItems.length === 0" type="info" class="mt-4">
+            No records found for this category.
+        </v-alert>
 
         <!-- Add/Edit Dialog -->
         <v-dialog v-model="dialog" max-width="600">
@@ -112,14 +230,79 @@
                                     required
                                 ></v-select>
                             </v-col>
-                            <v-col cols="12" lg="6">
-                                <v-text-field v-model.number="form.amount" label="Amount" type="number" prefix="৳" required></v-text-field>
+                            <v-col cols="12" lg="6" v-if="form.type !== 'loan'">
+                                <v-text-field v-model.number="form.amount" :label="form.type === 'investor' ? 'Invest Amount' : 'Amount'" type="number" prefix="৳" required></v-text-field>
                             </v-col>
-                            <v-col cols="12" lg="6">
+                            <v-col cols="12" lg="6" v-if="form.type !== 'loan'">
                                 <v-text-field v-model="form.date" label="Date" type="date" required></v-text-field>
                             </v-col>
-                            <v-col cols="12" lg="6">
+                            <!-- Loan Type - only for loan -->
+                            <v-col cols="12" lg="6" v-if="form.type === 'loan'">
+                                <v-select
+                                    v-model="form.loan_type"
+                                    :items="loanTypeOptions"
+                                    label="Loan Type"
+                                    required
+                                ></v-select>
+                            </v-col>
+                            <!-- Loan Amount (total_payable for with_profit) - only for loan -->
+                            <v-col cols="12" lg="6" v-if="form.type === 'loan'">
+                                <v-text-field
+                                    v-model.number="form.total_payable"
+                                    :label="form.loan_type === 'with_profit' ? 'Loan Amount (Total Payable)' : 'Loan Amount'"
+                                    type="number"
+                                    prefix="৳"
+                                    required
+                                ></v-text-field>
+                            </v-col>
+                            <!-- Received Amount - only for loan with profit -->
+                            <v-col cols="12" lg="6" v-if="form.type === 'loan' && form.loan_type === 'with_profit'">
+                                <v-text-field v-model.number="form.received_amount" label="Received Amount" type="number" prefix="৳"></v-text-field>
+                            </v-col>
+                            <!-- Receive Date - only for loan with profit -->
+                            <v-col cols="12" lg="6" v-if="form.type === 'loan' && form.loan_type === 'with_profit'">
+                                <v-text-field v-model="form.receive_date" label="Receive Date" type="date"></v-text-field>
+                            </v-col>
+                            <!-- Date for loan -->
+                            <v-col cols="12" lg="6" v-if="form.type === 'loan'">
+                                <v-text-field v-model="form.date" label="Loan Date" type="date" required></v-text-field>
+                            </v-col>
+                            <!-- Invest Period - only for investor -->
+                            <v-col cols="12" lg="6" v-if="form.type === 'investor'">
+                                <v-select
+                                    v-model="form.invest_period"
+                                    :items="investPeriodOptions"
+                                    label="Invest Period"
+                                    clearable
+                                ></v-select>
+                            </v-col>
+                            <!-- Share Value - for shareholder/partner -->
+                            <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
+                                <v-text-field v-model.number="form.share_value" label="Share Value" type="number" prefix="৳"></v-text-field>
+                            </v-col>
+                            <!-- Honorarium - only for partner -->
+                            <v-col cols="12" lg="6" v-if="form.type === 'partner'">
+                                <v-text-field v-model.number="form.honorarium" label="Honorarium" type="number" prefix="৳"></v-text-field>
+                            </v-col>
+                            <v-col cols="12" lg="6" v-if="form.type === 'partner' && form.honorarium > 0">
+                                <v-select
+                                    v-model="form.honorarium_type"
+                                    :items="honorariumTypes"
+                                    label="Honorarium Type"
+                                ></v-select>
+                            </v-col>
+                            <v-col cols="12" lg="6" v-if="form.type !== 'loan'">
+                                <v-text-field v-model="form.appoint_date" :label="form.type === 'investor' ? 'Start Date' : 'Appoint Date'" type="date"></v-text-field>
+                            </v-col>
+                            <v-col cols="12" lg="6" v-if="!['investor', 'loan'].includes(form.type)">
                                 <v-text-field v-model="form.due_date" label="Due Date (Optional)" type="date"></v-text-field>
+                            </v-col>
+                            <v-col cols="12" lg="6" v-if="form.type === 'investor'">
+                                <v-text-field v-model="form.due_date" label="Due Date (Auto-calculated)" type="date" readonly hint="Auto-calculated from Start Date + Invest Period"></v-text-field>
+                            </v-col>
+                            <!-- Due Date for loan -->
+                            <v-col cols="12" lg="6" v-if="form.type === 'loan'">
+                                <v-text-field v-model="form.due_date" label="Due Date" type="date"></v-text-field>
                             </v-col>
                             <v-col cols="12" lg="6">
                                 <v-select
@@ -142,6 +325,93 @@
             </v-card>
         </v-dialog>
 
+        <!-- Payment Dialog -->
+        <v-dialog v-model="paymentDialog" max-width="500">
+            <v-card>
+                <v-card-title>Add Payment - {{ selectedItem?.name }}</v-card-title>
+                <v-card-text>
+                    <v-form @submit.prevent="savePayment">
+                        <v-select
+                            v-model="paymentForm.type"
+                            :items="getPaymentTypes"
+                            label="Payment Type"
+                            required
+                        ></v-select>
+                        <v-text-field
+                            v-model.number="paymentForm.amount"
+                            label="Amount"
+                            type="number"
+                            prefix="৳"
+                            required
+                        ></v-text-field>
+                        <v-text-field
+                            v-model="paymentForm.date"
+                            label="Date"
+                            type="date"
+                            required
+                        ></v-text-field>
+                        <v-text-field
+                            v-if="paymentForm.type === 'profit_withdrawal'"
+                            v-model.number="paymentForm.for_year"
+                            label="For Year"
+                            type="number"
+                            :placeholder="new Date().getFullYear().toString()"
+                        ></v-text-field>
+                        <v-text-field
+                            v-model="paymentForm.note"
+                            label="Note (Optional)"
+                        ></v-text-field>
+                    </v-form>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="paymentDialog = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="savePayment" :loading="savingPayment">Save Payment</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Payment History Dialog -->
+        <v-dialog v-model="paymentsHistoryDialog" max-width="700">
+            <v-card>
+                <v-card-title class="d-flex align-center">
+                    Payment History - {{ selectedItem?.name }}
+                    <v-spacer></v-spacer>
+                    <v-btn icon size="small" @click="paymentsHistoryDialog = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-card-title>
+                <v-card-text>
+                    <v-data-table
+                        :headers="paymentHeaders"
+                        :items="payments"
+                        :loading="loadingPayments"
+                        density="compact"
+                    >
+                        <template v-slot:item.type="{ item }">
+                            <v-chip :color="getPaymentTypeColor(item.type)" size="small">
+                                {{ getPaymentTypeLabel(item.type) }}
+                            </v-chip>
+                        </template>
+                        <template v-slot:item.amount="{ item }">
+                            ৳{{ formatNumber(item.amount) }}
+                        </template>
+                        <template v-slot:item.date="{ item }">
+                            {{ formatDate(item.date) }}
+                        </template>
+                        <template v-slot:item.for_year="{ item }">
+                            {{ item.for_year || '-' }}
+                        </template>
+                        <template v-slot:item.actions="{ item }">
+                            <v-btn icon size="x-small" color="error" @click="confirmDeletePayment(item)">
+                                <v-icon>mdi-delete</v-icon>
+                            </v-btn>
+                        </template>
+                    </v-data-table>
+                </v-card-text>
+            </v-card>
+        </v-dialog>
+
         <!-- Delete Confirm Dialog -->
         <v-dialog v-model="deleteDialog" max-width="400">
             <v-card>
@@ -151,6 +421,19 @@
                     <v-spacer></v-spacer>
                     <v-btn @click="deleteDialog = false">Cancel</v-btn>
                     <v-btn color="error" @click="deleteItem" :loading="deleting">Delete</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Delete Payment Confirm Dialog -->
+        <v-dialog v-model="deletePaymentDialog" max-width="400">
+            <v-card>
+                <v-card-title>Confirm Delete Payment</v-card-title>
+                <v-card-text>Are you sure you want to delete this payment of ৳{{ formatNumber(selectedPayment?.amount) }}?</v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="deletePaymentDialog = false">Cancel</v-btn>
+                    <v-btn color="error" @click="deletePayment" :loading="deletingPayment">Delete</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -171,6 +454,17 @@ const selectedItem = ref(null)
 const saving = ref(false)
 const deleting = ref(false)
 const activeTab = ref('all')
+const searchQuery = ref('')
+
+// Payment related
+const paymentDialog = ref(false)
+const paymentsHistoryDialog = ref(false)
+const payments = ref([])
+const loadingPayments = ref(false)
+const savingPayment = ref(false)
+const deletePaymentDialog = ref(false)
+const selectedPayment = ref(null)
+const deletingPayment = ref(false)
 
 const typeOptions = [
     { title: 'Investor', value: 'investor' },
@@ -188,6 +482,61 @@ const statusOptions = [
     { title: 'Cancelled', value: 'cancelled' },
 ]
 
+const honorariumTypes = [
+    { title: 'Monthly', value: 'monthly' },
+    { title: 'Yearly', value: 'yearly' },
+]
+
+const investPeriodOptions = [
+    { title: '4 Months', value: 4 },
+    { title: '6 Months', value: 6 },
+    { title: '12 Months (1 Year)', value: 12 },
+    { title: '18 Months', value: 18 },
+    { title: '24 Months (2 Years)', value: 24 },
+]
+
+const loanTypeOptions = [
+    { title: 'With Profit (Sharia-based)', value: 'with_profit' },
+    { title: 'Without Profit (Personal)', value: 'without_profit' },
+]
+
+// Payment types - computed based on selected item type
+const getPaymentTypes = computed(() => {
+    const itemType = selectedItem.value?.type
+    const types = []
+
+    // Share Payment - for shareholder/partner (not investor)
+    if (['shareholder', 'partner'].includes(itemType)) {
+        types.push({ title: 'Share Payment', value: 'share_payment' })
+    }
+
+    // Profit/Loss Withdrawal - for shareholder/partner/investor
+    if (['shareholder', 'partner', 'investor'].includes(itemType)) {
+        types.push({ title: 'Profit / Loss', value: 'profit_withdrawal' })
+    }
+
+    // Honorarium Payment - only for partners
+    if (itemType === 'partner') {
+        types.push({ title: 'Honorarium Payment', value: 'honorarium_payment' })
+    }
+
+    // Loan Payment - only for loans
+    if (itemType === 'loan') {
+        types.push({ title: 'Loan Payment', value: 'loan_payment' })
+    }
+
+    return types
+})
+
+const paymentHeaders = [
+    { title: 'Type', key: 'type', width: '150px' },
+    { title: 'Amount', key: 'amount', width: '120px' },
+    { title: 'Date', key: 'date', width: '100px' },
+    { title: 'For Year', key: 'for_year', width: '80px' },
+    { title: 'Note', key: 'note' },
+    { title: '', key: 'actions', width: '50px', sortable: false },
+]
+
 const summaryCards = [
     { type: 'investor', label: 'Investor', color: 'deep-purple', icon: 'mdi-cash-multiple' },
     { type: 'partner', label: 'Partner', color: 'primary', icon: 'mdi-handshake' },
@@ -195,27 +544,33 @@ const summaryCards = [
     { type: 'investment_day_term', label: 'Day Term', color: 'success', icon: 'mdi-calendar-clock' },
     { type: 'loan', label: 'Loan', color: 'warning', icon: 'mdi-bank' },
     { type: 'account_payable', label: 'Payable', color: 'error', icon: 'mdi-arrow-up-circle' },
-    { type: 'account_receivable', label: 'Receivable', color: 'teal', icon: 'mdi-arrow-down-circle' },
-]
-
-const headers = [
-    { title: 'Name', key: 'name' },
-    { title: 'Type', key: 'type' },
-    { title: 'Amount', key: 'amount' },
-    { title: 'Date', key: 'date' },
-    { title: 'Due Date', key: 'due_date' },
-    { title: 'Status', key: 'status' },
-    { title: 'Actions', key: 'actions', sortable: false },
 ]
 
 const form = reactive({
     name: '',
     type: 'investor',
     amount: 0,
+    share_value: 0,
+    honorarium: 0,
+    honorarium_type: 'monthly',
+    invest_period: null,
+    loan_type: 'with_profit',
+    received_amount: 0,
+    total_payable: 0,
+    receive_date: '',
     date: new Date().toISOString().split('T')[0],
+    appoint_date: '',
     due_date: '',
     description: '',
     status: 'active',
+})
+
+const paymentForm = reactive({
+    type: 'share_payment',
+    amount: 0,
+    date: new Date().toISOString().split('T')[0],
+    for_year: null,
+    note: '',
 })
 
 const filteredItems = computed(() => {
@@ -230,13 +585,26 @@ const getTypeCount = (type) => {
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
 
 const formatDate = (date) => {
-    if (!date) return ''
+    if (!date) return '-'
     return new Date(date).toLocaleDateString('en-GB')
 }
 
 const getTypeLabel = (type) => {
     const option = typeOptions.find(o => o.value === type)
     return option ? option.title : type
+}
+
+const getTypeIcon = (type) => {
+    const icons = {
+        investor: 'mdi-cash-multiple',
+        partner: 'mdi-handshake',
+        shareholder: 'mdi-account-group',
+        investment_day_term: 'mdi-calendar-clock',
+        loan: 'mdi-bank',
+        account_payable: 'mdi-arrow-up-circle',
+        account_receivable: 'mdi-arrow-down-circle',
+    }
+    return icons[type] || 'mdi-file-document'
 }
 
 const getTypeColor = (type) => {
@@ -252,6 +620,19 @@ const getTypeColor = (type) => {
     return colors[type] || 'grey'
 }
 
+const getTypeColorHex = (type) => {
+    const colors = {
+        investor: '#673AB7',
+        partner: '#1976D2',
+        shareholder: '#0288D1',
+        investment_day_term: '#4CAF50',
+        loan: '#FF9800',
+        account_payable: '#F44336',
+        account_receivable: '#009688',
+    }
+    return colors[type] || '#9E9E9E'
+}
+
 const getStatusColor = (status) => {
     const colors = {
         active: 'success',
@@ -261,10 +642,32 @@ const getStatusColor = (status) => {
     return colors[status] || 'grey'
 }
 
+const getPaymentTypeColor = (type) => {
+    const colors = {
+        share_payment: 'success',
+        profit_withdrawal: 'warning',
+        honorarium_payment: 'info',
+        loan_payment: 'primary',
+    }
+    return colors[type] || 'grey'
+}
+
+const getPaymentTypeLabel = (type) => {
+    const labels = {
+        share_payment: 'Share Payment',
+        profit_withdrawal: 'Profit Withdrawal',
+        honorarium_payment: 'Honorarium',
+        loan_payment: 'Loan Payment',
+    }
+    return labels[type] || type
+}
+
 const fetchItems = async () => {
     loading.value = true
     try {
-        const response = await api.get('/invest-loan-liabilities')
+        const params = {}
+        if (searchQuery.value) params.search = searchQuery.value
+        const response = await api.get('/invest-loan-liabilities', { params })
         items.value = response.data
     } catch (error) {
         console.error('Error:', error)
@@ -289,7 +692,16 @@ const openDialog = (item = null) => {
             name: item.name,
             type: item.type,
             amount: item.amount,
+            share_value: item.share_value || 0,
+            honorarium: item.honorarium || 0,
+            honorarium_type: item.honorarium_type || 'monthly',
+            invest_period: item.invest_period || null,
+            loan_type: item.loan_type || 'with_profit',
+            received_amount: item.received_amount || 0,
+            total_payable: item.total_payable || 0,
+            receive_date: item.receive_date ? item.receive_date.split('T')[0] : '',
             date: item.date ? item.date.split('T')[0] : '',
+            appoint_date: item.appoint_date ? item.appoint_date.split('T')[0] : '',
             due_date: item.due_date ? item.due_date.split('T')[0] : '',
             description: item.description || '',
             status: item.status,
@@ -301,7 +713,16 @@ const openDialog = (item = null) => {
             name: '',
             type: defaultType,
             amount: 0,
+            share_value: 0,
+            honorarium: 0,
+            honorarium_type: 'monthly',
+            invest_period: null,
+            loan_type: 'with_profit',
+            received_amount: 0,
+            total_payable: 0,
+            receive_date: '',
             date: new Date().toISOString().split('T')[0],
+            appoint_date: '',
             due_date: '',
             description: '',
             status: 'active',
@@ -314,7 +735,14 @@ const save = async () => {
     saving.value = true
     try {
         const payload = { ...form }
+        if (!payload.appoint_date) delete payload.appoint_date
         if (!payload.due_date) delete payload.due_date
+        if (!payload.receive_date) delete payload.receive_date
+
+        // For loan without profit, copy total_payable to received_amount
+        if (payload.type === 'loan' && payload.loan_type === 'without_profit') {
+            payload.received_amount = payload.total_payable
+        }
 
         if (editMode.value) {
             await api.put(`/invest-loan-liabilities/${selectedItem.value.id}`, payload)
@@ -348,8 +776,80 @@ const deleteItem = async () => {
     deleting.value = false
 }
 
+// Payment functions
+const openPaymentDialog = (item) => {
+    selectedItem.value = item
+    // Set default payment type based on item type
+    let defaultPaymentType = 'share_payment'
+    if (item.type === 'loan') {
+        defaultPaymentType = 'loan_payment'
+    } else if (item.type === 'investor') {
+        defaultPaymentType = 'profit_withdrawal'
+    }
+    Object.assign(paymentForm, {
+        type: defaultPaymentType,
+        amount: 0,
+        date: new Date().toISOString().split('T')[0],
+        for_year: new Date().getFullYear(),
+        note: '',
+    })
+    paymentDialog.value = true
+}
+
+const savePayment = async () => {
+    savingPayment.value = true
+    try {
+        await api.post(`/invest-loan-liabilities/${selectedItem.value.id}/payment`, paymentForm)
+        paymentDialog.value = false
+        fetchItems()
+        fetchSummary()
+    } catch (error) {
+        console.error('Error:', error)
+    }
+    savingPayment.value = false
+}
+
+const viewPayments = async (item) => {
+    selectedItem.value = item
+    loadingPayments.value = true
+    paymentsHistoryDialog.value = true
+    try {
+        const response = await api.get(`/invest-loan-liabilities/${item.id}/payments`)
+        payments.value = response.data
+    } catch (error) {
+        console.error('Error:', error)
+    }
+    loadingPayments.value = false
+}
+
+const confirmDeletePayment = (payment) => {
+    selectedPayment.value = payment
+    deletePaymentDialog.value = true
+}
+
+const deletePayment = async () => {
+    deletingPayment.value = true
+    try {
+        await api.delete(`/invest-loan-liability-payments/${selectedPayment.value.id}`)
+        deletePaymentDialog.value = false
+        // Refresh the payments list
+        viewPayments(selectedItem.value)
+        fetchItems()
+        fetchSummary()
+    } catch (error) {
+        console.error('Error:', error)
+    }
+    deletingPayment.value = false
+}
+
 onMounted(() => {
     fetchItems()
     fetchSummary()
 })
 </script>
+
+<style scoped>
+.border-left-thick {
+    border-left: 4px solid;
+}
+</style>

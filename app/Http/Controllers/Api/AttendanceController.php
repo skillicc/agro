@@ -56,6 +56,8 @@ class AttendanceController extends Controller
             'total' => $attendances->count(),
             'present' => $attendances->where('status', 'present')->count(),
             'absent' => $attendances->where('status', 'absent')->count(),
+            'leave' => $attendances->where('status', 'leave')->count(),
+            'sick_leave' => $attendances->where('status', 'sick_leave')->count(),
             'regular_count' => $attendances->filter(fn($a) => $a->employee->employee_type === 'regular')->count(),
             'contractual_count' => $attendances->filter(fn($a) => $a->employee->employee_type === 'contractual')->count(),
         ];
@@ -67,11 +69,31 @@ class AttendanceController extends Controller
         ]);
     }
 
-    // Toggle single employee attendance (present/absent)
+    // Toggle single employee attendance (cycles through: present -> absent -> leave -> sick_leave -> present)
     public function toggle(Request $request, Attendance $attendance)
     {
+        $statusCycle = ['present', 'absent', 'leave', 'sick_leave'];
+        $currentIndex = array_search($attendance->status, $statusCycle);
+        $nextIndex = ($currentIndex + 1) % count($statusCycle);
+
         $attendance->update([
-            'status' => $attendance->status === 'present' ? 'absent' : 'present'
+            'status' => $statusCycle[$nextIndex]
+        ]);
+
+        return response()->json($attendance->load('employee.project'));
+    }
+
+    // Update attendance status directly with optional note
+    public function updateStatus(Request $request, Attendance $attendance)
+    {
+        $request->validate([
+            'status' => 'required|in:present,absent,leave,sick_leave',
+            'note' => 'nullable|string|max:255',
+        ]);
+
+        $attendance->update([
+            'status' => $request->status,
+            'note' => $request->note,
         ]);
 
         return response()->json($attendance->load('employee.project'));
@@ -127,6 +149,8 @@ class AttendanceController extends Controller
             'total_days' => $attendances->count(),
             'present_days' => $attendances->where('status', 'present')->count(),
             'absent_days' => $attendances->where('status', 'absent')->count(),
+            'leave_days' => $attendances->where('status', 'leave')->count(),
+            'sick_leave_days' => $attendances->where('status', 'sick_leave')->count(),
         ]);
     }
 
@@ -157,6 +181,8 @@ class AttendanceController extends Controller
                     'total_days' => $attendances->count(),
                     'present_days' => $presentDays,
                     'absent_days' => $attendances->where('status', 'absent')->count(),
+                    'leave_days' => $attendances->where('status', 'leave')->count(),
+                    'sick_leave_days' => $attendances->where('status', 'sick_leave')->count(),
                 ];
 
                 // Add salary info for contractual employees
@@ -200,6 +226,8 @@ class AttendanceController extends Controller
                 'total' => $records->count(),
                 'present' => $records->where('status', 'present')->count(),
                 'absent' => $records->where('status', 'absent')->count(),
+                'leave' => $records->where('status', 'leave')->count(),
+                'sick_leave' => $records->where('status', 'sick_leave')->count(),
             ];
         }
 

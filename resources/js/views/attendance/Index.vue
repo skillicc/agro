@@ -68,6 +68,22 @@
                 </v-card>
             </v-col>
             <v-col cols="3" sm="2" md="1">
+                <v-card color="purple" variant="tonal">
+                    <v-card-text class="pa-2 text-center">
+                        <div class="text-h6">{{ summary?.leave ?? 0 }}</div>
+                        <div class="text-caption">Leave</div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="3" sm="2" md="1">
+                <v-card color="warning" variant="tonal">
+                    <v-card-text class="pa-2 text-center">
+                        <div class="text-h6">{{ summary?.sick_leave ?? 0 }}</div>
+                        <div class="text-caption">Sick</div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="3" sm="2" md="1">
                 <v-card color="blue" variant="tonal">
                     <v-card-text class="pa-2 text-center">
                         <div class="text-h6">{{ summary?.regular_count ?? 0 }}</div>
@@ -116,34 +132,25 @@
                 </template>
                 <template v-slot:item.status="{ item }">
                     <v-chip
-                        :color="item.status === 'present' ? 'success' : 'error'"
+                        :color="getStatusColor(item.status)"
                         size="small"
                         @click="toggleAttendance(item)"
                         style="cursor: pointer;"
+                        :title="item.note || ''"
                     >
-                        {{ item.status === 'present' ? 'Present' : 'Absent' }}
+                        {{ getStatusLabel(item.status) }}
                     </v-chip>
+                    <v-icon v-if="item.note" size="x-small" class="ml-1" color="grey" :title="item.note">mdi-note-text</v-icon>
                 </template>
                 <template v-slot:item.actions="{ item }">
                     <v-btn
-                        v-if="item.status === 'present'"
                         icon
                         size="x-small"
-                        color="error"
-                        @click="cancelAttendance(item)"
-                        title="Mark Absent"
+                        color="info"
+                        @click="openStatusDialog(item)"
+                        title="Change Status"
                     >
-                        <v-icon>mdi-close</v-icon>
-                    </v-btn>
-                    <v-btn
-                        v-else
-                        icon
-                        size="x-small"
-                        color="success"
-                        @click="toggleAttendance(item)"
-                        title="Mark Present"
-                    >
-                        <v-icon>mdi-check</v-icon>
+                        <v-icon>mdi-pencil</v-icon>
                     </v-btn>
                 </template>
             </v-data-table>
@@ -163,6 +170,39 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <!-- Status Update Dialog -->
+        <v-dialog v-model="statusDialog" max-width="450">
+            <v-card>
+                <v-card-title>Update Attendance</v-card-title>
+                <v-card-text>
+                    <div class="mb-3">
+                        <strong>{{ selectedAttendance?.employee?.name }}</strong>
+                        <div class="text-caption text-grey">{{ selectedDate }}</div>
+                    </div>
+                    <v-select
+                        v-model="statusForm.status"
+                        :items="statusOptions"
+                        item-title="label"
+                        item-value="value"
+                        label="Status"
+                        density="comfortable"
+                    ></v-select>
+                    <v-textarea
+                        v-model="statusForm.note"
+                        label="Note (optional)"
+                        rows="2"
+                        density="comfortable"
+                        placeholder="Enter reason for absence/leave..."
+                    ></v-textarea>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="statusDialog = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="updateStatus" :loading="updatingStatus">Update</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </div>
 </template>
 
@@ -177,10 +217,28 @@ const cancelling = ref(false)
 const cancelAllDialog = ref(false)
 const selectedDate = ref(new Date().toISOString().split('T')[0])
 
+// Status dialog
+const statusDialog = ref(false)
+const selectedAttendance = ref(null)
+const updatingStatus = ref(false)
+const statusForm = ref({
+    status: 'present',
+    note: '',
+})
+
+const statusOptions = [
+    { value: 'present', label: 'Present' },
+    { value: 'absent', label: 'Absent' },
+    { value: 'leave', label: 'Leave' },
+    { value: 'sick_leave', label: 'Sick Leave' },
+]
+
 const summary = ref({
     total: 0,
     present: 0,
     absent: 0,
+    leave: 0,
+    sick_leave: 0,
 })
 
 const employeeTypes = [
@@ -208,11 +266,11 @@ const fetchAttendances = async () => {
         }
         const response = await api.get('/attendances', { params })
         attendances.value = response.data.attendances || []
-        summary.value = response.data.summary || { total: 0, present: 0, absent: 0, regular_count: 0, contractual_count: 0 }
+        summary.value = response.data.summary || { total: 0, present: 0, absent: 0, leave: 0, sick_leave: 0, regular_count: 0, contractual_count: 0 }
     } catch (error) {
         console.error('Error:', error)
         attendances.value = []
-        summary.value = { total: 0, present: 0, absent: 0, regular_count: 0, contractual_count: 0 }
+        summary.value = { total: 0, present: 0, absent: 0, leave: 0, sick_leave: 0, regular_count: 0, contractual_count: 0 }
     }
     loading.value = false
 }
@@ -230,17 +288,48 @@ const toggleAttendance = async (attendance) => {
     }
 }
 
-const cancelAttendance = async (attendance) => {
+const openStatusDialog = (attendance) => {
+    selectedAttendance.value = attendance
+    statusForm.value.status = attendance.status
+    statusForm.value.note = attendance.note || ''
+    statusDialog.value = true
+}
+
+const updateStatus = async () => {
+    if (!selectedAttendance.value) return
+    updatingStatus.value = true
     try {
-        const response = await api.post(`/attendances/${attendance.id}/cancel`)
-        const index = attendances.value.findIndex(a => a.id === attendance.id)
+        const response = await api.put(`/attendances/${selectedAttendance.value.id}/status`, statusForm.value)
+        const index = attendances.value.findIndex(a => a.id === selectedAttendance.value.id)
         if (index !== -1) {
             attendances.value[index] = response.data
         }
         updateSummary()
+        statusDialog.value = false
     } catch (error) {
         console.error('Error:', error)
     }
+    updatingStatus.value = false
+}
+
+const getStatusColor = (status) => {
+    const colors = {
+        present: 'success',
+        absent: 'error',
+        leave: 'purple',
+        sick_leave: 'warning',
+    }
+    return colors[status] || 'grey'
+}
+
+const getStatusLabel = (status) => {
+    const labels = {
+        present: 'Present',
+        absent: 'Absent',
+        leave: 'Leave',
+        sick_leave: 'Sick Leave',
+    }
+    return labels[status] || status
 }
 
 const confirmCancelAll = () => {
@@ -273,6 +362,8 @@ const markAllPresent = async () => {
 const updateSummary = () => {
     summary.value.present = attendances.value.filter(a => a.status === 'present').length
     summary.value.absent = attendances.value.filter(a => a.status === 'absent').length
+    summary.value.leave = attendances.value.filter(a => a.status === 'leave').length
+    summary.value.sick_leave = attendances.value.filter(a => a.status === 'sick_leave').length
 }
 
 onMounted(() => {

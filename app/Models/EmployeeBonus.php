@@ -6,18 +6,22 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use DateTimeInterface;
 
-class Attendance extends Model
+class EmployeeBonus extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'employee_id',
+        'project_id',
+        'type',
+        'amount',
         'date',
-        'status',
-        'note',
+        'reason',
+        'created_by',
     ];
 
     protected $casts = [
+        'amount' => 'decimal:2',
         'date' => 'date',
     ];
 
@@ -26,9 +30,16 @@ class Attendance extends Model
         return $this->belongsTo(Employee::class);
     }
 
-    /**
-     * Prepare a date for array / JSON serialization.
-     */
+    public function project()
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
     protected function serializeDate(DateTimeInterface $date): string
     {
         return $date->format('Y-m-d');

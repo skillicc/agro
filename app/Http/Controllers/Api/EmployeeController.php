@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\Salary;
 use App\Models\Advance;
+use App\Models\SalaryAdjustment;
+use App\Models\EmployeeBonus;
 use Illuminate\Http\Request;
 
 class EmployeeController extends Controller
@@ -137,17 +139,61 @@ class EmployeeController extends Controller
             'note' => 'nullable|string',
         ]);
 
+        // Check if salary already exists for this month
+        $existingSalary = Salary::where('employee_id', $employee->id)
+            ->where('month', $request->month)
+            ->first();
+
+        if ($existingSalary) {
+            return response()->json([
+                'message' => 'Salary for this month already exists. Please edit the existing entry.',
+                'existing_salary' => $existingSalary
+            ], 422);
+        }
+
+        // Calculate expected salary
+        $expectedSalary = $employee->isContractual()
+            ? $employee->calculateContractualSalary($request->month)
+            : floatval($employee->salary_amount);
+
+        $paidAmount = floatval($request->amount);
+        $salaryAmount = min($paidAmount, $expectedSalary);
+        $advanceAmount = max(0, $paidAmount - $expectedSalary);
+
+        // Create salary entry
         $salary = Salary::create([
             'project_id' => $employee->project_id,
             'employee_id' => $employee->id,
-            'amount' => $request->amount,
+            'amount' => $salaryAmount,
             'month' => $request->month,
             'payment_date' => $request->payment_date,
             'note' => $request->note,
             'created_by' => $request->user()->id,
         ]);
 
-        return response()->json($salary->load(['employee', 'creator']), 201);
+        $advance = null;
+        // If extra amount, create advance for next month
+        if ($advanceAmount > 0) {
+            // Calculate next month
+            $nextMonth = \Carbon\Carbon::parse($request->month . '-01')->addMonth()->format('Y-m');
+
+            $advance = Advance::create([
+                'project_id' => $employee->project_id,
+                'employee_id' => $employee->id,
+                'amount' => $advanceAmount,
+                'date' => $request->payment_date,
+                'reason' => "Auto-advance from {$request->month} salary (Extra: ৳" . number_format($advanceAmount) . ")",
+                'created_by' => $request->user()->id,
+            ]);
+        }
+
+        return response()->json([
+            'salary' => $salary->load(['employee', 'creator']),
+            'advance' => $advance ? $advance->load(['employee', 'creator']) : null,
+            'message' => $advance
+                ? "Salary ৳" . number_format($salaryAmount) . " paid. Extra ৳" . number_format($advanceAmount) . " added as advance."
+                : "Salary paid successfully."
+        ], 201);
     }
 
     public function giveAdvance(Request $request, Employee $employee)
@@ -376,5 +422,214 @@ class EmployeeController extends Controller
         }
 
         return $joiningDate->diffInMonths($currentMonth) + 1;
+    }
+
+    /**
+     * Calculate Earn Leave (EL) for all employees for a given month
+     * Rules:
+     * - Regular employees get 5 days leave allowance per month
+     * - Administration employees get 6 days leave allowance per month
+     * - If absent days > allowance: EL decreases (minus)
+     * - If absent days < allowance: EL increases (plus)
+     */
+    public function calculateEarnLeave(Request $request)
+    {
+        $request->validate([
+            'month' => 'required|string|regex:/^\d{4}-\d{2}$/',
+        ]);
+
+        $month = $request->month;
+        [$year, $monthNum] = explode('-', $month);
+
+        // Get all active regular employees (only regular employees have EL)
+        $employees = Employee::with('project')
+            ->where('is_active', true)
+            ->where('employee_type', 'regular')
+            ->get();
+
+        $results = [];
+        $totalUpdated = 0;
+
+        foreach ($employees as $employee) {
+            // Determine leave allowance based on project
+            // Administration gets 6 days, others get 5 days
+            $isAdministration = $employee->project && $employee->project->name === 'Administration';
+            $leaveAllowance = $isAdministration ? 6 : 5;
+
+            // Count all non-present days (absent, leave, sick_leave) in the month
+            $absentDays = $employee->attendances()
+                ->whereMonth('date', $monthNum)
+                ->whereYear('date', $year)
+                ->where('status', 'absent')
+                ->count();
+
+            $leaveDays = $employee->attendances()
+                ->whereMonth('date', $monthNum)
+                ->whereYear('date', $year)
+                ->where('status', 'leave')
+                ->count();
+
+            $sickLeaveDays = $employee->attendances()
+                ->whereMonth('date', $monthNum)
+                ->whereYear('date', $year)
+                ->where('status', 'sick_leave')
+                ->count();
+
+            // Total non-present days (all types of leave/absence deduct from allowance)
+            $totalLeaveDays = $absentDays + $leaveDays + $sickLeaveDays;
+
+            // Calculate EL adjustment
+            // If total leave days < allowance: positive (unused leave adds to EL)
+            // If total leave days > allowance: negative (extra absence deducts from EL)
+            $elAdjustment = $leaveAllowance - $totalLeaveDays;
+
+            // Update employee's EL
+            $oldEL = floatval($employee->earn_leave ?? 0);
+            $newEL = $oldEL + $elAdjustment;
+
+            $employee->earn_leave = $newEL;
+            $employee->save();
+            $totalUpdated++;
+
+            $results[] = [
+                'employee_id' => $employee->id,
+                'employee_name' => $employee->name,
+                'project' => $employee->project?->name,
+                'leave_allowance' => $leaveAllowance,
+                'absent_days' => $absentDays,
+                'leave_days' => $leaveDays,
+                'sick_leave_days' => $sickLeaveDays,
+                'total_leave_days' => $totalLeaveDays,
+                'el_adjustment' => $elAdjustment,
+                'old_el' => $oldEL,
+                'new_el' => $newEL,
+            ];
+        }
+
+        return response()->json([
+            'message' => "EL calculated for {$totalUpdated} employees",
+            'month' => $month,
+            'total_updated' => $totalUpdated,
+            'results' => $results,
+        ]);
+    }
+
+    /**
+     * Adjust employee salary (increase or decrease)
+     */
+    public function adjustSalary(Request $request, Employee $employee)
+    {
+        $request->validate([
+            'type' => 'required|in:increase,decrease',
+            'new_salary' => 'required|numeric|min:0',
+            'effective_date' => 'required|date',
+            'reason' => 'nullable|string|max:255',
+        ]);
+
+        $oldSalary = floatval($employee->salary_amount);
+        $newSalary = floatval($request->new_salary);
+        $amount = abs($newSalary - $oldSalary);
+
+        // Create adjustment record
+        $adjustment = SalaryAdjustment::create([
+            'employee_id' => $employee->id,
+            'type' => $request->type,
+            'old_salary' => $oldSalary,
+            'new_salary' => $newSalary,
+            'amount' => $amount,
+            'effective_date' => $request->effective_date,
+            'reason' => $request->reason,
+            'created_by' => $request->user()->id,
+        ]);
+
+        // Update employee salary
+        $employee->salary_amount = $newSalary;
+        $employee->save();
+
+        return response()->json([
+            'message' => 'Salary ' . ($request->type === 'increase' ? 'increased' : 'decreased') . ' successfully',
+            'adjustment' => $adjustment->load(['employee', 'creator']),
+        ], 201);
+    }
+
+    /**
+     * Get salary adjustment history for an employee
+     */
+    public function salaryAdjustments(Employee $employee)
+    {
+        $adjustments = $employee->salaryAdjustments()
+            ->with('creator')
+            ->orderBy('effective_date', 'desc')
+            ->get();
+
+        return response()->json($adjustments);
+    }
+
+    /**
+     * Give bonus or incentive to an employee
+     */
+    public function giveBonus(Request $request, Employee $employee)
+    {
+        $request->validate([
+            'type' => 'required|in:bonus,incentive',
+            'amount' => 'required|numeric|min:0',
+            'date' => 'required|date',
+            'reason' => 'nullable|string|max:255',
+        ]);
+
+        $bonus = EmployeeBonus::create([
+            'employee_id' => $employee->id,
+            'project_id' => $employee->project_id,
+            'type' => $request->type,
+            'amount' => $request->amount,
+            'date' => $request->date,
+            'reason' => $request->reason,
+            'created_by' => $request->user()->id,
+        ]);
+
+        return response()->json([
+            'message' => ucfirst($request->type) . ' given successfully',
+            'bonus' => $bonus->load(['employee', 'project', 'creator']),
+        ], 201);
+    }
+
+    /**
+     * Get bonus/incentive history for an employee
+     */
+    public function employeeBonuses(Employee $employee)
+    {
+        $bonuses = $employee->bonuses()
+            ->with(['project', 'creator'])
+            ->orderBy('date', 'desc')
+            ->get();
+
+        return response()->json($bonuses);
+    }
+
+    /**
+     * Get all bonuses/incentives
+     */
+    public function allBonuses(Request $request)
+    {
+        $query = EmployeeBonus::with(['employee', 'project', 'creator']);
+
+        if ($request->type) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->employee_id) {
+            $query->where('employee_id', $request->employee_id);
+        }
+
+        return response()->json($query->orderBy('date', 'desc')->get());
+    }
+
+    /**
+     * Delete a bonus/incentive
+     */
+    public function deleteBonus(EmployeeBonus $bonus)
+    {
+        $bonus->delete();
+        return response()->json(['message' => 'Bonus/Incentive deleted successfully']);
     }
 }

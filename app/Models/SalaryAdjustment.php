@@ -6,19 +6,26 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use DateTimeInterface;
 
-class Attendance extends Model
+class SalaryAdjustment extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'employee_id',
-        'date',
-        'status',
-        'note',
+        'type',
+        'old_salary',
+        'new_salary',
+        'amount',
+        'effective_date',
+        'reason',
+        'created_by',
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'old_salary' => 'decimal:2',
+        'new_salary' => 'decimal:2',
+        'amount' => 'decimal:2',
+        'effective_date' => 'date',
     ];
 
     public function employee()
@@ -26,9 +33,11 @@ class Attendance extends Model
         return $this->belongsTo(Employee::class);
     }
 
-    /**
-     * Prepare a date for array / JSON serialization.
-     */
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
     protected function serializeDate(DateTimeInterface $date): string
     {
         return $date->format('Y-m-d');

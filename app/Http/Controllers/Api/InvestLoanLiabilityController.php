@@ -4,13 +4,38 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\InvestLoanLiability;
+use App\Models\InvestLoanLiabilityPayment;
 use Illuminate\Http\Request;
 
 class InvestLoanLiabilityController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $items = InvestLoanLiability::orderBy('date', 'desc')->get();
+        $query = InvestLoanLiability::withSum('sharePayments as total_share_paid', 'amount')
+            ->withSum('profitWithdrawals as total_profit_withdrawn', 'amount')
+            ->withSum('loanPayments as total_loan_paid', 'amount');
+
+        // Filter by name
+        if ($request->search) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        // Filter by type
+        if ($request->type) {
+            $query->where('type', $request->type);
+        }
+
+        $items = $query->orderBy('date', 'desc')->get();
+
+        // Calculate loan rest amount for each loan item
+        $items->transform(function ($item) {
+            if ($item->type === 'loan') {
+                $totalPayable = $item->loan_type === 'with_profit' ? $item->total_payable : $item->received_amount;
+                $item->loan_rest_amount = $totalPayable - ($item->total_loan_paid ?? 0);
+            }
+            return $item;
+        });
+
         return response()->json($items);
     }
 
@@ -20,19 +45,47 @@ class InvestLoanLiabilityController extends Controller
             'name' => 'required|string|max:255',
             'type' => 'required|in:investor,partner,shareholder,investment_day_term,loan,account_payable,account_receivable',
             'amount' => 'required|numeric|min:0',
+            'share_value' => 'nullable|numeric|min:0',
+            'honorarium' => 'nullable|numeric|min:0',
+            'honorarium_type' => 'nullable|in:monthly,yearly',
+            'invest_period' => 'nullable|integer|in:4,6,12,18,24',
+            'loan_type' => 'nullable|in:with_profit,without_profit',
+            'received_amount' => 'nullable|numeric|min:0',
+            'total_payable' => 'nullable|numeric|min:0',
+            'receive_date' => 'nullable|date',
             'date' => 'required|date',
+            'appoint_date' => 'nullable|date',
             'due_date' => 'nullable|date',
             'description' => 'nullable|string',
             'status' => 'nullable|in:active,completed,cancelled',
         ]);
 
-        $item = InvestLoanLiability::create($request->all());
+        $data = $request->all();
+
+        // Auto-calculate due_date for investor based on appoint_date and invest_period
+        if ($request->type === 'investor' && $request->appoint_date && $request->invest_period) {
+            $data['due_date'] = date('Y-m-d', strtotime($request->appoint_date . ' + ' . $request->invest_period . ' months'));
+        }
+
+        // For loan without profit, total_payable equals received_amount
+        if ($request->type === 'loan' && $request->loan_type === 'without_profit') {
+            $data['total_payable'] = $request->received_amount;
+        }
+
+        $item = InvestLoanLiability::create($data);
 
         return response()->json($item, 201);
     }
 
     public function show(InvestLoanLiability $investLoanLiability)
     {
+        $investLoanLiability->load(['payments' => function ($q) {
+            $q->orderBy('date', 'desc');
+        }]);
+
+        $investLoanLiability->total_share_paid = $investLoanLiability->sharePayments()->sum('amount');
+        $investLoanLiability->total_profit_withdrawn = $investLoanLiability->profitWithdrawals()->sum('amount');
+
         return response()->json($investLoanLiability);
     }
 
@@ -42,13 +95,40 @@ class InvestLoanLiabilityController extends Controller
             'name' => 'nullable|string|max:255',
             'type' => 'nullable|in:investor,partner,shareholder,investment_day_term,loan,account_payable,account_receivable',
             'amount' => 'nullable|numeric|min:0',
+            'share_value' => 'nullable|numeric|min:0',
+            'honorarium' => 'nullable|numeric|min:0',
+            'honorarium_type' => 'nullable|in:monthly,yearly',
+            'invest_period' => 'nullable|integer|in:4,6,12,18,24',
+            'loan_type' => 'nullable|in:with_profit,without_profit',
+            'received_amount' => 'nullable|numeric|min:0',
+            'total_payable' => 'nullable|numeric|min:0',
+            'receive_date' => 'nullable|date',
             'date' => 'nullable|date',
+            'appoint_date' => 'nullable|date',
             'due_date' => 'nullable|date',
             'description' => 'nullable|string',
             'status' => 'nullable|in:active,completed,cancelled',
         ]);
 
-        $investLoanLiability->update($request->all());
+        $data = $request->all();
+
+        // Auto-calculate due_date for investor based on appoint_date and invest_period
+        $type = $request->type ?? $investLoanLiability->type;
+        $appointDate = $request->appoint_date ?? $investLoanLiability->appoint_date;
+        $investPeriod = $request->invest_period ?? $investLoanLiability->invest_period;
+
+        if ($type === 'investor' && $appointDate && $investPeriod) {
+            $data['due_date'] = date('Y-m-d', strtotime($appointDate . ' + ' . $investPeriod . ' months'));
+        }
+
+        // For loan without profit, total_payable equals received_amount
+        $loanType = $request->loan_type ?? $investLoanLiability->loan_type;
+        $receivedAmount = $request->received_amount ?? $investLoanLiability->received_amount;
+        if ($type === 'loan' && $loanType === 'without_profit') {
+            $data['total_payable'] = $receivedAmount;
+        }
+
+        $investLoanLiability->update($data);
 
         return response()->json($investLoanLiability);
     }
@@ -72,5 +152,83 @@ class InvestLoanLiabilityController extends Controller
         ];
 
         return response()->json($summary);
+    }
+
+    /**
+     * Add a payment (share payment, profit withdrawal, or honorarium payment)
+     */
+    public function addPayment(Request $request, InvestLoanLiability $investLoanLiability)
+    {
+        $request->validate([
+            'type' => 'required|in:share_payment,profit_withdrawal,honorarium_payment,loan_payment',
+            'amount' => 'required|numeric|min:0.01',
+            'date' => 'required|date',
+            'for_year' => 'nullable|integer|min:2000|max:2100',
+            'note' => 'nullable|string|max:255',
+        ]);
+
+        $payment = $investLoanLiability->payments()->create([
+            'type' => $request->type,
+            'amount' => $request->amount,
+            'date' => $request->date,
+            'for_year' => $request->for_year,
+            'note' => $request->note,
+            'created_by' => auth()->id(),
+        ]);
+
+        // Update total amount if it's a share payment
+        if ($request->type === 'share_payment') {
+            $investLoanLiability->amount = $investLoanLiability->sharePayments()->sum('amount');
+            $investLoanLiability->save();
+        }
+
+        // Update amount (paid) for loans - keep track of total paid
+        if ($request->type === 'loan_payment') {
+            $investLoanLiability->amount = $investLoanLiability->loanPayments()->sum('amount');
+            $investLoanLiability->save();
+        }
+
+        return response()->json([
+            'message' => 'Payment added successfully',
+            'payment' => $payment,
+        ]);
+    }
+
+    /**
+     * Get all payments for an item
+     */
+    public function getPayments(InvestLoanLiability $investLoanLiability)
+    {
+        $payments = $investLoanLiability->payments()
+            ->with('creator:id,name')
+            ->orderBy('date', 'desc')
+            ->get();
+
+        return response()->json($payments);
+    }
+
+    /**
+     * Delete a payment
+     */
+    public function deletePayment(InvestLoanLiabilityPayment $payment)
+    {
+        $investLoanLiability = $payment->investLoanLiability;
+        $paymentType = $payment->type;
+
+        $payment->delete();
+
+        // Update total amount if it was a share payment
+        if ($paymentType === 'share_payment') {
+            $investLoanLiability->amount = $investLoanLiability->sharePayments()->sum('amount');
+            $investLoanLiability->save();
+        }
+
+        // Update amount for loans
+        if ($paymentType === 'loan_payment') {
+            $investLoanLiability->amount = $investLoanLiability->loanPayments()->sum('amount');
+            $investLoanLiability->save();
+        }
+
+        return response()->json(['message' => 'Payment deleted successfully']);
     }
 }

@@ -2,10 +2,16 @@
     <div>
         <div class="d-flex justify-space-between align-center mb-4">
             <h1 class="text-h4">Employees</h1>
-            <v-btn color="primary" @click="openDialog()">
-                <v-icon left>mdi-plus</v-icon>
-                Add Employee
-            </v-btn>
+            <div class="d-flex ga-2">
+                <v-btn color="info" @click="openCalculateELDialog()">
+                    <v-icon left>mdi-calculator</v-icon>
+                    Calculate EL
+                </v-btn>
+                <v-btn color="primary" @click="openDialog()">
+                    <v-icon left>mdi-plus</v-icon>
+                    Add Employee
+                </v-btn>
+            </div>
         </div>
 
         <!-- Summary Cards -->
@@ -148,8 +154,11 @@
                         <v-btn icon size="small" color="success" @click="openSalaryDialog(item)" title="Pay Salary">
                             <v-icon>mdi-cash</v-icon>
                         </v-btn>
-                        <v-btn icon size="small" color="warning" @click="openAdvanceDialog(item)" title="Give Advance">
-                            <v-icon>mdi-cash-minus</v-icon>
+                        <v-btn v-if="item.employee_type === 'regular'" icon size="small" color="purple" @click="openAdjustSalaryDialog(item)" title="Adjust Salary">
+                            <v-icon>mdi-trending-up</v-icon>
+                        </v-btn>
+                        <v-btn icon size="small" color="warning" @click="openBonusDialog(item)" title="Bonus/Incentive">
+                            <v-icon>mdi-gift</v-icon>
                         </v-btn>
                         <v-btn icon size="small" @click="openDialog(item)" title="Edit">
                             <v-icon>mdi-pencil</v-icon>
@@ -256,25 +265,6 @@
                     <v-spacer></v-spacer>
                     <v-btn @click="salaryDialog = false">Cancel</v-btn>
                     <v-btn color="success" @click="paySalary" :loading="payingSalary">Pay</v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
-
-        <!-- Advance Dialog -->
-        <v-dialog v-model="advanceDialog" max-width="400">
-            <v-card>
-                <v-card-title>Give Advance - {{ selectedEmployee?.name }}</v-card-title>
-                <v-card-text>
-                    <v-form @submit.prevent="giveAdvance">
-                        <v-text-field v-model.number="advanceForm.amount" label="Amount" type="number" required></v-text-field>
-                        <v-text-field v-model="advanceForm.date" label="Date" type="date" required></v-text-field>
-                        <v-textarea v-model="advanceForm.reason" label="Reason" rows="2"></v-textarea>
-                    </v-form>
-                </v-card-text>
-                <v-card-actions>
-                    <v-spacer></v-spacer>
-                    <v-btn @click="advanceDialog = false">Cancel</v-btn>
-                    <v-btn color="warning" @click="giveAdvance" :loading="givingAdvance">Give</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -467,6 +457,143 @@
             </v-card>
         </v-dialog>
 
+        <!-- Calculate EL Dialog -->
+        <v-dialog v-model="calculateELDialog" max-width="600">
+            <v-card>
+                <v-card-title>
+                    <v-icon class="mr-2">mdi-calculator</v-icon>
+                    Calculate Earn Leave (EL)
+                </v-card-title>
+                <v-card-text>
+                    <v-alert type="info" density="compact" class="mb-4">
+                        <div><strong>Rules:</strong></div>
+                        <div>• Regular employees: 5 days leave/month</div>
+                        <div>• Administration: 6 days leave/month</div>
+                        <div>• If absent > allowance: EL decreases</div>
+                        <div>• If absent < allowance: EL increases</div>
+                    </v-alert>
+                    <v-select
+                        v-model="elMonth"
+                        :items="elMonthOptions"
+                        item-title="label"
+                        item-value="value"
+                        label="Select Month"
+                        required
+                    ></v-select>
+
+                    <!-- Results Table -->
+                    <div v-if="elResults.length > 0" class="mt-4">
+                        <h4 class="mb-2">Calculation Results:</h4>
+                        <v-table density="compact">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Project</th>
+                                    <th class="text-center">Allowance</th>
+                                    <th class="text-center">Absent</th>
+                                    <th class="text-center">Adjustment</th>
+                                    <th class="text-center">Old EL</th>
+                                    <th class="text-center">New EL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="result in elResults" :key="result.employee_id">
+                                    <td>{{ result.employee_name }}</td>
+                                    <td>{{ result.project || '-' }}</td>
+                                    <td class="text-center">{{ result.leave_allowance }}</td>
+                                    <td class="text-center">{{ result.absent_days }}</td>
+                                    <td class="text-center">
+                                        <v-chip :color="result.el_adjustment >= 0 ? 'success' : 'error'" size="x-small">
+                                            {{ result.el_adjustment >= 0 ? '+' : '' }}{{ result.el_adjustment }}
+                                        </v-chip>
+                                    </td>
+                                    <td class="text-center">{{ result.old_el }}</td>
+                                    <td class="text-center font-weight-bold">{{ result.new_el }}</td>
+                                </tr>
+                            </tbody>
+                        </v-table>
+                    </div>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="calculateELDialog = false">Close</v-btn>
+                    <v-btn color="info" @click="calculateEL" :loading="calculatingEL" :disabled="!elMonth || elResults.length > 0">
+                        Calculate
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Adjust Salary Dialog -->
+        <v-dialog v-model="adjustSalaryDialog" max-width="450">
+            <v-card>
+                <v-card-title>
+                    <v-icon class="mr-2">mdi-trending-up</v-icon>
+                    Adjust Salary - {{ selectedEmployee?.name }}
+                </v-card-title>
+                <v-card-text>
+                    <v-alert type="info" density="compact" class="mb-4">
+                        Current Salary: <strong>৳{{ formatNumber(selectedEmployee?.salary_amount) }}</strong>
+                    </v-alert>
+                    <v-form @submit.prevent="adjustSalary">
+                        <v-select
+                            v-model="adjustSalaryForm.type"
+                            :items="[{ value: 'increase', title: 'Increase' }, { value: 'decrease', title: 'Decrease' }]"
+                            item-title="title"
+                            item-value="value"
+                            label="Type"
+                            required
+                        ></v-select>
+                        <v-text-field
+                            v-model.number="adjustSalaryForm.new_salary"
+                            label="New Salary"
+                            type="number"
+                            required
+                            :hint="adjustSalaryForm.new_salary && selectedEmployee ? 'Change: ৳' + formatNumber(Math.abs(adjustSalaryForm.new_salary - selectedEmployee.salary_amount)) : ''"
+                            persistent-hint
+                        ></v-text-field>
+                        <v-text-field v-model="adjustSalaryForm.effective_date" label="Effective Date" type="date" required></v-text-field>
+                        <v-textarea v-model="adjustSalaryForm.reason" label="Reason" rows="2"></v-textarea>
+                    </v-form>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="adjustSalaryDialog = false">Cancel</v-btn>
+                    <v-btn color="purple" @click="adjustSalary" :loading="adjustingSalary">Adjust</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Bonus/Incentive Dialog -->
+        <v-dialog v-model="bonusDialog" max-width="450">
+            <v-card>
+                <v-card-title>
+                    <v-icon class="mr-2">mdi-gift</v-icon>
+                    Bonus/Incentive - {{ selectedEmployee?.name }}
+                </v-card-title>
+                <v-card-text>
+                    <v-form @submit.prevent="giveBonus">
+                        <v-select
+                            v-model="bonusForm.type"
+                            :items="[{ value: 'bonus', title: 'Bonus' }, { value: 'incentive', title: 'Incentive' }]"
+                            item-title="title"
+                            item-value="value"
+                            label="Type"
+                            required
+                        ></v-select>
+                        <v-text-field v-model.number="bonusForm.amount" label="Amount" type="number" required></v-text-field>
+                        <v-text-field v-model="bonusForm.date" label="Date" type="date" required></v-text-field>
+                        <v-textarea v-model="bonusForm.reason" label="Reason" rows="2"></v-textarea>
+                    </v-form>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="bonusDialog = false">Cancel</v-btn>
+                    <v-btn color="warning" @click="giveBonus" :loading="givingBonus">Give</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <!-- All Summary Dialog -->
         <v-dialog v-model="summaryDialog" max-width="900">
             <v-card>
@@ -634,7 +761,6 @@ const projects = ref([])
 const loading = ref(false)
 const dialog = ref(false)
 const salaryDialog = ref(false)
-const advanceDialog = ref(false)
 const historyDialog = ref(false)
 const summaryDialog = ref(false)
 const historyTab = ref('salaries')
@@ -643,7 +769,6 @@ const editMode = ref(false)
 const selectedEmployee = ref(null)
 const saving = ref(false)
 const payingSalary = ref(false)
-const givingAdvance = ref(false)
 const salaryHistory = ref([])
 const advanceHistory = ref([])
 const allSalaries = ref([])
@@ -653,6 +778,22 @@ const filterEmployee = ref(null)
 const allSalariesOriginal = ref([])
 const allAdvancesOriginal = ref([])
 const salaryCalculation = ref(null)
+
+// Calculate EL states
+const calculateELDialog = ref(false)
+const calculatingEL = ref(false)
+const elMonth = ref('')
+const elResults = ref([])
+
+// Salary Adjustment states
+const adjustSalaryDialog = ref(false)
+const adjustingSalary = ref(false)
+const adjustSalaryForm = reactive({ type: 'increase', new_salary: 0, effective_date: new Date().toISOString().split('T')[0], reason: '' })
+
+// Bonus/Incentive states
+const bonusDialog = ref(false)
+const givingBonus = ref(false)
+const bonusForm = reactive({ type: 'bonus', amount: 0, date: new Date().toISOString().split('T')[0], reason: '' })
 
 // Edit/Delete states
 const editSalaryDialog = ref(false)
@@ -690,20 +831,24 @@ const employeeTypes = [
 
 const filterType = ref(null)
 
-// Sort employees by project name (Administration separate from Central)
+// Sort employees by salary (highest first)
 const sortedEmployees = computed(() => {
     return [...employees.value].sort((a, b) => {
-        const projectA = a.project?.name || ''
-        const projectB = b.project?.name || ''
-
-        // Custom sort order - Administration comes after Central
-        const getProjectOrder = (name) => {
-            if (name === 'Administration') return 'ZZZZ_Administration' // Put at end
-            if (name === 'Central') return 'ZZZZ_Central' // Put near end
-            return name
+        // Get salary amount - for regular use salary_amount, for contractual use calculated_salary or daily_rate
+        const getSalary = (emp) => {
+            if (emp.employee_type === 'regular') {
+                return Number(emp.salary_amount || 0)
+            } else {
+                // For contractual, use calculated_salary if available, otherwise use daily_rate * 30 as estimate
+                return Number(emp.calculated_salary || (emp.daily_rate * 30) || 0)
+            }
         }
 
-        return getProjectOrder(projectA).localeCompare(getProjectOrder(projectB))
+        const salaryA = getSalary(a)
+        const salaryB = getSalary(b)
+
+        // Sort descending (highest salary first)
+        return salaryB - salaryA
     })
 })
 
@@ -725,7 +870,6 @@ const advanceHeaders = [
 
 const form = reactive({ project_id: null, employee_type: 'regular', name: '', phone: '', position: '', salary_amount: 0, daily_rate: 0, joining_date: '', earn_leave: 0, is_active: true })
 const salaryForm = reactive({ amount: 0, month: '', payment_date: new Date().toISOString().split('T')[0], note: '' })
-const advanceForm = reactive({ amount: 0, date: new Date().toISOString().split('T')[0], reason: '' })
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
 
@@ -739,6 +883,24 @@ const salaryMonthOptions = computed(() => {
     for (let i = 5; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
         // Use local date formatting instead of toISOString (which uses UTC)
+        const year = d.getFullYear()
+        const month = String(d.getMonth() + 1).padStart(2, '0')
+        const value = `${year}-${month}` // YYYY-MM
+        const label = `${monthNames[d.getMonth()]}'${String(year).slice(2)} (${value})`
+        months.push({ value, label })
+    }
+
+    return months
+})
+
+// Generate EL month options (last 12 months)
+const elMonthOptions = computed(() => {
+    const months = []
+    const now = new Date()
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+    for (let i = 0; i < 12; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
         const year = d.getFullYear()
         const month = String(d.getMonth() + 1).padStart(2, '0')
         const value = `${year}-${month}` // YYYY-MM
@@ -948,35 +1110,79 @@ const calculateContractualSalary = async () => {
 const paySalary = async () => {
     payingSalary.value = true
     try {
-        await api.post(`/employees/${selectedEmployee.value.id}/salary`, salaryForm)
+        const response = await api.post(`/employees/${selectedEmployee.value.id}/salary`, salaryForm)
         salaryDialog.value = false
         fetchEmployees()
-        alert('Salary paid successfully!')
+        alert(response.data.message || 'Salary paid successfully!')
     } catch (error) {
         console.error('Error:', error)
-        alert('Error paying salary')
+        if (error.response?.data?.message) {
+            alert(error.response.data.message)
+        } else {
+            alert('Error paying salary')
+        }
     }
     payingSalary.value = false
 }
 
-const openAdvanceDialog = (employee) => {
+// Open Adjust Salary Dialog
+const openAdjustSalaryDialog = (employee) => {
     selectedEmployee.value = employee
-    advanceForm.amount = 0
-    advanceDialog.value = true
+    adjustSalaryForm.type = 'increase'
+    adjustSalaryForm.new_salary = employee.salary_amount
+    adjustSalaryForm.effective_date = new Date().toISOString().split('T')[0]
+    adjustSalaryForm.reason = ''
+    adjustSalaryDialog.value = true
 }
 
-const giveAdvance = async () => {
-    givingAdvance.value = true
+// Adjust Salary
+const adjustSalary = async () => {
+    if (!adjustSalaryForm.new_salary || adjustSalaryForm.new_salary === selectedEmployee.value.salary_amount) {
+        alert('Please enter a different salary amount')
+        return
+    }
+
+    adjustingSalary.value = true
     try {
-        await api.post(`/employees/${selectedEmployee.value.id}/advance`, advanceForm)
-        advanceDialog.value = false
+        const response = await api.post(`/employees/${selectedEmployee.value.id}/adjust-salary`, adjustSalaryForm)
+        adjustSalaryDialog.value = false
         fetchEmployees()
-        alert('Advance given successfully!')
+        alert(response.data.message)
     } catch (error) {
         console.error('Error:', error)
-        alert('Error giving advance')
+        alert(error.response?.data?.message || 'Error adjusting salary')
     }
-    givingAdvance.value = false
+    adjustingSalary.value = false
+}
+
+// Open Bonus Dialog
+const openBonusDialog = (employee) => {
+    selectedEmployee.value = employee
+    bonusForm.type = 'bonus'
+    bonusForm.amount = 0
+    bonusForm.date = new Date().toISOString().split('T')[0]
+    bonusForm.reason = ''
+    bonusDialog.value = true
+}
+
+// Give Bonus/Incentive
+const giveBonus = async () => {
+    if (!bonusForm.amount || bonusForm.amount <= 0) {
+        alert('Please enter a valid amount')
+        return
+    }
+
+    givingBonus.value = true
+    try {
+        const response = await api.post(`/employees/${selectedEmployee.value.id}/bonus`, bonusForm)
+        bonusDialog.value = false
+        fetchEmployees()
+        alert(response.data.message)
+    } catch (error) {
+        console.error('Error:', error)
+        alert(error.response?.data?.message || 'Error giving bonus/incentive')
+    }
+    givingBonus.value = false
 }
 
 const viewHistory = async (employee) => {
@@ -1020,6 +1226,33 @@ const showAllSummary = async () => {
     } catch (error) {
         console.error('Error fetching summary:', error)
     }
+}
+
+// Open Calculate EL Dialog
+const openCalculateELDialog = () => {
+    elMonth.value = ''
+    elResults.value = []
+    calculateELDialog.value = true
+}
+
+// Calculate EL
+const calculateEL = async () => {
+    if (!elMonth.value) {
+        alert('Please select a month')
+        return
+    }
+
+    calculatingEL.value = true
+    try {
+        const response = await api.post('/employees/calculate-el', { month: elMonth.value })
+        elResults.value = response.data.results
+        fetchEmployees() // Refresh employee list to update EL values
+        alert(response.data.message)
+    } catch (error) {
+        console.error('Error calculating EL:', error)
+        alert('Error calculating EL')
+    }
+    calculatingEL.value = false
 }
 
 // Edit Salary
