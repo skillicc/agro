@@ -30,7 +30,8 @@
       "Bash(ssh -o StrictHostKeyChecking=no root@159.198.36.249 \"cd /home/smart/web/agro.tishohagh.com/public_html && cat routes/api.php | grep -A5 purchases\")",
       "Bash(ssh -o StrictHostKeyChecking=no root@159.198.36.249 \"cd /home/smart/web/agro.tishohagh.com/public_html && npm install @kurkle/color chart.js vue-chartjs --save && npm run build\")",
       "Bash(ssh -o StrictHostKeyChecking=no root@159.198.36.249 \"cd /home/smart/web/agro.tishohagh.com/public_html && php artisan cache:clear && php artisan config:clear && php artisan route:clear && php artisan view:clear && php artisan optimize\")",
-      "Bash(ssh:*)"
+      "Bash(ssh:*)",
+      "Bash(curl:*)"
     ]
   }
 }

@@ -458,7 +458,7 @@
         </v-dialog>
 
         <!-- Calculate EL Dialog -->
-        <v-dialog v-model="calculateELDialog" max-width="600">
+        <v-dialog v-model="calculateELDialog" max-width="800">
             <v-card>
                 <v-card-title>
                     <v-icon class="mr-2">mdi-calculator</v-icon>
@@ -484,34 +484,36 @@
                     <!-- Results Table -->
                     <div v-if="elResults.length > 0" class="mt-4">
                         <h4 class="mb-2">Calculation Results:</h4>
-                        <v-table density="compact">
-                            <thead>
-                                <tr>
-                                    <th>Employee</th>
-                                    <th>Project</th>
-                                    <th class="text-center">Allowance</th>
-                                    <th class="text-center">Absent</th>
-                                    <th class="text-center">Adjustment</th>
-                                    <th class="text-center">Old EL</th>
-                                    <th class="text-center">New EL</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="result in elResults" :key="result.employee_id">
-                                    <td>{{ result.employee_name }}</td>
-                                    <td>{{ result.project || '-' }}</td>
-                                    <td class="text-center">{{ result.leave_allowance }}</td>
-                                    <td class="text-center">{{ result.absent_days }}</td>
-                                    <td class="text-center">
-                                        <v-chip :color="result.el_adjustment >= 0 ? 'success' : 'error'" size="x-small">
-                                            {{ result.el_adjustment >= 0 ? '+' : '' }}{{ result.el_adjustment }}
-                                        </v-chip>
-                                    </td>
-                                    <td class="text-center">{{ result.old_el }}</td>
-                                    <td class="text-center font-weight-bold">{{ result.new_el }}</td>
-                                </tr>
-                            </tbody>
-                        </v-table>
+                        <div class="el-results-container">
+                            <v-table density="compact">
+                                <thead>
+                                    <tr>
+                                        <th>Employee</th>
+                                        <th>Project</th>
+                                        <th class="text-center">Allowance</th>
+                                        <th class="text-center">Absent</th>
+                                        <th class="text-center">Adjustment</th>
+                                        <th class="text-center">Old EL</th>
+                                        <th class="text-center">New EL</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="result in elResults" :key="result.employee_id">
+                                        <td>{{ result.employee_name }}</td>
+                                        <td>{{ result.project || '-' }}</td>
+                                        <td class="text-center">{{ result.leave_allowance }}</td>
+                                        <td class="text-center">{{ result.absent_days }}</td>
+                                        <td class="text-center">
+                                            <v-chip :color="result.el_adjustment >= 0 ? 'success' : 'error'" size="x-small">
+                                                {{ result.el_adjustment >= 0 ? '+' : '' }}{{ result.el_adjustment }}
+                                            </v-chip>
+                                        </td>
+                                        <td class="text-center">{{ result.old_el }}</td>
+                                        <td class="text-center font-weight-bold">{{ result.new_el }}</td>
+                                    </tr>
+                                </tbody>
+                            </v-table>
+                        </div>
                     </div>
                 </v-card-text>
                 <v-card-actions>
@@ -1458,5 +1460,19 @@ onMounted(() => {
 
 .status-pending {
     background-color: #FF9800 !important;
+}
+
+.el-results-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
+.el-results-container thead th {
+    position: sticky;
+    top: 0;
+    background: #f5f5f5;
+    z-index: 1;
 }
 </style>
