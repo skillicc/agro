@@ -1250,7 +1250,8 @@ const calculateEL = async () => {
         alert(response.data.message)
     } catch (error) {
         console.error('Error calculating EL:', error)
-        alert('Error calculating EL')
+        const errorMsg = error.response?.data?.message || error.message || 'Unknown error'
+        alert('Error calculating EL: ' + errorMsg)
     }
     calculatingEL.value = false
 }
