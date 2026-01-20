@@ -96,13 +96,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('productions', ProductionController::class);
 
     // Employees, Salaries & Advances
+    // IMPORTANT: Static routes must come BEFORE dynamic {employee} routes
+    Route::post('/employees/calculate-el', [EmployeeController::class, 'calculateEarnLeave']);
     Route::apiResource('employees', EmployeeController::class);
     Route::post('/employees/{employee}/salary', [EmployeeController::class, 'paySalary']);
     Route::post('/employees/{employee}/advance', [EmployeeController::class, 'giveAdvance']);
     Route::get('/employees/{employee}/salaries', [EmployeeController::class, 'employeeSalaries']);
     Route::get('/employees/{employee}/advances', [EmployeeController::class, 'employeeAdvances']);
     Route::get('/employees/{employee}/calculate-salary', [EmployeeController::class, 'calculateSalary']);
-    Route::post('/employees/calculate-el', [EmployeeController::class, 'calculateEarnLeave']);
     Route::get('/salaries', [EmployeeController::class, 'salaries']);
     Route::post('/salaries', [EmployeeController::class, 'storeSalary']);
     Route::put('/salaries/{salary}', [EmployeeController::class, 'updateSalary']);
