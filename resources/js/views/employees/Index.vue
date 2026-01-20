@@ -134,6 +134,16 @@
                             :title="item.absent_dates && item.absent_dates.length > 0 ? 'Absent: ' + item.absent_dates.join(', ') : ''"
                         >{{ item.earn_leave || 0 }}</span>
                     </template>
+                    <template v-slot:item.absent_count="{ item }">
+                        <v-chip
+                            :color="item.absent_dates && item.absent_dates.length > 0 ? 'error' : 'success'"
+                            size="small"
+                            :style="item.absent_dates && item.absent_dates.length > 0 ? 'cursor: help' : ''"
+                            :title="item.absent_dates && item.absent_dates.length > 0 ? 'Absent: ' + item.absent_dates.join(', ') : 'No absences'"
+                        >
+                            {{ item.absent_dates ? item.absent_dates.length : 0 }}
+                        </v-chip>
+                    </template>
                     <template v-slot:item.total_advance_paid="{ item }">
                         <span class="text-warning font-weight-bold">৳{{ formatNumber(item.total_advance_paid) }}</span>
                     </template>
@@ -822,6 +832,7 @@ const headers = [
     { title: 'Position', key: 'position' },
     { title: 'Salary', key: 'salary_display' },
     { title: 'EL', key: 'earn_leave' },
+    { title: 'Absent', key: 'absent_count' },
     { title: 'Advance', key: 'total_advance_paid' },
     { title: 'Paid', key: 'total_paid' },
     { title: 'Due', key: 'current_month_due' },
