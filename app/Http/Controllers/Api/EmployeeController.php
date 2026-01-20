@@ -16,6 +16,11 @@ class EmployeeController extends Controller
     {
         $query = Employee::with('project');
 
+        // Exclude Administration employees by default
+        $query->whereDoesntHave('project', function ($q) {
+            $q->where('name', 'Administration');
+        });
+
         if ($request->project_id) {
             $query->where('project_id', $request->project_id);
         }
