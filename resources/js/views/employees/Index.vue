@@ -129,7 +129,10 @@
                         </div>
                     </template>
                     <template v-slot:item.earn_leave="{ item }">
-                        <span>{{ item.earn_leave || 0 }}</span>
+                        <span
+                            :style="item.absent_dates && item.absent_dates.length > 0 ? 'cursor: help; text-decoration: underline dotted;' : ''"
+                            :title="item.absent_dates && item.absent_dates.length > 0 ? 'Absent: ' + item.absent_dates.join(', ') : ''"
+                        >{{ item.earn_leave || 0 }}</span>
                     </template>
                     <template v-slot:item.total_advance_paid="{ item }">
                         <span class="text-warning font-weight-bold">৳{{ formatNumber(item.total_advance_paid) }}</span>

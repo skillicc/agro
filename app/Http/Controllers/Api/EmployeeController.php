@@ -60,6 +60,15 @@ class EmployeeController extends Controller
             // Also store individual totals
             $employee->total_salary_paid = $totalSalaryPaid;
             $employee->total_advance_paid = $totalAdvancePaid;
+
+            // Get absent dates for current month (for EL tooltip)
+            $employee->absent_dates = $employee->attendances()
+                ->whereYear('date', now()->year)
+                ->whereMonth('date', now()->month)
+                ->where('status', 'absent')
+                ->pluck('date')
+                ->map(fn($d) => \Carbon\Carbon::parse($d)->format('d M'))
+                ->toArray();
         });
 
         return response()->json($employees);
