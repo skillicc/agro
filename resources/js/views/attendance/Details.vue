@@ -153,26 +153,12 @@
                             <v-chip color="success" size="small">{{ item.present_days }}</v-chip>
                         </template>
                         <template v-slot:item.absent_days="{ item }">
-                            <v-tooltip
-                                v-if="item.absent_dates && item.absent_dates.length > 0"
-                                location="top"
+                            <v-chip
+                                color="error"
+                                size="small"
+                                :style="item.absent_days > 0 ? 'cursor: help' : ''"
+                                :title="item.absent_dates && item.absent_dates.length > 0 ? 'Absent: ' + item.absent_dates.join(', ') : ''"
                             >
-                                <template v-slot:activator="{ props }">
-                                    <v-chip
-                                        v-bind="props"
-                                        color="error"
-                                        size="small"
-                                        style="cursor: pointer"
-                                    >
-                                        {{ item.absent_days }}
-                                    </v-chip>
-                                </template>
-                                <div class="text-center">
-                                    <div class="font-weight-bold mb-1">Absent Dates:</div>
-                                    <div v-for="date in item.absent_dates" :key="date">{{ date }}</div>
-                                </div>
-                            </v-tooltip>
-                            <v-chip v-else color="error" size="small">
                                 {{ item.absent_days }}
                             </v-chip>
                         </template>
