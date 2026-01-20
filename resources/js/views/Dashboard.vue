@@ -1,10 +1,10 @@
 <template>
     <div>
-        <h1 class="text-h4 text-sm-h3 mb-4">Dashboard</h1>
+        <h1 class="text-h5 text-sm-h4 text-lg-h3 mb-2 mb-sm-4">Dashboard</h1>
 
         <!-- Main Summary Cards -->
-        <v-row>
-            <v-col cols="6" sm="6" md="4" lg="2">
+        <v-row dense>
+            <v-col cols="6" sm="4" md="4" lg="2">
                 <v-card color="primary" variant="tonal" class="h-100">
                     <v-card-text class="pa-2 pa-sm-3 text-center">
                         <v-icon size="32" class="mb-1">mdi-folder-multiple</v-icon>
@@ -13,7 +13,7 @@
                     </v-card-text>
                 </v-card>
             </v-col>
-            <v-col cols="6" sm="6" md="4" lg="2">
+            <v-col cols="6" sm="4" md="4" lg="2">
                 <v-card color="success" variant="tonal" class="h-100">
                     <v-card-text class="pa-2 pa-sm-3 text-center">
                         <v-icon size="32" class="mb-1">mdi-cart-arrow-up</v-icon>
@@ -22,7 +22,7 @@
                     </v-card-text>
                 </v-card>
             </v-col>
-            <v-col cols="6" sm="6" md="4" lg="2">
+            <v-col cols="6" sm="4" md="4" lg="2">
                 <v-card color="info" variant="tonal" class="h-100">
                     <v-card-text class="pa-2 pa-sm-3 text-center">
                         <v-icon size="32" class="mb-1">mdi-cart-arrow-down</v-icon>
@@ -31,7 +31,7 @@
                     </v-card-text>
                 </v-card>
             </v-col>
-            <v-col cols="6" sm="6" md="4" lg="2">
+            <v-col cols="6" sm="4" md="4" lg="2">
                 <v-card color="warning" variant="tonal" class="h-100">
                     <v-card-text class="pa-2 pa-sm-3 text-center">
                         <v-icon size="32" class="mb-1">mdi-cash-minus</v-icon>
@@ -40,7 +40,7 @@
                     </v-card-text>
                 </v-card>
             </v-col>
-            <v-col cols="6" sm="6" md="4" lg="2">
+            <v-col cols="6" sm="4" md="4" lg="2">
                 <v-card color="purple" variant="tonal" class="h-100">
                     <v-card-text class="pa-2 pa-sm-3 text-center">
                         <v-icon size="32" class="mb-1">mdi-cash</v-icon>
@@ -49,7 +49,7 @@
                     </v-card-text>
                 </v-card>
             </v-col>
-            <v-col cols="6" sm="6" md="4" lg="2">
+            <v-col cols="6" sm="4" md="4" lg="2">
                 <v-card :color="dashboard.monthly_profit >= 0 ? 'green' : 'red'" variant="tonal" class="h-100">
                     <v-card-text class="pa-2 pa-sm-3 text-center">
                         <v-icon size="32" class="mb-1">{{ dashboard.monthly_profit >= 0 ? 'mdi-trending-up' : 'mdi-trending-down' }}</v-icon>
@@ -61,7 +61,7 @@
         </v-row>
 
         <!-- Secondary Stats Row -->
-        <v-row class="mt-2">
+        <v-row dense class="mt-2">
             <v-col cols="6" sm="4" md="3" lg="2">
                 <v-card variant="outlined" class="h-100">
                     <v-card-text class="pa-2 pa-sm-3 text-center">
@@ -118,7 +118,7 @@
             </v-col>
         </v-row>
 
-        <v-row class="mt-2 mt-sm-4">
+        <v-row dense class="mt-2 mt-sm-4">
             <!-- Due Summary & Quick Stats -->
             <v-col cols="12" md="6" lg="4">
                 <v-card class="h-100">
@@ -233,7 +233,7 @@
             </v-col>
         </v-row>
 
-        <v-row class="mt-2 mt-sm-4">
+        <v-row dense class="mt-2 mt-sm-4">
             <!-- Recent Sales -->
             <v-col cols="12" md="6" lg="6" xl="6">
                 <v-card class="h-100">

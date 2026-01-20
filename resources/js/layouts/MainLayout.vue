@@ -46,10 +46,10 @@
         <!-- Navigation Drawer - Responsive width -->
         <v-navigation-drawer
             v-model="drawer"
-            :temporary="$vuetify.display.mdAndDown"
-            :permanent="$vuetify.display.lgAndUp"
-            :rail="$vuetify.display.lgAndUp && rail"
-            :width="$vuetify.display.xs ? 280 : 300"
+            :temporary="$vuetify.display.smAndDown"
+            :permanent="$vuetify.display.mdAndUp"
+            :rail="$vuetify.display.mdAndUp && rail"
+            :width="$vuetify.display.xs ? 260 : ($vuetify.display.md ? 260 : 280)"
         >
             <!-- Header when expanded -->
             <v-list-item
@@ -59,7 +59,7 @@
                 subtitle="Inventory System"
                 class="py-2"
             >
-                <template v-slot:append v-if="$vuetify.display.lgAndUp">
+                <template v-slot:append v-if="$vuetify.display.mdAndUp">
                     <v-btn
                         icon="mdi-chevron-left"
                         variant="text"
@@ -229,18 +229,26 @@ const toggleTheme = () => {
     localStorage.setItem('theme', newTheme)
 }
 
-// Auto-open drawer on large screens
-watch(() => display.lgAndUp.value, (isLarge) => {
-    if (isLarge) {
+// Auto-open drawer on medium and large screens
+watch(() => display.mdAndUp.value, (isMediumOrLarge) => {
+    if (isMediumOrLarge) {
         drawer.value = true
-        rail.value = false // Reset rail when screen size changes
+        // Start in rail mode on md screens for more content space
+        rail.value = display.md.value
     }
 }, { immediate: true })
 
+// Collapse to rail when transitioning from lg to md
+watch(() => display.md.value, (isMedium) => {
+    if (isMedium && display.mdAndUp.value) {
+        rail.value = true
+    }
+}, { immediate: false })
+
 // Toggle drawer - handle rail mode properly
 const toggleDrawer = () => {
-    if (display.lgAndUp.value) {
-        // On large screens, toggle rail mode instead of drawer
+    if (display.mdAndUp.value) {
+        // On medium and large screens, toggle rail mode instead of drawer
         rail.value = !rail.value
     } else {
         // On small screens, toggle drawer

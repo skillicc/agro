@@ -1,1 +1,45 @@
 /* Main App CSS - Vuetify handles styling */
+
+/* Global responsive table styling */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure v-data-table doesn't overflow on small screens */
+.v-data-table {
+    max-width: 100%;
+}
+
+/* Compact card padding on small screens */
+@media (max-width: 600px) {
+    .v-card-text {
+        padding: 12px !important;
+    }
+
+    .v-card-title {
+        padding: 12px !important;
+        font-size: 1rem !important;
+    }
+}
+
+/* Better touch targets on mobile */
+@media (max-width: 960px) {
+    .v-btn--icon {
+        min-width: 36px;
+        min-height: 36px;
+    }
+}
+
+/* Prevent content overflow */
+.v-main {
+    overflow-x: hidden;
+}
+
+/* Better dialog scrolling on mobile */
+@media (max-width: 600px) {
+    .v-dialog > .v-card {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+}

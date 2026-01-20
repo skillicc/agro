@@ -1,16 +1,25 @@
 <template>
     <div>
-        <div class="d-flex justify-space-between align-center mb-4">
-            <h1 class="text-h4">Sales</h1>
-            <v-btn color="primary" :to="{ name: 'sale-create' }">
+        <div class="d-flex flex-wrap justify-space-between align-center mb-2 mb-sm-4 ga-2">
+            <h1 class="text-h5 text-sm-h4">Sales</h1>
+            <v-btn color="primary" :to="{ name: 'sale-create' }" :size="$vuetify.display.smAndDown ? 'small' : 'default'">
                 <v-icon left>mdi-plus</v-icon>
-                New Sale
+                <span class="d-none d-sm-inline">New Sale</span>
+                <span class="d-sm-none">Add</span>
             </v-btn>
         </div>
 
         <v-card>
-            <v-card-text>
-                <v-data-table :headers="headers" :items="sales" :loading="loading">
+            <v-card-text class="pa-2 pa-sm-4">
+                <div class="table-responsive">
+                <v-data-table
+                    :headers="responsiveHeaders"
+                    :items="sales"
+                    :loading="loading"
+                    density="comfortable"
+                    :items-per-page="10"
+                    class="elevation-0"
+                >
                     <template v-slot:item.sl="{ index }">
                         {{ index + 1 }}
                     </template>
@@ -34,15 +43,21 @@
                         </v-btn>
                     </template>
                 </v-data-table>
+                </div>
             </v-card-text>
         </v-card>
 
         <!-- View Dialog -->
-        <v-dialog v-model="viewDialog" max-width="700">
+        <v-dialog v-model="viewDialog" :max-width="$vuetify.display.smAndDown ? '95%' : '700'" :fullscreen="$vuetify.display.xs">
             <v-card v-if="selectedSale">
-                <v-card-title>Challan: {{ selectedSale.challan_no }}</v-card-title>
-                <v-card-text>
-                    <v-row>
+                <v-card-title class="d-flex justify-space-between align-center">
+                    <span>Challan: {{ selectedSale.challan_no }}</span>
+                    <v-btn v-if="$vuetify.display.xs" icon size="small" @click="viewDialog = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-card-title>
+                <v-card-text class="pa-2 pa-sm-4">
+                    <v-row dense>
                         <v-col cols="6">
                             <strong>Date:</strong> {{ selectedSale.date }}
                         </v-col>
@@ -56,7 +71,8 @@
                             <strong>Created By:</strong> {{ selectedSale.creator?.name }}
                         </v-col>
                     </v-row>
-                    <v-divider class="my-4"></v-divider>
+                    <v-divider class="my-2 my-sm-4"></v-divider>
+                    <div class="table-responsive">
                     <v-table density="compact">
                         <thead>
                             <tr>
@@ -75,9 +91,10 @@
                             </tr>
                         </tbody>
                     </v-table>
-                    <v-divider class="my-4"></v-divider>
-                    <v-row>
-                        <v-col cols="6" offset="6">
+                    </div>
+                    <v-divider class="my-2 my-sm-4"></v-divider>
+                    <v-row dense>
+                        <v-col cols="12" sm="6" :offset-sm="6">
                             <div class="d-flex justify-space-between"><span>Subtotal:</span> <span>৳{{ formatNumber(selectedSale.subtotal) }}</span></div>
                             <div class="d-flex justify-space-between"><span>Discount:</span> <span>৳{{ formatNumber(selectedSale.discount) }}</span></div>
                             <div class="d-flex justify-space-between text-h6"><span>Total:</span> <span>৳{{ formatNumber(selectedSale.total) }}</span></div>
@@ -94,7 +111,7 @@
         </v-dialog>
 
         <!-- Delete Confirmation Dialog -->
-        <v-dialog v-model="deleteDialog" max-width="400">
+        <v-dialog v-model="deleteDialog" :max-width="$vuetify.display.xs ? '95%' : '400'">
             <v-card>
                 <v-card-title class="text-error">Delete Sale</v-card-title>
                 <v-card-text>
@@ -114,9 +131,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useDisplay } from 'vuetify'
 import api from '../../services/api'
 
+const display = useDisplay()
 const sales = ref([])
 const loading = ref(false)
 const viewDialog = ref(false)
@@ -126,15 +145,26 @@ const saleToDelete = ref(null)
 const deleting = ref(false)
 
 const headers = [
-    { title: 'SL', key: 'sl', width: '60px' },
+    { title: 'SL', key: 'sl', width: '50px' },
     { title: 'Challan No.', key: 'challan_no' },
     { title: 'Date', key: 'date' },
     { title: 'Project', key: 'project.name' },
     { title: 'Customer', key: 'customer.name' },
     { title: 'Total', key: 'total' },
     { title: 'Due', key: 'due' },
-    { title: 'Actions', key: 'actions', sortable: false },
+    { title: 'Actions', key: 'actions', sortable: false, width: '120px' },
 ]
+
+// Hide some columns on smaller screens
+const responsiveHeaders = computed(() => {
+    if (display.xs.value) {
+        return headers.filter(h => ['challan_no', 'total', 'actions'].includes(h.key))
+    }
+    if (display.smAndDown.value) {
+        return headers.filter(h => !['project.name'].includes(h.key))
+    }
+    return headers
+})
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
 
@@ -180,3 +210,10 @@ const deleteSale = async () => {
 
 onMounted(() => fetchSales())
 </script>
+
+<style scoped>
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+</style>
