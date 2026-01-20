@@ -459,10 +459,8 @@ class EmployeeController extends Controller
                 }
             }
 
-            // Determine leave allowance based on project
-            // Administration gets 6 days, others get 5 days
-            $isAdministration = $employee->project && $employee->project->name === 'Administration';
-            $leaveAllowance = $isAdministration ? 6 : 5;
+            // All regular employees get 5 days leave allowance per month
+            $leaveAllowance = 5;
 
             // Count all non-present days (absent, leave, sick_leave) in the month
             $absentDays = $employee->attendances()
