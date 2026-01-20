@@ -451,6 +451,14 @@ class EmployeeController extends Controller
         $totalUpdated = 0;
 
         foreach ($employees as $employee) {
+            // Skip if employee joined after this month
+            if ($employee->joining_date) {
+                $joiningMonth = \Carbon\Carbon::parse($employee->joining_date)->format('Y-m');
+                if ($joiningMonth > $month) {
+                    continue; // Employee hadn't joined yet
+                }
+            }
+
             // Determine leave allowance based on project
             // Administration gets 6 days, others get 5 days
             $isAdministration = $employee->project && $employee->project->name === 'Administration';
