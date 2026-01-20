@@ -425,21 +425,17 @@ class EmployeeController extends Controller
     }
 
     /**
-     * Calculate Earn Leave (EL) for all employees for a given month
+     * Calculate Earn Leave (EL) for all employees for current month
      * Rules:
      * - Regular employees get 5 days leave allowance per month
-     * - Administration employees get 6 days leave allowance per month
-     * - If absent days > allowance: EL decreases (minus)
-     * - If absent days < allowance: EL increases (plus)
+     * - EL = 5 - absent days (current month only, not accumulated)
      */
     public function calculateEarnLeave(Request $request)
     {
-        $request->validate([
-            'month' => 'required|string|regex:/^\d{4}-\d{2}$/',
-        ]);
-
-        $month = $request->month;
-        [$year, $monthNum] = explode('-', $month);
+        // Use current month
+        $year = now()->year;
+        $monthNum = now()->month;
+        $month = now()->format('Y-m');
 
         // Get all active regular employees (only regular employees have EL)
         $employees = Employee::with('project')
@@ -455,14 +451,21 @@ class EmployeeController extends Controller
             if ($employee->joining_date) {
                 $joiningMonth = \Carbon\Carbon::parse($employee->joining_date)->format('Y-m');
                 if ($joiningMonth > $month) {
+                    $employee->earn_leave = 0;
+                    $employee->save();
                     continue; // Employee hadn't joined yet
                 }
+            } else {
+                // No joining date, set EL to 0
+                $employee->earn_leave = 0;
+                $employee->save();
+                continue;
             }
 
             // All regular employees get 5 days leave allowance per month
             $leaveAllowance = 5;
 
-            // Count all non-present days (absent, leave, sick_leave) in the month
+            // Count all non-present days (absent, leave, sick_leave) in current month
             $absentDays = $employee->attendances()
                 ->whereMonth('date', $monthNum)
                 ->whereYear('date', $year)
@@ -481,17 +484,12 @@ class EmployeeController extends Controller
                 ->where('status', 'sick_leave')
                 ->count();
 
-            // Total non-present days (all types of leave/absence deduct from allowance)
+            // Total non-present days
             $totalLeaveDays = $absentDays + $leaveDays + $sickLeaveDays;
 
-            // Calculate EL adjustment
-            // If total leave days < allowance: positive (unused leave adds to EL)
-            // If total leave days > allowance: negative (extra absence deducts from EL)
-            $elAdjustment = $leaveAllowance - $totalLeaveDays;
-
-            // Update employee's EL
+            // EL = allowance - absent days (current month only)
             $oldEL = floatval($employee->earn_leave ?? 0);
-            $newEL = $oldEL + $elAdjustment;
+            $newEL = $leaveAllowance - $totalLeaveDays;
 
             $employee->earn_leave = $newEL;
             $employee->save();
@@ -506,7 +504,6 @@ class EmployeeController extends Controller
                 'leave_days' => $leaveDays,
                 'sick_leave_days' => $sickLeaveDays,
                 'total_leave_days' => $totalLeaveDays,
-                'el_adjustment' => $elAdjustment,
                 'old_el' => $oldEL,
                 'new_el' => $newEL,
             ];
