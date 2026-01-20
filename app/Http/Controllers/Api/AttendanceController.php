@@ -176,11 +176,18 @@ class AttendanceController extends Controller
 
                 $presentDays = $attendances->where('status', 'present')->count();
 
+                // Get absent dates for tooltip
+                $absentDates = $attendances->where('status', 'absent')
+                    ->pluck('date')
+                    ->map(fn($d) => \Carbon\Carbon::parse($d)->format('d M'))
+                    ->toArray();
+
                 $result = [
                     'employee' => $employee,
                     'total_days' => $attendances->count(),
                     'present_days' => $presentDays,
                     'absent_days' => $attendances->where('status', 'absent')->count(),
+                    'absent_dates' => $absentDates,
                     'leave_days' => $attendances->where('status', 'leave')->count(),
                     'sick_leave_days' => $attendances->where('status', 'sick_leave')->count(),
                 ];
