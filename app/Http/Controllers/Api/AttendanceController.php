@@ -17,6 +17,11 @@ class AttendanceController extends Controller
         // Build employee query with optional filters
         $employeeQuery = Employee::where('is_active', true);
 
+        // Exclude Administration employees
+        $employeeQuery->whereDoesntHave('project', function ($q) {
+            $q->where('name', 'Administration');
+        });
+
         // Filter by employee type
         if ($request->employee_type) {
             $employeeQuery->where('employee_type', $request->employee_type);
@@ -42,6 +47,10 @@ class AttendanceController extends Controller
             ->whereDate('date', $date)
             ->whereHas('employee', function ($q) use ($request) {
                 $q->where('is_active', true);
+                // Exclude Administration employees
+                $q->whereDoesntHave('project', function ($pq) {
+                    $pq->where('name', 'Administration');
+                });
                 if ($request->employee_type) {
                     $q->where('employee_type', $request->employee_type);
                 }
@@ -162,6 +171,11 @@ class AttendanceController extends Controller
 
         $employeeQuery = Employee::where('is_active', true)->with(['project']);
 
+        // Exclude Administration employees
+        $employeeQuery->whereDoesntHave('project', function ($q) {
+            $q->where('name', 'Administration');
+        });
+
         // Filter by employee type
         if ($request->employee_type) {
             $employeeQuery->where('employee_type', $request->employee_type);
@@ -219,6 +233,10 @@ class AttendanceController extends Controller
             ->whereYear('date', $year)
             ->whereHas('employee', function ($q) {
                 $q->where('is_active', true);
+                // Exclude Administration employees
+                $q->whereDoesntHave('project', function ($pq) {
+                    $pq->where('name', 'Administration');
+                });
             })
             ->get()
             ->groupBy(function ($attendance) {
