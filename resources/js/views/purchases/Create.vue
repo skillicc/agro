@@ -12,7 +12,7 @@
                 <v-form @submit.prevent="savePurchase">
                     <!-- Header Fields -->
                     <v-row dense>
-                        <v-col cols="12" sm="6" lg="3">
+                        <v-col cols="12" sm="6" md="4" lg="2">
                             <v-select
                                 v-model="form.project_id"
                                 :items="projects"
@@ -25,7 +25,7 @@
                                 persistent-hint
                             ></v-select>
                         </v-col>
-                        <v-col cols="12" sm="6" lg="3">
+                        <v-col cols="12" sm="6" md="4" lg="2">
                             <v-select
                                 v-model="form.warehouse_id"
                                 :items="warehouses"
@@ -38,7 +38,7 @@
                                 persistent-hint
                             ></v-select>
                         </v-col>
-                        <v-col cols="12" sm="4" lg="2">
+                        <v-col cols="12" sm="6" md="4" lg="2">
                             <v-select
                                 v-model="form.supplier_id"
                                 :items="suppliers"
@@ -49,14 +49,26 @@
                                 density="comfortable"
                             ></v-select>
                         </v-col>
-                        <v-col cols="6" sm="4" lg="2">
+                        <v-col cols="6" sm="6" md="4" lg="2">
                             <v-text-field
                                 v-model="form.invoice_no"
                                 label="Invoice No."
                                 density="comfortable"
+                                placeholder="Enter invoice number"
                             ></v-text-field>
                         </v-col>
-                        <v-col cols="6" sm="4" lg="2">
+                        <v-col cols="6" sm="6" md="4" lg="2">
+                            <v-text-field
+                                model-value="Auto-generated"
+                                label="Reference No."
+                                density="comfortable"
+                                readonly
+                                bg-color="grey-lighten-4"
+                                hint="Generated on save"
+                                persistent-hint
+                            ></v-text-field>
+                        </v-col>
+                        <v-col cols="12" sm="6" md="4" lg="2">
                             <v-text-field
                                 v-model="form.date"
                                 label="Date"

@@ -102,9 +102,15 @@
         <!-- View Dialog -->
         <v-dialog v-model="viewDialog" :max-width="$vuetify.display.smAndDown ? '95%' : '700'" :fullscreen="$vuetify.display.xs">
             <v-card v-if="selectedPurchase">
-                <v-card-title>{{ selectedPurchase.invoice_no }}</v-card-title>
+                <v-card-title>{{ selectedPurchase.reference_no }}</v-card-title>
                 <v-card-text>
                     <v-row>
+                        <v-col cols="6">
+                            <strong>Reference No:</strong> {{ selectedPurchase.reference_no }}
+                        </v-col>
+                        <v-col cols="6">
+                            <strong>Invoice No:</strong> {{ selectedPurchase.invoice_no || '-' }}
+                        </v-col>
                         <v-col cols="6">
                             <strong>Date:</strong> {{ selectedPurchase.date }}
                         </v-col>
@@ -176,7 +182,7 @@
                 <v-card-text>
                     Are you sure you want to delete this purchase?
                     <div v-if="purchaseToDelete" class="mt-2">
-                        <strong>{{ purchaseToDelete.invoice_no }}</strong>
+                        <strong>{{ purchaseToDelete.reference_no }}</strong>
                     </div>
                 </v-card-text>
                 <v-card-actions>
@@ -212,6 +218,7 @@ const filters = reactive({
 
 const headers = [
     { title: 'SL', key: 'sl', width: '50px' },
+    { title: 'Reference', key: 'reference_no' },
     { title: 'Invoice', key: 'invoice_no' },
     { title: 'Date', key: 'date' },
     { title: 'Project', key: 'project.name' },
@@ -225,10 +232,10 @@ const headers = [
 // Hide some columns on smaller screens
 const responsiveHeaders = computed(() => {
     if (display.xs.value) {
-        return headers.filter(h => ['invoice_no', 'total', 'actions'].includes(h.key))
+        return headers.filter(h => ['reference_no', 'total', 'actions'].includes(h.key))
     }
     if (display.smAndDown.value) {
-        return headers.filter(h => !['warehouse.name', 'project.name'].includes(h.key))
+        return headers.filter(h => !['warehouse.name', 'project.name', 'invoice_no'].includes(h.key))
     }
     if (display.md.value) {
         return headers.filter(h => h.key !== 'warehouse.name')

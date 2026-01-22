@@ -15,6 +15,7 @@ class Purchase extends Model
         'warehouse_id',
         'supplier_id',
         'invoice_no',
+        'reference_no',
         'date',
         'subtotal',
         'discount',

@@ -12,7 +12,7 @@
                 <v-form @submit.prevent="savePurchase">
                     <!-- Header Fields -->
                     <v-row dense>
-                        <v-col cols="12" sm="6" lg="3">
+                        <v-col cols="12" sm="6" md="4" lg="2">
                             <v-select
                                 v-model="form.project_id"
                                 :items="projects"
@@ -25,7 +25,7 @@
                                 persistent-hint
                             ></v-select>
                         </v-col>
-                        <v-col cols="12" sm="6" lg="3">
+                        <v-col cols="12" sm="6" md="4" lg="2">
                             <v-select
                                 v-model="form.warehouse_id"
                                 :items="warehouses"
@@ -38,7 +38,7 @@
                                 persistent-hint
                             ></v-select>
                         </v-col>
-                        <v-col cols="12" sm="4" lg="2">
+                        <v-col cols="12" sm="6" md="4" lg="2">
                             <v-select
                                 v-model="form.supplier_id"
                                 :items="suppliers"
@@ -49,14 +49,23 @@
                                 density="comfortable"
                             ></v-select>
                         </v-col>
-                        <v-col cols="6" sm="4" lg="2">
+                        <v-col cols="6" sm="6" md="4" lg="2">
                             <v-text-field
                                 v-model="form.invoice_no"
                                 label="Invoice No."
                                 density="comfortable"
                             ></v-text-field>
                         </v-col>
-                        <v-col cols="6" sm="4" lg="2">
+                        <v-col cols="6" sm="6" md="4" lg="2">
+                            <v-text-field
+                                v-model="form.reference_no"
+                                label="Reference No."
+                                density="comfortable"
+                                readonly
+                                bg-color="grey-lighten-4"
+                            ></v-text-field>
+                        </v-col>
+                        <v-col cols="12" sm="6" md="4" lg="2">
                             <v-text-field
                                 v-model="form.date"
                                 label="Date"
@@ -336,6 +345,7 @@ const form = reactive({
     warehouse_id: null,
     supplier_id: null,
     invoice_no: '',
+    reference_no: '',
     date: '',
     discount: 0,
     paid: 0,
@@ -407,6 +417,7 @@ const fetchData = async () => {
         form.warehouse_id = purchase.warehouse_id
         form.supplier_id = purchase.supplier_id
         form.invoice_no = purchase.invoice_no
+        form.reference_no = purchase.reference_no
         form.date = purchase.date
         form.discount = parseFloat(purchase.discount) || 0
         form.paid = parseFloat(purchase.paid) || 0
