@@ -125,20 +125,23 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/bonuses/{bonus}', [EmployeeController::class, 'deleteBonus']);
 
     // Attendance
+    // IMPORTANT: Static routes must come BEFORE dynamic {attendance} routes
     Route::get('/attendances', [AttendanceController::class, 'index']);
-    Route::post('/attendances/{attendance}/toggle', [AttendanceController::class, 'toggle']);
-    Route::put('/attendances/{attendance}/status', [AttendanceController::class, 'updateStatus']);
-    Route::post('/attendances/{attendance}/cancel', [AttendanceController::class, 'cancel']);
     Route::post('/attendances/cancel-all', [AttendanceController::class, 'cancelAll']);
     Route::post('/attendances/mark-all-present', [AttendanceController::class, 'markAllPresent']);
     Route::get('/attendances/monthly-report', [AttendanceController::class, 'monthlyReport']);
     Route::get('/attendances/daily-chart', [AttendanceController::class, 'dailyChartData']);
-    Route::get('/employees/{employee}/attendance-summary', [AttendanceController::class, 'monthlySummary']);
 
-    // Administration Attendance (separate system)
+    // Administration Attendance (separate system) - must be before {attendance} routes
     Route::get('/attendances/admin', [AttendanceController::class, 'adminIndex']);
     Route::post('/attendances/admin/cancel-all', [AttendanceController::class, 'adminCancelAll']);
     Route::post('/attendances/admin/mark-all-present', [AttendanceController::class, 'adminMarkAllPresent']);
+
+    // Dynamic attendance routes (with {attendance} parameter)
+    Route::post('/attendances/{attendance}/toggle', [AttendanceController::class, 'toggle']);
+    Route::put('/attendances/{attendance}/status', [AttendanceController::class, 'updateStatus']);
+    Route::post('/attendances/{attendance}/cancel', [AttendanceController::class, 'cancel']);
+    Route::get('/employees/{employee}/attendance-summary', [AttendanceController::class, 'monthlySummary']);
 
     // Reports
     Route::get('/dashboard', [ReportController::class, 'dashboard']);
