@@ -162,6 +162,12 @@
                                 {{ item.absent_days }}
                             </v-chip>
                         </template>
+                        <template v-slot:item.leave_days="{ item }">
+                            <v-chip color="warning" size="small">{{ item.leave_days || 0 }}</v-chip>
+                        </template>
+                        <template v-slot:item.sick_leave_days="{ item }">
+                            <v-chip color="purple" size="small">{{ item.sick_leave_days || 0 }}</v-chip>
+                        </template>
                         <template v-slot:item.attendance_rate="{ item }">
                             <v-chip
                                 :color="getAttendanceColor(item.attendance_rate)"
@@ -242,6 +248,8 @@ const tableHeaders = [
     { title: 'Total Days', key: 'total_days', align: 'center' },
     { title: 'Present', key: 'present_days', align: 'center' },
     { title: 'Absent', key: 'absent_days', align: 'center' },
+    { title: 'Leave', key: 'leave_days', align: 'center' },
+    { title: 'Sick Leave', key: 'sick_leave_days', align: 'center' },
     { title: 'Rate', key: 'attendance_rate', align: 'center' },
 ]
 
@@ -273,19 +281,23 @@ const summaryStats = computed(() => {
 const pieChartData = computed(() => {
     let totalPresent = 0
     let totalAbsent = 0
+    let totalLeave = 0
+    let totalSickLeave = 0
 
     dailyData.value.forEach(day => {
         totalPresent += day.present
         totalAbsent += day.absent
+        totalLeave += day.leave || 0
+        totalSickLeave += day.sick_leave || 0
     })
 
-    if (totalPresent === 0 && totalAbsent === 0) return null
+    if (totalPresent === 0 && totalAbsent === 0 && totalLeave === 0 && totalSickLeave === 0) return null
 
     return {
-        labels: ['Present', 'Absent'],
+        labels: ['Present', 'Absent', 'Leave', 'Sick Leave'],
         datasets: [{
-            data: [totalPresent, totalAbsent],
-            backgroundColor: ['#4CAF50', '#F44336'],
+            data: [totalPresent, totalAbsent, totalLeave, totalSickLeave],
+            backgroundColor: ['#4CAF50', '#F44336', '#FF9800', '#9C27B0'],
             borderWidth: 0
         }]
     }
@@ -318,6 +330,18 @@ const dailyChartData = computed(() => {
                 label: 'Absent',
                 data: dailyData.value.map(d => d.absent),
                 backgroundColor: '#F44336',
+                borderRadius: 4
+            },
+            {
+                label: 'Leave',
+                data: dailyData.value.map(d => d.leave || 0),
+                backgroundColor: '#FF9800',
+                borderRadius: 4
+            },
+            {
+                label: 'Sick Leave',
+                data: dailyData.value.map(d => d.sick_leave || 0),
+                backgroundColor: '#9C27B0',
                 borderRadius: 4
             }
         ]
@@ -368,6 +392,18 @@ const employeeChartData = computed(() => {
                 label: 'Absent Days',
                 data: employeeReport.value.map(e => e.absent_days),
                 backgroundColor: '#F44336',
+                borderRadius: 4
+            },
+            {
+                label: 'Leave Days',
+                data: employeeReport.value.map(e => e.leave_days || 0),
+                backgroundColor: '#FF9800',
+                borderRadius: 4
+            },
+            {
+                label: 'Sick Leave Days',
+                data: employeeReport.value.map(e => e.sick_leave_days || 0),
+                backgroundColor: '#9C27B0',
                 borderRadius: 4
             }
         ]
