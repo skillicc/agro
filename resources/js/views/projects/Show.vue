@@ -56,6 +56,7 @@
                 <v-tab value="sales">Sales</v-tab>
                 <v-tab value="assets">Assets</v-tab>
                 <v-tab value="employees">Employees</v-tab>
+                <v-tab value="attendance" v-if="isAdministration">Attendance</v-tab>
                 <v-tab value="damages" v-if="project.type === 'nursery' || project.type === 'shop'">Damages</v-tab>
                 <v-tab value="productions" v-if="project.type === 'nursery'">Productions</v-tab>
             </v-tabs>
@@ -77,6 +78,9 @@
                     <v-window-item value="employees">
                         <EmployeesList :projectId="project.id" />
                     </v-window-item>
+                    <v-window-item value="attendance" v-if="isAdministration">
+                        <AdminAttendance :projectId="project.id" />
+                    </v-window-item>
                     <v-window-item value="damages">
                         <DamagesList :projectId="project.id" />
                     </v-window-item>
@@ -90,7 +94,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '../../services/api'
 import ExpensesList from '../../components/ExpensesList.vue'
@@ -100,11 +104,17 @@ import AssetsList from '../../components/AssetsList.vue'
 import EmployeesList from '../../components/EmployeesList.vue'
 import DamagesList from '../../components/DamagesList.vue'
 import ProductionsList from '../../components/ProductionsList.vue'
+import AdminAttendance from '../../components/AdminAttendance.vue'
 
 const route = useRoute()
 const project = ref(null)
 const summary = ref({})
 const tab = ref('expenses')
+
+// Check if this is the Administration project
+const isAdministration = computed(() => {
+    return project.value?.name === 'Administration'
+})
 
 const getProjectColor = (type) => {
     const colors = { field: 'green', nursery: 'teal', shop: 'blue' }

@@ -442,7 +442,8 @@ class EmployeeController extends Controller
      * Calculate Earn Leave (EL) for all employees for current month
      * Rules:
      * - Regular employees get 5 days leave allowance per month
-     * - EL = 5 - absent days (current month only, not accumulated)
+     * - Administration employees get 6 days leave allowance per month
+     * - EL = allowance - absent days (current month only, not accumulated)
      */
     public function calculateEarnLeave(Request $request)
     {
@@ -452,6 +453,7 @@ class EmployeeController extends Controller
         $month = now()->format('Y-m');
 
         // Get all active regular employees (only regular employees have EL)
+        // Including Administration employees
         $employees = Employee::with('project')
             ->where('is_active', true)
             ->where('employee_type', 'regular')
@@ -476,8 +478,9 @@ class EmployeeController extends Controller
                 continue;
             }
 
-            // All regular employees get 5 days leave allowance per month
-            $leaveAllowance = 5;
+            // Administration employees get 6 days, others get 5 days
+            $isAdministration = $employee->project && $employee->project->name === 'Administration';
+            $leaveAllowance = $isAdministration ? 6 : 5;
 
             // Count all non-present days (absent, leave, sick_leave) in current month
             $absentDays = $employee->attendances()

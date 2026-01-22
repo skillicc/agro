@@ -267,4 +267,98 @@ class AttendanceController extends Controller
             'daily_data' => $dailyData,
         ]);
     }
+
+    // ==================== Administration Attendance ====================
+
+    // Get attendance for Administration employees for a specific date
+    public function adminIndex(Request $request)
+    {
+        $date = $request->date ?? now()->toDateString();
+        $projectId = $request->project_id;
+
+        // Get Administration employees
+        $employees = Employee::where('is_active', true)
+            ->whereHas('project', function ($q) {
+                $q->where('name', 'Administration');
+            })
+            ->with(['project'])
+            ->orderBy('name')
+            ->get();
+
+        // Auto-generate attendance for employees who don't have it yet
+        foreach ($employees as $employee) {
+            Attendance::firstOrCreate(
+                ['employee_id' => $employee->id, 'date' => $date],
+                ['status' => 'present']
+            );
+        }
+
+        // Get all attendances for the date
+        $attendances = Attendance::with(['employee.project'])
+            ->whereDate('date', $date)
+            ->whereHas('employee', function ($q) {
+                $q->where('is_active', true);
+                $q->whereHas('project', function ($pq) {
+                    $pq->where('name', 'Administration');
+                });
+            })
+            ->get();
+
+        // Summary
+        $summary = [
+            'total' => $attendances->count(),
+            'present' => $attendances->where('status', 'present')->count(),
+            'absent' => $attendances->where('status', 'absent')->count(),
+            'leave' => $attendances->where('status', 'leave')->count(),
+            'sick_leave' => $attendances->where('status', 'sick_leave')->count(),
+        ];
+
+        return response()->json([
+            'date' => $date,
+            'attendances' => $attendances,
+            'summary' => $summary,
+        ]);
+    }
+
+    // Cancel all Administration attendances for a date
+    public function adminCancelAll(Request $request)
+    {
+        $request->validate([
+            'date' => 'required|date',
+        ]);
+
+        // Get Administration employee IDs
+        $employeeIds = Employee::where('is_active', true)
+            ->whereHas('project', function ($q) {
+                $q->where('name', 'Administration');
+            })
+            ->pluck('id');
+
+        Attendance::whereDate('date', $request->date)
+            ->whereIn('employee_id', $employeeIds)
+            ->update(['status' => 'absent']);
+
+        return response()->json(['message' => 'All Administration attendances cancelled for ' . $request->date]);
+    }
+
+    // Mark all Administration as present for a date
+    public function adminMarkAllPresent(Request $request)
+    {
+        $request->validate([
+            'date' => 'required|date',
+        ]);
+
+        // Get Administration employee IDs
+        $employeeIds = Employee::where('is_active', true)
+            ->whereHas('project', function ($q) {
+                $q->where('name', 'Administration');
+            })
+            ->pluck('id');
+
+        Attendance::whereDate('date', $request->date)
+            ->whereIn('employee_id', $employeeIds)
+            ->update(['status' => 'present']);
+
+        return response()->json(['message' => 'All Administration marked present for ' . $request->date]);
+    }
 }

@@ -135,6 +135,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/attendances/daily-chart', [AttendanceController::class, 'dailyChartData']);
     Route::get('/employees/{employee}/attendance-summary', [AttendanceController::class, 'monthlySummary']);
 
+    // Administration Attendance (separate system)
+    Route::get('/attendances/admin', [AttendanceController::class, 'adminIndex']);
+    Route::post('/attendances/admin/cancel-all', [AttendanceController::class, 'adminCancelAll']);
+    Route::post('/attendances/admin/mark-all-present', [AttendanceController::class, 'adminMarkAllPresent']);
+
     // Reports
     Route::get('/dashboard', [ReportController::class, 'dashboard']);
     Route::get('/reports/monthly', [ReportController::class, 'monthlyReport']);
