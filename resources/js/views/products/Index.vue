@@ -1,22 +1,28 @@
 <template>
     <div>
-        <div class="d-flex justify-space-between align-center mb-4">
-            <h1 class="text-h4">Products</h1>
+        <div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center mb-4 ga-2">
+            <h1 class="text-h5 text-sm-h4">Products</h1>
             <div class="d-flex ga-2">
-                <v-btn color="secondary" variant="outlined" @click="categoryDialog = true">
+                <v-btn color="secondary" variant="outlined" @click="categoryDialog = true" :size="$vuetify.display.xs ? 'small' : 'default'">
                     <v-icon left>mdi-shape</v-icon>
-                    Categories
+                    <span class="d-none d-sm-inline">Categories</span>
                 </v-btn>
-                <v-btn color="primary" @click="openDialog()">
+                <v-btn color="primary" @click="openDialog()" :size="$vuetify.display.xs ? 'small' : 'default'">
                     <v-icon left>mdi-plus</v-icon>
-                    Add Product
+                    <span class="d-none d-sm-inline">Add Product</span>
+                    <span class="d-sm-none">Add</span>
                 </v-btn>
             </div>
         </div>
 
         <v-card>
-            <v-card-text>
-                <v-data-table :headers="headers" :items="products" :loading="loading">
+            <v-card-text class="pa-2 pa-sm-4">
+                <v-data-table
+                    :headers="responsiveHeaders"
+                    :items="products"
+                    :loading="loading"
+                    :density="$vuetify.display.smAndDown ? 'compact' : 'default'"
+                >
                     <template v-slot:item.sl="{ index }">
                         {{ index + 1 }}
                     </template>
@@ -234,8 +240,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useDisplay } from 'vuetify'
 import api from '../../services/api'
+
+const { smAndUp, mdAndUp } = useDisplay()
 
 const products = ref([])
 const categories = ref([])
@@ -273,17 +282,38 @@ const productTypes = [
     { title: 'ক্রয়-বিক্রয় (Trading)', value: 'trading' },
 ]
 
-const headers = [
-    { title: 'SL', key: 'sl', width: '60px' },
-    { title: 'Name', key: 'name' },
-    { title: 'Type', key: 'type' },
-    { title: 'Categories', key: 'categories' },
-    { title: 'Unit', key: 'unit' },
-    { title: 'Cost Price', key: 'cost_price' },
-    { title: 'Selling Price', key: 'selling_price' },
-    { title: 'Stock', key: 'stock_quantity' },
-    { title: 'Actions', key: 'actions', sortable: false },
-]
+const responsiveHeaders = computed(() => {
+    if (mdAndUp.value) {
+        // Desktop: show all columns
+        return [
+            { title: 'SL', key: 'sl', width: '60px' },
+            { title: 'Name', key: 'name' },
+            { title: 'Type', key: 'type' },
+            { title: 'Categories', key: 'categories' },
+            { title: 'Unit', key: 'unit' },
+            { title: 'Cost Price', key: 'cost_price' },
+            { title: 'Selling Price', key: 'selling_price' },
+            { title: 'Stock', key: 'stock_quantity' },
+            { title: 'Actions', key: 'actions', sortable: false },
+        ]
+    }
+    if (smAndUp.value) {
+        // Tablet: show fewer columns
+        return [
+            { title: 'SL', key: 'sl', width: '50px' },
+            { title: 'Name', key: 'name' },
+            { title: 'Price', key: 'selling_price' },
+            { title: 'Stock', key: 'stock_quantity' },
+            { title: 'Actions', key: 'actions', sortable: false },
+        ]
+    }
+    // Mobile: minimal columns
+    return [
+        { title: 'Name', key: 'name' },
+        { title: 'Stock', key: 'stock_quantity' },
+        { title: 'Actions', key: 'actions', sortable: false },
+    ]
+})
 
 const form = reactive({
     name: '',

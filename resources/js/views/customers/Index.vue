@@ -1,24 +1,80 @@
 <template>
     <div>
-        <div class="d-flex justify-space-between align-center mb-4">
-            <h1 class="text-h4">Customers</h1>
+        <div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center mb-4 ga-2">
+            <h1 class="text-h5 text-sm-h4">Customers</h1>
             <div class="d-flex ga-2">
-                <v-btn color="success" @click="openPaymentDialog()">
+                <v-btn color="success" @click="openPaymentDialog()" :size="$vuetify.display.xs ? 'small' : 'default'">
                     <v-icon left>mdi-cash-plus</v-icon>
-                    Add Payment
+                    <span class="d-none d-sm-inline">Add Payment</span>
+                    <span class="d-sm-none">Pay</span>
                 </v-btn>
-                <v-btn color="primary" @click="openDialog()">
+                <v-btn color="primary" @click="openDialog()" :size="$vuetify.display.xs ? 'small' : 'default'">
                     <v-icon left>mdi-plus</v-icon>
-                    Add Customer
+                    <span class="d-none d-sm-inline">Add Customer</span>
+                    <span class="d-sm-none">Add</span>
                 </v-btn>
             </div>
         </div>
 
         <v-card>
-            <v-card-text>
-                <v-data-table :headers="headers" :items="customers" :loading="loading">
+            <v-card-text class="pa-2 pa-sm-4">
+                <!-- Mobile Card View -->
+                <div v-if="$vuetify.display.xs" class="mobile-list">
+                    <v-card
+                        v-for="customer in customers"
+                        :key="customer.id"
+                        variant="outlined"
+                        class="mb-2"
+                    >
+                        <v-card-text class="pa-3">
+                            <div class="d-flex justify-space-between align-start">
+                                <div>
+                                    <div class="font-weight-bold">{{ customer.name }}</div>
+                                    <div class="text-caption text-grey">{{ customer.phone }}</div>
+                                </div>
+                                <v-chip :color="customer.total_due > 0 ? 'warning' : 'success'" size="small">
+                                    ৳{{ formatNumber(customer.total_due) }}
+                                </v-chip>
+                            </div>
+                            <v-divider class="my-2"></v-divider>
+                            <div class="d-flex justify-space-between text-caption">
+                                <span>Sale: ৳{{ formatNumber(customer.total_sale) }}</span>
+                                <span class="text-success">Paid: ৳{{ formatNumber(customer.total_paid) }}</span>
+                            </div>
+                            <div class="d-flex justify-end mt-2 ga-1">
+                                <v-btn icon size="x-small" variant="tonal" @click="viewLedger(customer)">
+                                    <v-icon size="small">mdi-file-document</v-icon>
+                                </v-btn>
+                                <v-btn icon size="x-small" variant="tonal" @click="openDialog(customer)">
+                                    <v-icon size="small">mdi-pencil</v-icon>
+                                </v-btn>
+                                <v-btn icon size="x-small" variant="tonal" color="error" @click="confirmDelete(customer)">
+                                    <v-icon size="small">mdi-delete</v-icon>
+                                </v-btn>
+                            </div>
+                        </v-card-text>
+                    </v-card>
+                    <div v-if="loading" class="text-center py-4">
+                        <v-progress-circular indeterminate></v-progress-circular>
+                    </div>
+                </div>
+
+                <!-- Desktop Table View -->
+                <v-data-table
+                    v-else
+                    :headers="responsiveHeaders"
+                    :items="customers"
+                    :loading="loading"
+                    :density="$vuetify.display.smAndDown ? 'compact' : 'default'"
+                >
                     <template v-slot:item.sl="{ index }">
                         {{ index + 1 }}
+                    </template>
+                    <template v-slot:item.total_sale="{ item }">
+                        ৳{{ formatNumber(item.total_sale) }}
+                    </template>
+                    <template v-slot:item.total_paid="{ item }">
+                        <span class="text-success">৳{{ formatNumber(item.total_paid) }}</span>
                     </template>
                     <template v-slot:item.total_due="{ item }">
                         <v-chip :color="item.total_due > 0 ? 'warning' : 'success'" size="small">
@@ -26,15 +82,17 @@
                         </v-chip>
                     </template>
                     <template v-slot:item.actions="{ item }">
-                        <v-btn icon size="small" @click="viewLedger(item)">
-                            <v-icon>mdi-file-document</v-icon>
-                        </v-btn>
-                        <v-btn icon size="small" @click="openDialog(item)">
-                            <v-icon>mdi-pencil</v-icon>
-                        </v-btn>
-                        <v-btn icon size="small" color="error" @click="confirmDelete(item)">
-                            <v-icon>mdi-delete</v-icon>
-                        </v-btn>
+                        <div class="d-flex ga-1">
+                            <v-btn icon size="x-small" variant="text" @click="viewLedger(item)">
+                                <v-icon>mdi-file-document</v-icon>
+                            </v-btn>
+                            <v-btn icon size="x-small" variant="text" @click="openDialog(item)">
+                                <v-icon>mdi-pencil</v-icon>
+                            </v-btn>
+                            <v-btn icon size="x-small" variant="text" color="error" @click="confirmDelete(item)">
+                                <v-icon>mdi-delete</v-icon>
+                            </v-btn>
+                        </div>
                     </template>
                 </v-data-table>
             </v-card-text>
@@ -145,8 +203,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useDisplay } from 'vuetify'
 import api from '../../services/api'
+
+const { smAndUp } = useDisplay()
 
 const customers = ref([])
 const loading = ref(false)
@@ -171,15 +232,26 @@ const paymentForm = reactive({
     note: '',
 })
 
-const headers = [
-    { title: 'SL', key: 'sl', width: '60px' },
-    { title: 'Name', key: 'name' },
-    { title: 'Phone', key: 'phone' },
-    { title: 'Total Sale', key: 'total_sale' },
-    { title: 'Total Paid', key: 'total_paid' },
-    { title: 'Total Due', key: 'total_due' },
-    { title: 'Actions', key: 'actions', sortable: false },
-]
+const responsiveHeaders = computed(() => {
+    if (smAndUp.value) {
+        return [
+            { title: 'SL', key: 'sl', width: '60px' },
+            { title: 'Name', key: 'name' },
+            { title: 'Phone', key: 'phone' },
+            { title: 'Total Sale', key: 'total_sale' },
+            { title: 'Total Paid', key: 'total_paid' },
+            { title: 'Total Due', key: 'total_due' },
+            { title: 'Actions', key: 'actions', sortable: false },
+        ]
+    }
+    // Compact view for tablets
+    return [
+        { title: 'SL', key: 'sl', width: '50px' },
+        { title: 'Name', key: 'name' },
+        { title: 'Due', key: 'total_due' },
+        { title: 'Actions', key: 'actions', sortable: false },
+    ]
+})
 
 const form = reactive({ name: '', phone: '', email: '', address: '' })
 

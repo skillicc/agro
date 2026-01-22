@@ -185,6 +185,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useDisplay } from 'vuetify'
 import { Bar, Doughnut } from 'vue-chartjs'
 import {
     Chart as ChartJS,
@@ -208,6 +209,8 @@ ChartJS.register(
     Legend,
     ArcElement
 )
+
+const { smAndUp, mdAndUp } = useDisplay()
 
 const loading = ref(false)
 const dailyData = ref([])
@@ -241,17 +244,34 @@ const monthName = computed(() => {
     return months.find(m => m.value === selectedMonth.value)?.name || ''
 })
 
-const tableHeaders = [
-    { title: 'SL', key: 'sl', sortable: false, width: '60px' },
-    { title: 'Employee', key: 'employee.name' },
-    { title: 'Project', key: 'employee.project' },
-    { title: 'Total Days', key: 'total_days', align: 'center' },
-    { title: 'Present', key: 'present_days', align: 'center' },
-    { title: 'Absent', key: 'absent_days', align: 'center' },
-    { title: 'Leave', key: 'leave_days', align: 'center' },
-    { title: 'Sick Leave', key: 'sick_leave_days', align: 'center' },
-    { title: 'Rate', key: 'attendance_rate', align: 'center' },
-]
+const tableHeaders = computed(() => {
+    if (mdAndUp.value) {
+        return [
+            { title: 'SL', key: 'sl', sortable: false, width: '60px' },
+            { title: 'Employee', key: 'employee.name' },
+            { title: 'Project', key: 'employee.project' },
+            { title: 'Total Days', key: 'total_days', align: 'center' },
+            { title: 'Present', key: 'present_days', align: 'center' },
+            { title: 'Absent', key: 'absent_days', align: 'center' },
+            { title: 'Leave', key: 'leave_days', align: 'center' },
+            { title: 'Sick Leave', key: 'sick_leave_days', align: 'center' },
+            { title: 'Rate', key: 'attendance_rate', align: 'center' },
+        ]
+    }
+    if (smAndUp.value) {
+        return [
+            { title: 'Employee', key: 'employee.name' },
+            { title: 'Present', key: 'present_days', align: 'center' },
+            { title: 'Absent', key: 'absent_days', align: 'center' },
+            { title: 'Rate', key: 'attendance_rate', align: 'center' },
+        ]
+    }
+    return [
+        { title: 'Employee', key: 'employee.name' },
+        { title: 'Present', key: 'present_days', align: 'center' },
+        { title: 'Rate', key: 'attendance_rate', align: 'center' },
+    ]
+})
 
 // Summary Statistics
 const summaryStats = computed(() => {

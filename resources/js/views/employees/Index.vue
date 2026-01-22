@@ -769,7 +769,10 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useDisplay } from 'vuetify'
 import api from '../../services/api'
+
+const { mdAndUp } = useDisplay()
 
 const employees = ref([])
 const projects = ref([])
@@ -824,21 +827,37 @@ const deletingAdvance = ref(false)
 const editSalaryForm = reactive({ id: null, amount: 0, month: '', payment_date: '', note: '' })
 const editAdvanceForm = reactive({ id: null, amount: 0, date: '', reason: '', is_deducted: false })
 
-const headers = [
-    { title: '#', key: 'sl', width: '50px' },
-    { title: 'Name', key: 'name' },
-    { title: 'Type', key: 'employee_type' },
-    { title: 'Project', key: 'project.name' },
-    { title: 'Position', key: 'position' },
-    { title: 'Salary', key: 'salary_display' },
-    { title: 'EL', key: 'earn_leave' },
-    { title: 'Absent', key: 'absent_count' },
-    { title: 'Advance', key: 'total_advance_paid' },
-    { title: 'Paid', key: 'total_paid' },
-    { title: 'Due', key: 'current_month_due' },
-    { title: 'Status', key: 'is_active' },
-    { title: 'Actions', key: 'actions', sortable: false },
-]
+const headers = computed(() => {
+    const baseHeaders = [
+        { title: '#', key: 'sl', width: '50px' },
+        { title: 'Name', key: 'name' },
+        { title: 'Salary', key: 'salary_display' },
+        { title: 'Due', key: 'current_month_due' },
+        { title: 'Status', key: 'is_active' },
+        { title: 'Actions', key: 'actions', sortable: false },
+    ]
+
+    if (mdAndUp.value) {
+        // Desktop: show all columns
+        return [
+            { title: '#', key: 'sl', width: '50px' },
+            { title: 'Name', key: 'name' },
+            { title: 'Type', key: 'employee_type' },
+            { title: 'Project', key: 'project.name' },
+            { title: 'Position', key: 'position' },
+            { title: 'Salary', key: 'salary_display' },
+            { title: 'EL', key: 'earn_leave' },
+            { title: 'Absent', key: 'absent_count' },
+            { title: 'Advance', key: 'total_advance_paid' },
+            { title: 'Paid', key: 'total_paid' },
+            { title: 'Due', key: 'current_month_due' },
+            { title: 'Status', key: 'is_active' },
+            { title: 'Actions', key: 'actions', sortable: false },
+        ]
+    }
+    // Mobile/Tablet: show only essential columns
+    return baseHeaders
+})
 
 const employeeTypes = [
     { value: 'regular', label: 'Regular' },
