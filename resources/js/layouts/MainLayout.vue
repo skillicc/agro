@@ -245,9 +245,16 @@ const clearCache = async () => {
         // Hard refresh (bypass browser cache)
         window.location.reload(true)
     } catch (error) {
-        console.error('Error clearing cache:', error)
-        alert('Error clearing cache: ' + (error.response?.data?.message || error.message))
-        clearingCache.value = false
+        console.error('API cache clear failed, trying direct PHP:', error)
+        // Fallback to direct PHP file (for when route cache is stale)
+        try {
+            await axios.get('/clear-cache.php?key=bangalio2024clear')
+            window.location.reload(true)
+        } catch (fallbackError) {
+            console.error('Fallback also failed:', fallbackError)
+            alert('Error clearing cache. Please SSH and run: php artisan optimize:clear')
+            clearingCache.value = false
+        }
     }
 }
 
