@@ -9,6 +9,59 @@
             </v-btn>
         </div>
 
+        <!-- Filters -->
+        <v-card class="mb-4">
+            <v-card-text class="pa-2 pa-sm-4">
+                <v-row dense>
+                    <v-col cols="12" sm="4" md="3">
+                        <v-autocomplete
+                            v-model="filters.supplier_id"
+                            :items="suppliers"
+                            item-title="name"
+                            item-value="id"
+                            label="Supplier"
+                            density="compact"
+                            clearable
+                            hide-details
+                            @update:model-value="fetchPurchases"
+                        ></v-autocomplete>
+                    </v-col>
+                    <v-col cols="6" sm="4" md="3">
+                        <v-text-field
+                            v-model="filters.start_date"
+                            label="From Date"
+                            type="date"
+                            density="compact"
+                            hide-details
+                            clearable
+                            @update:model-value="fetchPurchases"
+                        ></v-text-field>
+                    </v-col>
+                    <v-col cols="6" sm="4" md="3">
+                        <v-text-field
+                            v-model="filters.end_date"
+                            label="To Date"
+                            type="date"
+                            density="compact"
+                            hide-details
+                            clearable
+                            @update:model-value="fetchPurchases"
+                        ></v-text-field>
+                    </v-col>
+                    <v-col cols="12" sm="12" md="3" class="d-flex align-center ga-2">
+                        <v-btn color="primary" variant="tonal" size="small" @click="fetchPurchases">
+                            <v-icon left>mdi-magnify</v-icon>
+                            Search
+                        </v-btn>
+                        <v-btn variant="text" size="small" @click="clearFilters">
+                            <v-icon left>mdi-filter-off</v-icon>
+                            Clear
+                        </v-btn>
+                    </v-col>
+                </v-row>
+            </v-card-text>
+        </v-card>
+
         <v-card>
             <v-card-text class="pa-2 pa-sm-4">
                 <div class="table-responsive">
@@ -137,18 +190,25 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useDisplay } from 'vuetify'
 import api from '../../services/api'
 
 const display = useDisplay()
 const purchases = ref([])
+const suppliers = ref([])
 const loading = ref(false)
 const viewDialog = ref(false)
 const selectedPurchase = ref(null)
 const deleteDialog = ref(false)
 const purchaseToDelete = ref(null)
 const deleting = ref(false)
+
+const filters = reactive({
+    supplier_id: null,
+    start_date: null,
+    end_date: null,
+})
 
 const headers = [
     { title: 'SL', key: 'sl', width: '50px' },
@@ -183,15 +243,37 @@ const calculateTotalMRP = (items) => {
     return items.reduce((sum, item) => sum + (parseFloat(item.total_mrp) || 0), 0)
 }
 
+const fetchSuppliers = async () => {
+    try {
+        const response = await api.get('/suppliers')
+        suppliers.value = response.data
+    } catch (error) {
+        console.error('Error fetching suppliers:', error)
+    }
+}
+
 const fetchPurchases = async () => {
     loading.value = true
     try {
-        const response = await api.get('/purchases')
+        const params = new URLSearchParams()
+        if (filters.supplier_id) params.append('supplier_id', filters.supplier_id)
+        if (filters.start_date) params.append('start_date', filters.start_date)
+        if (filters.end_date) params.append('end_date', filters.end_date)
+
+        const query = params.toString() ? `?${params.toString()}` : ''
+        const response = await api.get(`/purchases${query}`)
         purchases.value = response.data
     } catch (error) {
         console.error('Error:', error)
     }
     loading.value = false
+}
+
+const clearFilters = () => {
+    filters.supplier_id = null
+    filters.start_date = null
+    filters.end_date = null
+    fetchPurchases()
 }
 
 const viewPurchase = async (purchase) => {
@@ -223,7 +305,10 @@ const deletePurchase = async () => {
     deleting.value = false
 }
 
-onMounted(() => fetchPurchases())
+onMounted(() => {
+    fetchSuppliers()
+    fetchPurchases()
+})
 </script>
 
 <style scoped>
