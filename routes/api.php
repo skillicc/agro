@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\AccountsReceivableController;
 use App\Http\Controllers\Api\AccountsPayableController;
 use App\Http\Controllers\Api\InvestLoanLiabilityController;
 use App\Http\Controllers\Api\AttendanceController;
+use App\Http\Controllers\Api\SystemController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -196,4 +197,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/invest-loan-liabilities/{investLoanLiability}/payment', [InvestLoanLiabilityController::class, 'addPayment']);
     Route::get('/invest-loan-liabilities/{investLoanLiability}/payments', [InvestLoanLiabilityController::class, 'getPayments']);
     Route::delete('/invest-loan-liability-payments/{payment}', [InvestLoanLiabilityController::class, 'deletePayment']);
+
+    // System utilities
+    Route::post('/system/clear-cache', [SystemController::class, 'clearCache']);
 });

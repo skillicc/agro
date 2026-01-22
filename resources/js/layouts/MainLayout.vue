@@ -6,6 +6,12 @@
             <v-toolbar-title class="text-body-1 text-sm-h6">Bangalio Agro</v-toolbar-title>
             <v-spacer></v-spacer>
 
+            <!-- Cache Clear Button -->
+            <v-btn icon @click="clearCache" :loading="clearingCache" :size="$vuetify.display.smAndDown ? 'small' : 'default'" class="mr-1">
+                <v-icon>mdi-cached</v-icon>
+                <v-tooltip activator="parent" location="bottom">Clear Cache & Refresh</v-tooltip>
+            </v-btn>
+
             <!-- Theme Toggle -->
             <v-btn icon @click="toggleTheme" :size="$vuetify.display.smAndDown ? 'small' : 'default'" class="mr-1">
                 <v-icon>{{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
@@ -212,9 +218,11 @@ import { ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
 import { useAuthStore } from '../stores/auth'
+import axios from 'axios'
 
 const drawer = ref(false)
 const rail = ref(false)
+const clearingCache = ref(false)
 const router = useRouter()
 const authStore = useAuthStore()
 const display = useDisplay()
@@ -227,6 +235,20 @@ const toggleTheme = () => {
     const newTheme = isDark.value ? 'light' : 'dark'
     theme.global.name.value = newTheme
     localStorage.setItem('theme', newTheme)
+}
+
+// Clear cache and hard refresh
+const clearCache = async () => {
+    clearingCache.value = true
+    try {
+        await axios.post('/api/system/clear-cache')
+        // Hard refresh (bypass browser cache)
+        window.location.reload(true)
+    } catch (error) {
+        console.error('Error clearing cache:', error)
+        alert('Error clearing cache: ' + (error.response?.data?.message || error.message))
+        clearingCache.value = false
+    }
 }
 
 // Auto-open drawer on medium and large screens
