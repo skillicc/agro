@@ -276,14 +276,23 @@ class AttendanceController extends Controller
         $date = $request->date ?? now()->toDateString();
         $projectId = $request->project_id;
 
+        // Position hierarchy order
+        $positionOrder = [
+            'Founder & CEO' => 1,
+            'Director (IT & Accounts)' => 2,
+            'Production Manager' => 3,
+        ];
+
         // Get Administration employees
         $employees = Employee::where('is_active', true)
             ->whereHas('project', function ($q) {
                 $q->where('name', 'Administration');
             })
             ->with(['project'])
-            ->orderBy('name')
-            ->get();
+            ->get()
+            ->sortBy(function ($employee) use ($positionOrder) {
+                return $positionOrder[$employee->position] ?? 999;
+            });
 
         // Auto-generate attendance for employees who don't have it yet
         foreach ($employees as $employee) {
@@ -293,7 +302,7 @@ class AttendanceController extends Controller
             );
         }
 
-        // Get all attendances for the date
+        // Get all attendances for the date and sort by position hierarchy
         $attendances = Attendance::with(['employee.project'])
             ->whereDate('date', $date)
             ->whereHas('employee', function ($q) {
@@ -302,7 +311,11 @@ class AttendanceController extends Controller
                     $pq->where('name', 'Administration');
                 });
             })
-            ->get();
+            ->get()
+            ->sortBy(function ($attendance) use ($positionOrder) {
+                return $positionOrder[$attendance->employee->position] ?? 999;
+            })
+            ->values();
 
         // Summary
         $summary = [
