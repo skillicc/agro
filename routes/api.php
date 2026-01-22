@@ -127,6 +127,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Attendance
     // IMPORTANT: Static routes must come BEFORE dynamic {attendance} routes
     Route::get('/attendances', [AttendanceController::class, 'index']);
+    Route::post('/attendances', [AttendanceController::class, 'store']);
     Route::post('/attendances/cancel-all', [AttendanceController::class, 'cancelAll']);
     Route::post('/attendances/mark-all-present', [AttendanceController::class, 'markAllPresent']);
     Route::get('/attendances/monthly-report', [AttendanceController::class, 'monthlyReport']);

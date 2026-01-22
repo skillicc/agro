@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 
 class AttendanceController extends Controller
 {
-    // Get attendance for a specific date (auto-generate if not exists)
+    // Get attendance for a specific date (manual attendance - no auto-generate)
     public function index(Request $request)
     {
         $date = $request->date ?? now()->toDateString();
@@ -34,48 +34,70 @@ class AttendanceController extends Controller
 
         $employees = $employeeQuery->with(['project'])->orderBy('name')->get();
 
-        // Auto-generate attendance for employees who don't have it yet
-        foreach ($employees as $employee) {
-            Attendance::firstOrCreate(
-                ['employee_id' => $employee->id, 'date' => $date],
-                ['status' => 'present']
-            );
-        }
+        // Get existing attendances for the date
+        $existingAttendances = Attendance::whereDate('date', $date)
+            ->whereIn('employee_id', $employees->pluck('id'))
+            ->get()
+            ->keyBy('employee_id');
 
-        // Get all attendances for the date with employee info
-        $attendances = Attendance::with(['employee.project'])
-            ->whereDate('date', $date)
-            ->whereHas('employee', function ($q) use ($request) {
-                $q->where('is_active', true);
-                // Exclude Administration employees
-                $q->whereDoesntHave('project', function ($pq) {
-                    $pq->where('name', 'Administration');
-                });
-                if ($request->employee_type) {
-                    $q->where('employee_type', $request->employee_type);
-                }
-                if ($request->project_id) {
-                    $q->where('project_id', $request->project_id);
-                }
-            })
-            ->get();
+        // Build response with employees and their attendance (if exists)
+        $attendances = $employees->map(function ($employee) use ($existingAttendances, $date) {
+            $attendance = $existingAttendances->get($employee->id);
+            return [
+                'id' => $attendance?->id,
+                'employee_id' => $employee->id,
+                'date' => $date,
+                'status' => $attendance?->status,
+                'note' => $attendance?->note,
+                'employee' => $employee,
+            ];
+        });
 
-        // Summary with type breakdown
+        // Summary - total is all employees, others are marked counts
+        $markedAttendances = $attendances->filter(fn($a) => $a['status'] !== null);
         $summary = [
             'total' => $attendances->count(),
-            'present' => $attendances->where('status', 'present')->count(),
-            'absent' => $attendances->where('status', 'absent')->count(),
-            'leave' => $attendances->where('status', 'leave')->count(),
-            'sick_leave' => $attendances->where('status', 'sick_leave')->count(),
-            'regular_count' => $attendances->filter(fn($a) => $a->employee->employee_type === 'regular')->count(),
-            'contractual_count' => $attendances->filter(fn($a) => $a->employee->employee_type === 'contractual')->count(),
+            'present' => $markedAttendances->where('status', 'present')->count(),
+            'absent' => $markedAttendances->where('status', 'absent')->count(),
+            'leave' => $markedAttendances->where('status', 'leave')->count(),
+            'sick_leave' => $markedAttendances->where('status', 'sick_leave')->count(),
+            'not_marked' => $attendances->filter(fn($a) => $a['status'] === null)->count(),
+            'regular_count' => $markedAttendances->filter(fn($a) => $a['employee']->employee_type === 'regular')->count(),
+            'contractual_count' => $markedAttendances->filter(fn($a) => $a['employee']->employee_type === 'contractual')->count(),
         ];
 
         return response()->json([
             'date' => $date,
-            'attendances' => $attendances,
+            'attendances' => $attendances->values(),
             'summary' => $summary,
         ]);
+    }
+
+    // Create attendance for an employee (for manual marking)
+    public function store(Request $request)
+    {
+        $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+            'date' => 'required|date',
+            'status' => 'required|in:present,absent,leave,sick_leave',
+        ]);
+
+        $attendance = Attendance::firstOrCreate(
+            [
+                'employee_id' => $request->employee_id,
+                'date' => $request->date,
+            ],
+            [
+                'status' => $request->status,
+            ]
+        );
+
+        // If attendance already existed, update the status
+        if (!$attendance->wasRecentlyCreated) {
+            $attendance->update(['status' => $request->status]);
+        }
+
+        return response()->json($attendance->load('employee.project'));
     }
 
     // Toggle single employee attendance (cycles through: present -> absent -> leave -> sick_leave -> present)
@@ -283,7 +305,7 @@ class AttendanceController extends Controller
             'Production Manager' => 3,
         ];
 
-        // Get Administration employees
+        // Get Administration employees sorted by position hierarchy
         $employees = Employee::where('is_active', true)
             ->whereHas('project', function ($q) {
                 $q->where('name', 'Administration');
@@ -294,36 +316,34 @@ class AttendanceController extends Controller
                 return $positionOrder[$employee->position] ?? 999;
             });
 
-        // Auto-generate attendance for employees who don't have it yet
-        foreach ($employees as $employee) {
-            Attendance::firstOrCreate(
-                ['employee_id' => $employee->id, 'date' => $date],
-                ['status' => 'present']
-            );
-        }
-
-        // Get all attendances for the date and sort by position hierarchy
-        $attendances = Attendance::with(['employee.project'])
-            ->whereDate('date', $date)
-            ->whereHas('employee', function ($q) {
-                $q->where('is_active', true);
-                $q->whereHas('project', function ($pq) {
-                    $pq->where('name', 'Administration');
-                });
-            })
+        // Get existing attendances for the date
+        $existingAttendances = Attendance::whereDate('date', $date)
+            ->whereIn('employee_id', $employees->pluck('id'))
             ->get()
-            ->sortBy(function ($attendance) use ($positionOrder) {
-                return $positionOrder[$attendance->employee->position] ?? 999;
-            })
-            ->values();
+            ->keyBy('employee_id');
 
-        // Summary
+        // Build response with employees and their attendance (if exists)
+        $attendances = $employees->map(function ($employee) use ($existingAttendances, $date) {
+            $attendance = $existingAttendances->get($employee->id);
+            return [
+                'id' => $attendance?->id,
+                'employee_id' => $employee->id,
+                'date' => $date,
+                'status' => $attendance?->status,
+                'note' => $attendance?->note,
+                'employee' => $employee,
+            ];
+        })->values();
+
+        // Summary - total is all employees, others are marked counts
+        $markedAttendances = $attendances->filter(fn($a) => $a['status'] !== null);
         $summary = [
             'total' => $attendances->count(),
-            'present' => $attendances->where('status', 'present')->count(),
-            'absent' => $attendances->where('status', 'absent')->count(),
-            'leave' => $attendances->where('status', 'leave')->count(),
-            'sick_leave' => $attendances->where('status', 'sick_leave')->count(),
+            'present' => $markedAttendances->where('status', 'present')->count(),
+            'absent' => $markedAttendances->where('status', 'absent')->count(),
+            'leave' => $markedAttendances->where('status', 'leave')->count(),
+            'sick_leave' => $markedAttendances->where('status', 'sick_leave')->count(),
+            'not_marked' => $attendances->filter(fn($a) => $a['status'] === null)->count(),
         ];
 
         return response()->json([

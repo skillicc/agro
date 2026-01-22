@@ -232,10 +232,24 @@ const fetchAttendances = async () => {
 
 const toggleAttendance = async (attendance) => {
     try {
-        const response = await api.post(`/attendances/${attendance.id}/toggle`)
-        const index = attendances.value.findIndex(a => a.id === attendance.id)
+        let response
+        if (!attendance.id) {
+            // Create new attendance for unmarked employee
+            response = await api.post('/attendances', {
+                employee_id: attendance.employee_id,
+                date: selectedDate.value,
+                status: 'present'
+            })
+        } else {
+            // Toggle existing attendance
+            response = await api.post(`/attendances/${attendance.id}/toggle`)
+        }
+        const index = attendances.value.findIndex(a => a.employee_id === attendance.employee_id)
         if (index !== -1) {
-            attendances.value[index] = response.data
+            attendances.value[index] = {
+                ...response.data,
+                employee_id: response.data.employee_id || attendance.employee_id
+            }
         }
         updateSummary()
     } catch (error) {
@@ -245,7 +259,7 @@ const toggleAttendance = async (attendance) => {
 
 const openStatusDialog = (attendance) => {
     selectedAttendance.value = attendance
-    statusForm.value.status = attendance.status
+    statusForm.value.status = attendance.status || 'present'
     statusForm.value.note = attendance.note || ''
     statusDialog.value = true
 }
@@ -254,10 +268,24 @@ const updateStatus = async () => {
     if (!selectedAttendance.value) return
     updatingStatus.value = true
     try {
-        const response = await api.put(`/attendances/${selectedAttendance.value.id}/status`, statusForm.value)
-        const index = attendances.value.findIndex(a => a.id === selectedAttendance.value.id)
+        let response
+        if (!selectedAttendance.value.id) {
+            // Create new attendance for unmarked employee
+            response = await api.post('/attendances', {
+                employee_id: selectedAttendance.value.employee_id,
+                date: selectedDate.value,
+                status: statusForm.value.status
+            })
+        } else {
+            // Update existing attendance
+            response = await api.put(`/attendances/${selectedAttendance.value.id}/status`, statusForm.value)
+        }
+        const index = attendances.value.findIndex(a => a.employee_id === selectedAttendance.value.employee_id)
         if (index !== -1) {
-            attendances.value[index] = response.data
+            attendances.value[index] = {
+                ...response.data,
+                employee_id: response.data.employee_id || selectedAttendance.value.employee_id
+            }
         }
         updateSummary()
         statusDialog.value = false
@@ -268,6 +296,7 @@ const updateStatus = async () => {
 }
 
 const getStatusColor = (status) => {
+    if (!status) return 'grey'
     const colors = {
         present: 'success',
         absent: 'error',
@@ -278,6 +307,7 @@ const getStatusColor = (status) => {
 }
 
 const getStatusLabel = (status) => {
+    if (!status) return 'Not Marked'
     const labels = {
         present: 'Present',
         absent: 'Absent',
@@ -326,6 +356,7 @@ const updateSummary = () => {
     summary.value.absent = attendances.value.filter(a => a.status === 'absent').length
     summary.value.leave = attendances.value.filter(a => a.status === 'leave').length
     summary.value.sick_leave = attendances.value.filter(a => a.status === 'sick_leave').length
+    summary.value.not_marked = attendances.value.filter(a => !a.status).length
 }
 
 watch(() => props.projectId, () => {
