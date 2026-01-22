@@ -112,6 +112,12 @@
                     <template v-slot:item.sl="{ index }">
                         {{ index + 1 }}
                     </template>
+                    <template v-slot:item.name_position="{ item }">
+                        <div>
+                            <div class="font-weight-medium">{{ item.name }}</div>
+                            <div class="text-caption text-grey">{{ item.position || '-' }}</div>
+                        </div>
+                    </template>
                     <template v-slot:item.employee_type="{ item }">
                         <v-chip :color="item.employee_type === 'regular' ? 'blue' : 'orange'" size="small">
                             {{ item.employee_type === 'regular' ? 'Regular' : 'Contractual' }}
@@ -772,7 +778,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useDisplay } from 'vuetify'
 import api from '../../services/api'
 
-const { mdAndUp } = useDisplay()
+const { smAndUp, mdAndUp, lgAndUp } = useDisplay()
 
 const employees = ref([])
 const projects = ref([])
@@ -828,23 +834,13 @@ const editSalaryForm = reactive({ id: null, amount: 0, month: '', payment_date: 
 const editAdvanceForm = reactive({ id: null, amount: 0, date: '', reason: '', is_deducted: false })
 
 const headers = computed(() => {
-    const baseHeaders = [
-        { title: '#', key: 'sl', width: '50px' },
-        { title: 'Name', key: 'name' },
-        { title: 'Salary', key: 'salary_display' },
-        { title: 'Due', key: 'current_month_due' },
-        { title: 'Status', key: 'is_active' },
-        { title: 'Actions', key: 'actions', sortable: false },
-    ]
-
-    if (mdAndUp.value) {
-        // Desktop: show all columns
+    if (lgAndUp.value) {
+        // Large Desktop (1280px+): show all columns
         return [
             { title: '#', key: 'sl', width: '50px' },
-            { title: 'Name', key: 'name' },
+            { title: 'Name', key: 'name_position' },
             { title: 'Type', key: 'employee_type' },
             { title: 'Project', key: 'project.name' },
-            { title: 'Position', key: 'position' },
             { title: 'Salary', key: 'salary_display' },
             { title: 'EL', key: 'earn_leave' },
             { title: 'Absent', key: 'absent_count' },
@@ -855,8 +851,27 @@ const headers = computed(() => {
             { title: 'Actions', key: 'actions', sortable: false },
         ]
     }
-    // Mobile/Tablet: show only essential columns
-    return baseHeaders
+    if (mdAndUp.value) {
+        // Medium Desktop/Laptop (960px-1279px): fewer columns
+        return [
+            { title: '#', key: 'sl', width: '50px' },
+            { title: 'Name', key: 'name_position' },
+            { title: 'Salary', key: 'salary_display' },
+            { title: 'Advance', key: 'total_advance_paid' },
+            { title: 'Paid', key: 'total_paid' },
+            { title: 'Due', key: 'current_month_due' },
+            { title: 'Status', key: 'is_active' },
+            { title: 'Actions', key: 'actions', sortable: false },
+        ]
+    }
+    // Mobile/Tablet: minimal columns
+    return [
+        { title: '#', key: 'sl', width: '50px' },
+        { title: 'Name', key: 'name_position' },
+        { title: 'Salary', key: 'salary_display' },
+        { title: 'Due', key: 'current_month_due' },
+        { title: 'Actions', key: 'actions', sortable: false },
+    ]
 })
 
 const employeeTypes = [
