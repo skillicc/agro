@@ -99,6 +99,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Employees, Salaries & Advances
     // IMPORTANT: Static routes must come BEFORE dynamic {employee} routes
     Route::post('/employees/calculate-el', [EmployeeController::class, 'calculateEarnLeave']);
+    Route::get('/employees/admin', [EmployeeController::class, 'adminEmployees']);
     Route::apiResource('employees', EmployeeController::class);
     Route::post('/employees/{employee}/salary', [EmployeeController::class, 'paySalary']);
     Route::post('/employees/{employee}/advance', [EmployeeController::class, 'giveAdvance']);

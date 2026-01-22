@@ -79,6 +79,72 @@ class EmployeeController extends Controller
         return response()->json($employees);
     }
 
+    // Get Administration employees with detailed salary info
+    public function adminEmployees(Request $request)
+    {
+        // Position hierarchy order
+        $positionOrder = [
+            'Founder & CEO' => 1,
+            'Director (IT & Accounts)' => 2,
+            'Production Manager' => 3,
+        ];
+
+        $employees = Employee::with('project')
+            ->whereHas('project', function ($q) {
+                $q->where('name', 'Administration');
+            })
+            ->get()
+            ->sortBy(function ($employee) use ($positionOrder) {
+                return $positionOrder[$employee->position] ?? 999;
+            })
+            ->values();
+
+        $currentMonth = now()->format('Y-m');
+        $previousMonth = now()->subMonthNoOverflow()->format('Y-m');
+
+        $employees->each(function ($employee) use ($currentMonth, $previousMonth) {
+            // Total salary paid all time
+            $totalSalaryPaid = $employee->salaries()->sum('amount');
+
+            // Total advance paid all time
+            $totalAdvancePaid = $employee->advances()->sum('amount');
+
+            // Undeducted advance
+            $undeductedAdvance = $employee->advances()->where('is_deducted', false)->sum('amount');
+
+            // Salary amount
+            $employee->salary = $employee->salary_amount;
+
+            // Earn Leave balance
+            $employee->el_balance = $employee->earn_leave ?? 0;
+
+            // Absent count this month
+            $employee->absent_count = $employee->attendances()
+                ->whereYear('date', now()->year)
+                ->whereMonth('date', now()->month)
+                ->where('status', 'absent')
+                ->count();
+
+            // Total advance (undeducted)
+            $employee->advance_balance = $undeductedAdvance;
+
+            // This month's salary paid
+            $thisMonthPaid = $employee->salaries()
+                ->where('month', $currentMonth)
+                ->sum('amount');
+            $employee->paid_this_month = $thisMonthPaid;
+
+            // Due = salary - paid this month - undeducted advance
+            $employee->due = max(0, floatval($employee->salary_amount) - $thisMonthPaid - $undeductedAdvance);
+
+            // Total paid all time
+            $employee->total_paid = $totalSalaryPaid;
+            $employee->total_advance = $totalAdvancePaid;
+        });
+
+        return response()->json($employees);
+    }
+
     public function store(Request $request)
     {
         $rules = [

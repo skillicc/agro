@@ -76,7 +76,8 @@
                         <AssetsList :projectId="project.id" />
                     </v-window-item>
                     <v-window-item value="employees">
-                        <EmployeesList :projectId="project.id" />
+                        <AdminEmployeesList v-if="isAdministration" :projectId="project.id" />
+                        <EmployeesList v-else :projectId="project.id" />
                     </v-window-item>
                     <v-window-item value="attendance" v-if="isAdministration">
                         <AdminAttendance :projectId="project.id" />
@@ -102,6 +103,7 @@ import PurchasesList from '../../components/PurchasesList.vue'
 import SalesList from '../../components/SalesList.vue'
 import AssetsList from '../../components/AssetsList.vue'
 import EmployeesList from '../../components/EmployeesList.vue'
+import AdminEmployeesList from '../../components/AdminEmployeesList.vue'
 import DamagesList from '../../components/DamagesList.vue'
 import ProductionsList from '../../components/ProductionsList.vue'
 import AdminAttendance from '../../components/AdminAttendance.vue'
