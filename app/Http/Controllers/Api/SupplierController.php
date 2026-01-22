@@ -11,7 +11,16 @@ class SupplierController extends Controller
 {
     public function index()
     {
-        $suppliers = Supplier::withCount('purchases')->get();
+        $suppliers = Supplier::withCount('purchases')
+            ->withSum('purchases as total_purchase', 'total')
+            ->withSum('payments as total_paid', 'amount')
+            ->get();
+
+        // Calculate total_due for each supplier
+        $suppliers->each(function ($supplier) {
+            $supplier->total_due = floatval($supplier->total_purchase ?? 0) - floatval($supplier->total_paid ?? 0);
+        });
+
         return response()->json($suppliers);
     }
 
