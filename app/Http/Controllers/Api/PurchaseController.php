@@ -163,6 +163,7 @@ class PurchaseController extends Controller
                 'project_id' => $request->project_id,
                 'warehouse_id' => $request->warehouse_id,
                 'supplier_id' => $request->supplier_id,
+                'invoice_no' => $request->invoice_no,
                 'date' => $request->date,
                 'discount' => $request->discount ?? 0,
                 'paid' => $request->paid ?? 0,
