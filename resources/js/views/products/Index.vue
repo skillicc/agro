@@ -17,11 +17,71 @@
 
         <v-card>
             <v-card-text class="pa-2 pa-sm-4">
+                <!-- Filters -->
+                <v-row class="mb-3">
+                    <v-col cols="6" sm="4" md="3">
+                        <v-select
+                            v-model="sortBy"
+                            :items="sortOptions"
+                            item-title="title"
+                            item-value="value"
+                            label="Sort By"
+                            density="compact"
+                            hide-details
+                            clearable
+                        ></v-select>
+                    </v-col>
+                    <v-col cols="6" sm="4" md="2">
+                        <v-select
+                            v-model="sortOrder"
+                            :items="orderOptions"
+                            item-title="title"
+                            item-value="value"
+                            label="Order"
+                            density="compact"
+                            hide-details
+                        ></v-select>
+                    </v-col>
+                    <v-col cols="6" sm="4" md="3">
+                        <v-select
+                            v-model="filterCategory"
+                            :items="categories"
+                            item-title="name"
+                            item-value="id"
+                            label="Category"
+                            density="compact"
+                            hide-details
+                            clearable
+                        ></v-select>
+                    </v-col>
+                    <v-col cols="6" sm="4" md="2">
+                        <v-select
+                            v-model="filterType"
+                            :items="productTypes"
+                            label="Type"
+                            density="compact"
+                            hide-details
+                            clearable
+                        ></v-select>
+                    </v-col>
+                    <v-col cols="12" sm="4" md="2">
+                        <v-text-field
+                            v-model="search"
+                            label="Search"
+                            prepend-inner-icon="mdi-magnify"
+                            density="compact"
+                            hide-details
+                            clearable
+                        ></v-text-field>
+                    </v-col>
+                </v-row>
+
                 <v-data-table
                     :headers="responsiveHeaders"
-                    :items="products"
+                    :items="filteredProducts"
                     :loading="loading"
                     :density="$vuetify.display.smAndDown ? 'compact' : 'default'"
+                    :search="search"
                 >
                     <template v-slot:item.sl="{ index }">
                         {{ index + 1 }}
@@ -255,6 +315,71 @@ const editMode = ref(false)
 const selectedProduct = ref(null)
 const saving = ref(false)
 const deleting = ref(false)
+
+// Filter & Sort
+const search = ref('')
+const sortBy = ref('name')
+const sortOrder = ref('asc')
+const filterCategory = ref(null)
+const filterType = ref(null)
+
+const sortOptions = [
+    { title: 'Name', value: 'name' },
+    { title: 'Selling Price', value: 'selling_price' },
+    { title: 'Buying Price', value: 'buying_price' },
+    { title: 'Stock Quantity', value: 'stock_quantity' },
+    { title: 'Created Date', value: 'created_at' },
+]
+
+const orderOptions = [
+    { title: 'Ascending (A-Z, 0-9)', value: 'asc' },
+    { title: 'Descending (Z-A, 9-0)', value: 'desc' },
+]
+
+const filteredProducts = computed(() => {
+    let result = [...products.value]
+
+    // Filter by category
+    if (filterCategory.value) {
+        result = result.filter(p =>
+            p.categories && p.categories.some(c => c.id === filterCategory.value)
+        )
+    }
+
+    // Filter by type
+    if (filterType.value) {
+        result = result.filter(p => p.type === filterType.value)
+    }
+
+    // Sort
+    if (sortBy.value) {
+        result.sort((a, b) => {
+            let valA = a[sortBy.value]
+            let valB = b[sortBy.value]
+
+            // Handle null/undefined
+            if (valA == null) valA = ''
+            if (valB == null) valB = ''
+
+            // Handle numbers
+            if (typeof valA === 'number' && typeof valB === 'number') {
+                return sortOrder.value === 'asc' ? valA - valB : valB - valA
+            }
+
+            // Handle strings
+            valA = String(valA).toLowerCase()
+            valB = String(valB).toLowerCase()
+
+            if (sortOrder.value === 'asc') {
+                return valA.localeCompare(valB)
+            } else {
+                return valB.localeCompare(valA)
+            }
+        })
+    }
+
+    return result
+})
 
 // Category management
 const categoryDialog = ref(false)
