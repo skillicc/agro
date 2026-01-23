@@ -240,11 +240,12 @@ const filters = reactive({
     supplier_id: null,
     start_date: null,
     end_date: null,
-    sort_by: 'date',
+    sort_by: 'id',
     sort_order: 'desc',
 })
 
 const sortOptions = [
+    { label: 'Latest Entry', value: 'id' },
     { label: 'Date', value: 'date' },
     { label: 'Reference', value: 'reference_no' },
     { label: 'Total', value: 'total' },
@@ -318,7 +319,7 @@ const clearFilters = () => {
     filters.supplier_id = null
     filters.start_date = null
     filters.end_date = null
-    filters.sort_by = 'date'
+    filters.sort_by = 'id'
     filters.sort_order = 'desc'
     fetchPurchases()
 }

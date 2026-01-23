@@ -31,7 +31,7 @@ class PurchaseController extends Controller
         $sortBy = $request->sort_by ?? 'date';
         $sortOrder = $request->sort_order ?? 'desc';
 
-        $allowedSortFields = ['date', 'reference_no', 'total', 'due', 'created_at', 'supplier'];
+        $allowedSortFields = ['id', 'date', 'reference_no', 'total', 'due', 'created_at', 'supplier'];
         if (!in_array($sortBy, $allowedSortFields)) {
             $sortBy = 'date';
         }
