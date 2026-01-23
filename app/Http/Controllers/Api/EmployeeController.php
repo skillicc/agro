@@ -219,18 +219,6 @@ class EmployeeController extends Controller
             'note' => 'nullable|string',
         ]);
 
-        // Check if salary already exists for this month
-        $existingSalary = Salary::where('employee_id', $employee->id)
-            ->where('month', $request->month)
-            ->first();
-
-        if ($existingSalary) {
-            return response()->json([
-                'message' => 'Salary for this month already exists. Please edit the existing entry.',
-                'existing_salary' => $existingSalary
-            ], 422);
-        }
-
         // Calculate expected salary
         $expectedSalary = $employee->isContractual()
             ? $employee->calculateContractualSalary($request->month)
