@@ -318,12 +318,13 @@ const deleting = ref(false)
 
 // Filter & Sort
 const search = ref('')
-const sortBy = ref('name')
-const sortOrder = ref('asc')
+const sortBy = ref('id')
+const sortOrder = ref('desc')
 const filterCategory = ref(null)
 const filterType = ref(null)
 
 const sortOptions = [
+    { title: 'Latest Entry', value: 'id' },
     { title: 'Name', value: 'name' },
     { title: 'Selling Price', value: 'selling_price' },
     { title: 'Buying Price', value: 'buying_price' },
