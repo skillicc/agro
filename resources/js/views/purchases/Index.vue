@@ -48,7 +48,33 @@
                             @update:model-value="fetchPurchases"
                         ></v-text-field>
                     </v-col>
-                    <v-col cols="12" sm="12" md="3" class="d-flex align-center ga-2">
+                    <v-col cols="6" sm="4" md="2">
+                        <v-select
+                            v-model="filters.sort_by"
+                            :items="sortOptions"
+                            item-title="label"
+                            item-value="value"
+                            label="Sort By"
+                            density="compact"
+                            hide-details
+                            @update:model-value="fetchPurchases"
+                        ></v-select>
+                    </v-col>
+                    <v-col cols="6" sm="4" md="2">
+                        <v-btn-toggle v-model="filters.sort_order" mandatory density="compact" @update:model-value="fetchPurchases">
+                            <v-btn value="desc" size="small">
+                                <v-icon>mdi-sort-descending</v-icon>
+                                DESC
+                            </v-btn>
+                            <v-btn value="asc" size="small">
+                                <v-icon>mdi-sort-ascending</v-icon>
+                                ASC
+                            </v-btn>
+                        </v-btn-toggle>
+                    </v-col>
+                </v-row>
+                <v-row dense class="mt-2">
+                    <v-col cols="12" class="d-flex align-center ga-2">
                         <v-btn color="primary" variant="tonal" size="small" @click="fetchPurchases">
                             <v-icon left>mdi-magnify</v-icon>
                             Search
@@ -214,7 +240,17 @@ const filters = reactive({
     supplier_id: null,
     start_date: null,
     end_date: null,
+    sort_by: 'date',
+    sort_order: 'desc',
 })
+
+const sortOptions = [
+    { label: 'Date', value: 'date' },
+    { label: 'Reference', value: 'reference_no' },
+    { label: 'Total', value: 'total' },
+    { label: 'Due', value: 'due' },
+    { label: 'Supplier', value: 'supplier' },
+]
 
 const headers = [
     { title: 'SL', key: 'sl', width: '50px' },
@@ -269,7 +305,32 @@ const fetchPurchases = async () => {
 
         const query = params.toString() ? `?${params.toString()}` : ''
         const response = await api.get(`/purchases${query}`)
-        purchases.value = response.data
+        let data = response.data
+
+        // Apply sorting
+        if (filters.sort_by) {
+            data.sort((a, b) => {
+                let valA, valB
+                if (filters.sort_by === 'supplier') {
+                    valA = a.supplier?.name || ''
+                    valB = b.supplier?.name || ''
+                } else if (filters.sort_by === 'total' || filters.sort_by === 'due') {
+                    valA = parseFloat(a[filters.sort_by]) || 0
+                    valB = parseFloat(b[filters.sort_by]) || 0
+                } else {
+                    valA = a[filters.sort_by] || ''
+                    valB = b[filters.sort_by] || ''
+                }
+
+                if (filters.sort_order === 'asc') {
+                    return valA > valB ? 1 : valA < valB ? -1 : 0
+                } else {
+                    return valA < valB ? 1 : valA > valB ? -1 : 0
+                }
+            })
+        }
+
+        purchases.value = data
     } catch (error) {
         console.error('Error:', error)
     }
@@ -280,6 +341,8 @@ const clearFilters = () => {
     filters.supplier_id = null
     filters.start_date = null
     filters.end_date = null
+    filters.sort_by = 'date'
+    filters.sort_order = 'desc'
     fetchPurchases()
 }
 
