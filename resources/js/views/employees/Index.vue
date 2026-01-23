@@ -923,16 +923,15 @@ const salaryForm = reactive({ amount: 0, month: '', payment_date: new Date().toI
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
 
-// Generate salary month options (last 6 months + current month)
+// Generate salary month options (last 24 months + current month for backdating)
 const salaryMonthOptions = computed(() => {
     const months = []
     const now = new Date()
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-    // Add last 6 months including current
-    for (let i = 5; i >= 0; i--) {
+    // Add last 24 months including current (allows backdating up to 2 years)
+    for (let i = 23; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-        // Use local date formatting instead of toISOString (which uses UTC)
         const year = d.getFullYear()
         const month = String(d.getMonth() + 1).padStart(2, '0')
         const value = `${year}-${month}` // YYYY-MM
