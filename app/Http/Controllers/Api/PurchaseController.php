@@ -27,7 +27,24 @@ class PurchaseController extends Controller
             $query->whereBetween('date', [$request->start_date, $request->end_date]);
         }
 
-        $purchases = $query->orderBy('date', 'desc')->get();
+        // Sorting
+        $sortBy = $request->sort_by ?? 'date';
+        $sortOrder = $request->sort_order ?? 'desc';
+
+        $allowedSortFields = ['date', 'reference_no', 'total', 'due', 'created_at', 'supplier'];
+        if (!in_array($sortBy, $allowedSortFields)) {
+            $sortBy = 'date';
+        }
+
+        if ($sortBy === 'supplier') {
+            $query->leftJoin('suppliers', 'purchases.supplier_id', '=', 'suppliers.id')
+                  ->orderBy('suppliers.name', $sortOrder)
+                  ->select('purchases.*');
+        } else {
+            $query->orderBy($sortBy, $sortOrder);
+        }
+
+        $purchases = $query->get();
 
         return response()->json($purchases);
     }

@@ -302,35 +302,12 @@ const fetchPurchases = async () => {
         if (filters.supplier_id) params.append('supplier_id', filters.supplier_id)
         if (filters.start_date) params.append('start_date', filters.start_date)
         if (filters.end_date) params.append('end_date', filters.end_date)
+        if (filters.sort_by) params.append('sort_by', filters.sort_by)
+        if (filters.sort_order) params.append('sort_order', filters.sort_order)
 
         const query = params.toString() ? `?${params.toString()}` : ''
         const response = await api.get(`/purchases${query}`)
-        let data = response.data
-
-        // Apply sorting
-        if (filters.sort_by) {
-            data.sort((a, b) => {
-                let valA, valB
-                if (filters.sort_by === 'supplier') {
-                    valA = a.supplier?.name || ''
-                    valB = b.supplier?.name || ''
-                } else if (filters.sort_by === 'total' || filters.sort_by === 'due') {
-                    valA = parseFloat(a[filters.sort_by]) || 0
-                    valB = parseFloat(b[filters.sort_by]) || 0
-                } else {
-                    valA = a[filters.sort_by] || ''
-                    valB = b[filters.sort_by] || ''
-                }
-
-                if (filters.sort_order === 'asc') {
-                    return valA > valB ? 1 : valA < valB ? -1 : 0
-                } else {
-                    return valA < valB ? 1 : valA > valB ? -1 : 0
-                }
-            })
-        }
-
-        purchases.value = data
+        purchases.value = response.data
     } catch (error) {
         console.error('Error:', error)
     }
