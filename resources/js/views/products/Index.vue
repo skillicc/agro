@@ -116,6 +116,9 @@
                         ৳{{ formatNumber(item.selling_price) }}
                     </template>
                     <template v-slot:item.actions="{ item }">
+                        <v-btn icon size="small" color="info" @click="viewBatches(item)" title="View Batches">
+                            <v-icon>mdi-package-variant</v-icon>
+                        </v-btn>
                         <v-btn icon size="small" @click="openDialog(item)">
                             <v-icon>mdi-pencil</v-icon>
                         </v-btn>
@@ -296,6 +299,86 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <!-- Stock Batches Dialog -->
+        <v-dialog v-model="batchDialog" max-width="700">
+            <v-card>
+                <v-card-title class="d-flex align-center">
+                    <v-icon class="mr-2">mdi-package-variant</v-icon>
+                    Stock Batches - {{ selectedBatchProduct?.name }}
+                </v-card-title>
+                <v-card-text>
+                    <v-alert v-if="batchLoading" type="info" variant="tonal" class="mb-3">
+                        Loading batches...
+                    </v-alert>
+                    <template v-else>
+                        <!-- Summary by Price -->
+                        <div class="mb-4">
+                            <div class="text-subtitle-2 mb-2">Stock by Price</div>
+                            <v-table density="compact" v-if="batchByPrice.length > 0">
+                                <thead>
+                                    <tr>
+                                        <th>Unit Price</th>
+                                        <th class="text-right">Quantity</th>
+                                        <th class="text-right">Total Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(item, idx) in batchByPrice" :key="idx">
+                                        <td>৳{{ formatNumber(item.unit_price) }}</td>
+                                        <td class="text-right">{{ item.quantity }} {{ selectedBatchProduct?.unit }}</td>
+                                        <td class="text-right">৳{{ formatNumber(item.unit_price * item.quantity) }}</td>
+                                    </tr>
+                                    <tr class="font-weight-bold bg-grey-lighten-4">
+                                        <td>Total</td>
+                                        <td class="text-right">{{ batchTotalQty }} {{ selectedBatchProduct?.unit }}</td>
+                                        <td class="text-right">৳{{ formatNumber(batchTotalValue) }}</td>
+                                    </tr>
+                                </tbody>
+                            </v-table>
+                            <v-alert v-else type="warning" variant="tonal">
+                                No stock batches found for this product.
+                            </v-alert>
+                        </div>
+
+                        <!-- Detailed Batches -->
+                        <div v-if="batches.length > 0">
+                            <div class="text-subtitle-2 mb-2">Batch Details</div>
+                            <v-table density="compact">
+                                <thead>
+                                    <tr>
+                                        <th>Batch #</th>
+                                        <th>Date</th>
+                                        <th class="text-right">Price</th>
+                                        <th class="text-right">Initial</th>
+                                        <th class="text-right">Remaining</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="batch in batches" :key="batch.id">
+                                        <td class="text-caption">{{ batch.batch_number }}</td>
+                                        <td>{{ batch.purchase_date }}</td>
+                                        <td class="text-right">৳{{ formatNumber(batch.unit_price) }}</td>
+                                        <td class="text-right">{{ batch.initial_quantity }}</td>
+                                        <td class="text-right">{{ batch.remaining_quantity }}</td>
+                                        <td>
+                                            <v-chip :color="batch.status === 'active' ? 'success' : 'grey'" size="x-small">
+                                                {{ batch.status }}
+                                            </v-chip>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </v-table>
+                        </div>
+                    </template>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="batchDialog = false">Close</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </div>
 </template>
 
@@ -390,6 +473,38 @@ const editCategoryMode = ref(false)
 const selectedCategory = ref(null)
 const savingCategory = ref(false)
 const deletingCategory = ref(false)
+
+// Batch management
+const batchDialog = ref(false)
+const batchLoading = ref(false)
+const selectedBatchProduct = ref(null)
+const batches = ref([])
+const batchByPrice = ref([])
+
+const batchTotalQty = computed(() => {
+    return batchByPrice.value.reduce((sum, b) => sum + parseFloat(b.quantity || 0), 0)
+})
+
+const batchTotalValue = computed(() => {
+    return batchByPrice.value.reduce((sum, b) => sum + (parseFloat(b.unit_price) * parseFloat(b.quantity || 0)), 0)
+})
+
+const viewBatches = async (product) => {
+    selectedBatchProduct.value = product
+    batchDialog.value = true
+    batchLoading.value = true
+    batches.value = []
+    batchByPrice.value = []
+
+    try {
+        const response = await api.get(`/products/${product.id}/batches`)
+        batches.value = response.data.batches || []
+        batchByPrice.value = response.data.by_price || []
+    } catch (error) {
+        console.error('Error fetching batches:', error)
+    }
+    batchLoading.value = false
+}
 
 const unitOptions = [
     { title: 'Piece (পিস)', value: 'pcs' },

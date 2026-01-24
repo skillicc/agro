@@ -42,6 +42,11 @@ class PurchaseItem extends Model
         return $this->belongsTo(Product::class);
     }
 
+    public function stockBatch()
+    {
+        return $this->hasOne(StockBatch::class);
+    }
+
     protected static function booted()
     {
         static::created(function ($item) {
@@ -58,6 +63,21 @@ class PurchaseItem extends Model
                     []
                 )->increment('quantity', $item->quantity);
             }
+
+            // Create stock batch for batch-wise tracking
+            StockBatch::create([
+                'product_id' => $item->product_id,
+                'purchase_item_id' => $item->id,
+                'warehouse_id' => $item->purchase->warehouse_id,
+                'batch_number' => StockBatch::generateBatchNumber($item->product_id),
+                'unit_price' => $item->unit_price,
+                'unit_mrp' => $item->unit_mrp ?? 0,
+                'initial_quantity' => $item->quantity,
+                'remaining_quantity' => $item->quantity,
+                'purchase_date' => $item->purchase->date,
+                'source' => 'purchase',
+                'status' => 'active',
+            ]);
         });
 
         static::deleted(function ($item) {
@@ -74,6 +94,9 @@ class PurchaseItem extends Model
                     $warehouseStock->decrement('quantity', $item->quantity);
                 }
             }
+
+            // Delete associated stock batch
+            StockBatch::where('purchase_item_id', $item->id)->delete();
         });
     }
 

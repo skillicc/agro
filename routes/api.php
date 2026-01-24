@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\AccountsPayableController;
 use App\Http\Controllers\Api\InvestLoanLiabilityController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\SystemController;
+use App\Http\Controllers\Api\StockBatchController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -207,6 +208,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/invest-loan-liabilities/{investLoanLiability}/payment', [InvestLoanLiabilityController::class, 'addPayment']);
     Route::get('/invest-loan-liabilities/{investLoanLiability}/payments', [InvestLoanLiabilityController::class, 'getPayments']);
     Route::delete('/invest-loan-liability-payments/{payment}', [InvestLoanLiabilityController::class, 'deletePayment']);
+
+    // Stock Batches (batch-wise stock tracking)
+    Route::get('/stock-batches', [StockBatchController::class, 'index']);
+    Route::get('/stock-batches/by-price', [StockBatchController::class, 'stockByPrice']);
+    Route::get('/stock-batches/{stockBatch}', [StockBatchController::class, 'show']);
+    Route::get('/products/{product}/batches', [StockBatchController::class, 'productBatches']);
+    Route::post('/stock-batches/adjust', [StockBatchController::class, 'adjust']);
+    Route::post('/stock-batches/{stockBatch}/deduct', [StockBatchController::class, 'deduct']);
 
     // System utilities
     Route::post('/system/clear-cache', [SystemController::class, 'clearCache']);

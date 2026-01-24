@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Models\SaleItemBatch;
+use App\Models\StockBatch;
 use App\Models\CustomerPayment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -44,8 +46,11 @@ class SaleController extends Controller
             'note' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.batch_selections' => 'nullable|array',
+            'items.*.batch_selections.*.batch_id' => 'required_with:items.*.batch_selections|exists:stock_batches,id',
+            'items.*.batch_selections.*.quantity' => 'required_with:items.*.batch_selections|numeric|min:0.01',
         ]);
 
         // Validate that at least one of project_id or warehouse_id is provided
@@ -74,13 +79,54 @@ class SaleController extends Controller
             ]);
 
             foreach ($request->items as $item) {
-                SaleItem::create([
+                $costPrice = null;
+                $totalCost = 0;
+
+                // Calculate cost price from batch selections
+                if (!empty($item['batch_selections'])) {
+                    foreach ($item['batch_selections'] as $selection) {
+                        $batch = StockBatch::find($selection['batch_id']);
+                        if ($batch) {
+                            $totalCost += $selection['quantity'] * $batch->unit_price;
+                        }
+                    }
+                    $costPrice = $totalCost / $item['quantity'];
+                }
+
+                $saleItem = SaleItem::create([
                     'sale_id' => $sale->id,
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['unit_price'],
+                    'cost_price' => $costPrice,
                     'total' => $item['quantity'] * $item['unit_price'],
                 ]);
+
+                // Process batch selections (deduct from batches)
+                if (!empty($item['batch_selections'])) {
+                    foreach ($item['batch_selections'] as $selection) {
+                        $batch = StockBatch::find($selection['batch_id']);
+                        if (!$batch) {
+                            throw new \Exception("Batch not found: {$selection['batch_id']}");
+                        }
+
+                        if ($batch->remaining_quantity < $selection['quantity']) {
+                            throw new \Exception("Insufficient stock in batch {$batch->batch_number}. Available: {$batch->remaining_quantity}, Requested: {$selection['quantity']}");
+                        }
+
+                        // Create sale item batch record
+                        SaleItemBatch::create([
+                            'sale_item_id' => $saleItem->id,
+                            'stock_batch_id' => $batch->id,
+                            'quantity' => $selection['quantity'],
+                            'cost_price' => $batch->unit_price,
+                        ]);
+
+                        // Deduct from batch
+                        $batch->decrement('remaining_quantity', $selection['quantity']);
+                        $batch->updateStatus();
+                    }
+                }
             }
 
             $sale->calculateTotals();
@@ -99,7 +145,7 @@ class SaleController extends Controller
 
             DB::commit();
 
-            return response()->json($sale->load(['project', 'customer', 'items.product', 'creator']), 201);
+            return response()->json($sale->load(['project', 'customer', 'items.product', 'items.batches.stockBatch', 'creator']), 201);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Error creating sale: ' . $e->getMessage()], 500);
@@ -108,7 +154,7 @@ class SaleController extends Controller
 
     public function show(Sale $sale)
     {
-        return response()->json($sale->load(['project', 'customer', 'items.product', 'payments', 'creator']));
+        return response()->json($sale->load(['project', 'customer', 'items.product', 'items.batches.stockBatch', 'payments', 'creator']));
     }
 
     public function update(Request $request, Sale $sale)
@@ -125,6 +171,9 @@ class SaleController extends Controller
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.batch_selections' => 'nullable|array',
+            'items.*.batch_selections.*.batch_id' => 'required_with:items.*.batch_selections|exists:stock_batches,id',
+            'items.*.batch_selections.*.quantity' => 'required_with:items.*.batch_selections|numeric|min:0.01',
         ]);
 
         // Validate that at least one of project_id or warehouse_id is provided
@@ -150,23 +199,64 @@ class SaleController extends Controller
                 'note' => $request->note,
             ]);
 
-            // Delete old items and create new ones
+            // Delete old items (this will restore batch quantities via SaleItem's deleted event)
             $sale->items()->delete();
 
             foreach ($request->items as $item) {
-                SaleItem::create([
+                $costPrice = null;
+                $totalCost = 0;
+
+                // Calculate cost price from batch selections
+                if (!empty($item['batch_selections'])) {
+                    foreach ($item['batch_selections'] as $selection) {
+                        $batch = StockBatch::find($selection['batch_id']);
+                        if ($batch) {
+                            $totalCost += $selection['quantity'] * $batch->unit_price;
+                        }
+                    }
+                    $costPrice = $totalCost / $item['quantity'];
+                }
+
+                $saleItem = SaleItem::create([
                     'sale_id' => $sale->id,
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['unit_price'],
+                    'cost_price' => $costPrice,
                     'total' => $item['quantity'] * $item['unit_price'],
                 ]);
+
+                // Process batch selections (deduct from batches)
+                if (!empty($item['batch_selections'])) {
+                    foreach ($item['batch_selections'] as $selection) {
+                        $batch = StockBatch::find($selection['batch_id']);
+                        if (!$batch) {
+                            throw new \Exception("Batch not found: {$selection['batch_id']}");
+                        }
+
+                        if ($batch->remaining_quantity < $selection['quantity']) {
+                            throw new \Exception("Insufficient stock in batch {$batch->batch_number}. Available: {$batch->remaining_quantity}, Requested: {$selection['quantity']}");
+                        }
+
+                        // Create sale item batch record
+                        SaleItemBatch::create([
+                            'sale_item_id' => $saleItem->id,
+                            'stock_batch_id' => $batch->id,
+                            'quantity' => $selection['quantity'],
+                            'cost_price' => $batch->unit_price,
+                        ]);
+
+                        // Deduct from batch
+                        $batch->decrement('remaining_quantity', $selection['quantity']);
+                        $batch->updateStatus();
+                    }
+                }
             }
 
             $sale->calculateTotals();
             DB::commit();
 
-            return response()->json($sale->load(['project', 'warehouse', 'customer', 'items.product', 'creator']));
+            return response()->json($sale->load(['project', 'warehouse', 'customer', 'items.product', 'items.batches.stockBatch', 'creator']));
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Error updating sale: ' . $e->getMessage()], 500);

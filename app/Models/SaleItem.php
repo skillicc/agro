@@ -15,11 +15,13 @@ class SaleItem extends Model
         'product_id',
         'quantity',
         'unit_price',
+        'cost_price',
         'total',
     ];
 
     protected $casts = [
         'unit_price' => 'decimal:2',
+        'cost_price' => 'decimal:2',
         'total' => 'decimal:2',
     ];
 
@@ -33,6 +35,23 @@ class SaleItem extends Model
         return $this->belongsTo(Product::class);
     }
 
+    public function batches()
+    {
+        return $this->hasMany(SaleItemBatch::class);
+    }
+
+    // Get cost of goods sold for this sale item
+    public function getCostOfGoodsSoldAttribute(): float
+    {
+        return $this->batches->sum(fn($b) => $b->quantity * $b->cost_price);
+    }
+
+    // Get profit for this sale item
+    public function getProfitAttribute(): float
+    {
+        return $this->total - $this->cost_of_goods_sold;
+    }
+
     protected static function booted()
     {
         static::created(function ($item) {
@@ -43,6 +62,15 @@ class SaleItem extends Model
         static::deleted(function ($item) {
             // Increment global product stock
             $item->product->increment('stock_quantity', $item->quantity);
+
+            // Restore batch quantities
+            foreach ($item->batches as $saleItemBatch) {
+                $stockBatch = $saleItemBatch->stockBatch;
+                if ($stockBatch) {
+                    $stockBatch->increment('remaining_quantity', $saleItemBatch->quantity);
+                    $stockBatch->updateStatus();
+                }
+            }
         });
     }
 
