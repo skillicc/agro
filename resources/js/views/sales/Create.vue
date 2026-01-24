@@ -37,33 +37,99 @@
                     <v-divider class="my-4"></v-divider>
 
                     <h3 class="mb-4">Items</h3>
-                    <v-row v-for="(item, index) in form.items" :key="index" align="center">
-                        <v-col cols="12" sm="6" lg="4">
-                            <v-autocomplete v-model="item.product_id" :items="products" item-title="name" item-value="id" label="Product" required @update:model-value="updatePrice(index)">
-                                <template v-slot:item="{ props, item }">
-                                    <v-list-item v-bind="props">
-                                        <template v-slot:subtitle>
-                                            {{ item.raw.unit }} | ৳{{ formatNumber(item.raw.selling_price) }} | Stock: {{ item.raw.stock_quantity }}
-                                        </template>
-                                    </v-list-item>
-                                </template>
-                            </v-autocomplete>
-                        </v-col>
-                        <v-col cols="6" sm="4" lg="2">
-                            <v-text-field v-model.number="item.quantity" :label="`Qty (${getProductUnit(item.product_id).toUpperCase()})`" type="number" min="1" step="0.01" required></v-text-field>
-                        </v-col>
-                        <v-col cols="6" sm="4" lg="2">
-                            <v-text-field v-model.number="item.unit_price" label="Unit Price" type="number" required></v-text-field>
-                        </v-col>
-                        <v-col cols="6" sm="4" lg="2">
-                            <v-text-field :model-value="formatNumber(item.quantity * item.unit_price)" label="Total" readonly></v-text-field>
-                        </v-col>
-                        <v-col cols="6" sm="4" lg="2">
-                            <v-btn icon color="error" @click="removeItem(index)" :disabled="form.items.length === 1">
-                                <v-icon>mdi-delete</v-icon>
-                            </v-btn>
-                        </v-col>
-                    </v-row>
+
+                    <v-card v-for="(item, index) in form.items" :key="index" variant="outlined" class="mb-4 pa-3">
+                        <v-row align="center">
+                            <v-col cols="12" sm="6" lg="4">
+                                <v-autocomplete v-model="item.product_id" :items="products" item-title="name" item-value="id" label="Product" required @update:model-value="onProductSelect(index)">
+                                    <template v-slot:item="{ props, item }">
+                                        <v-list-item v-bind="props">
+                                            <template v-slot:subtitle>
+                                                {{ item.raw.unit }} | ৳{{ formatNumber(item.raw.selling_price) }} | Stock: {{ item.raw.stock_quantity }}
+                                            </template>
+                                        </v-list-item>
+                                    </template>
+                                </v-autocomplete>
+                            </v-col>
+                            <v-col cols="6" sm="4" lg="2">
+                                <v-text-field v-model.number="item.quantity" :label="`Qty (${getProductUnit(item.product_id).toUpperCase()})`" type="number" min="0.01" step="0.01" required readonly></v-text-field>
+                            </v-col>
+                            <v-col cols="6" sm="4" lg="2">
+                                <v-text-field v-model.number="item.unit_price" label="Unit Price" type="number" required></v-text-field>
+                            </v-col>
+                            <v-col cols="6" sm="4" lg="2">
+                                <v-text-field :model-value="formatNumber(item.quantity * item.unit_price)" label="Total" readonly></v-text-field>
+                            </v-col>
+                            <v-col cols="6" sm="4" lg="2">
+                                <v-btn icon color="error" @click="removeItem(index)" :disabled="form.items.length === 1">
+                                    <v-icon>mdi-delete</v-icon>
+                                </v-btn>
+                            </v-col>
+                        </v-row>
+
+                        <!-- Batch Selection Section -->
+                        <div v-if="item.product_id && item.batches && item.batches.length > 0" class="mt-3">
+                            <v-divider class="mb-3"></v-divider>
+                            <div class="d-flex align-center mb-2">
+                                <v-icon size="small" class="mr-2">mdi-package-variant</v-icon>
+                                <span class="text-subtitle-2 font-weight-bold">Select Batches to Sell From:</span>
+                                <v-chip size="x-small" color="info" class="ml-2">Total Available: {{ getTotalAvailable(item.batches) }}</v-chip>
+                            </div>
+
+                            <v-table density="compact" class="batch-table">
+                                <thead>
+                                    <tr>
+                                        <th>Batch</th>
+                                        <th>Purchase Date</th>
+                                        <th>Cost Price</th>
+                                        <th>Available</th>
+                                        <th style="width: 150px;">Sell Qty</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="batch in item.batches" :key="batch.id">
+                                        <td>
+                                            <span class="text-caption">{{ batch.batch_number }}</span>
+                                        </td>
+                                        <td>{{ batch.purchase_date }}</td>
+                                        <td class="font-weight-medium">৳{{ formatNumber(batch.unit_price) }}</td>
+                                        <td>
+                                            <v-chip size="x-small" :color="batch.remaining_quantity > 0 ? 'success' : 'error'">
+                                                {{ batch.remaining_quantity }}
+                                            </v-chip>
+                                        </td>
+                                        <td>
+                                            <v-text-field
+                                                v-model.number="batch.sell_quantity"
+                                                type="number"
+                                                min="0"
+                                                :max="batch.remaining_quantity"
+                                                step="0.01"
+                                                density="compact"
+                                                variant="outlined"
+                                                hide-details
+                                                @update:model-value="updateItemQuantity(index)"
+                                                style="max-width: 120px;"
+                                            ></v-text-field>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </v-table>
+
+                            <div v-if="getBatchSelectionTotal(index) > 0" class="mt-2 text-right">
+                                <v-chip color="primary" size="small">
+                                    Selected: {{ getBatchSelectionTotal(index) }} |
+                                    Avg Cost: ৳{{ formatNumber(getAverageCost(index)) }}
+                                </v-chip>
+                            </div>
+                        </div>
+
+                        <div v-else-if="item.product_id && (!item.batches || item.batches.length === 0)" class="mt-3">
+                            <v-alert type="warning" density="compact" variant="tonal">
+                                No available batches for this product
+                            </v-alert>
+                        </div>
+                    </v-card>
 
                     <v-btn color="secondary" @click="addItem" class="mt-2">
                         <v-icon left>mdi-plus</v-icon>
@@ -140,7 +206,7 @@ const form = reactive({
     discount: 0,
     paid: 0,
     note: '',
-    items: [{ product_id: null, quantity: 1, unit_price: 0 }],
+    items: [{ product_id: null, quantity: 0, unit_price: 0, batches: [], batch_selections: [] }],
 })
 
 const customerForm = reactive({
@@ -155,14 +221,84 @@ const total = computed(() => subtotal.value - form.discount)
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
 
-const addItem = () => form.items.push({ product_id: null, quantity: 1, unit_price: 0 })
+const addItem = () => form.items.push({ product_id: null, quantity: 0, unit_price: 0, batches: [], batch_selections: [] })
 const removeItem = (index) => form.items.splice(index, 1)
 
-const updatePrice = (index) => {
-    const product = products.value.find(p => p.id === form.items[index].product_id)
+const onProductSelect = async (index) => {
+    const item = form.items[index]
+    const product = products.value.find(p => p.id === item.product_id)
+
     if (product) {
-        form.items[index].unit_price = product.selling_price
+        item.unit_price = product.selling_price
+        item.quantity = 0
+        item.batches = []
+        item.batch_selections = []
+
+        // Fetch available batches for this product
+        try {
+            const response = await api.get(`/products/${product.id}/batches`)
+            item.batches = (response.data.batches || []).map(b => ({
+                ...b,
+                sell_quantity: 0
+            }))
+        } catch (error) {
+            console.error('Error fetching batches:', error)
+            item.batches = []
+        }
     }
+}
+
+const updateItemQuantity = (index) => {
+    const item = form.items[index]
+    // Calculate total quantity from batch selections
+    let totalQty = 0
+    item.batch_selections = []
+
+    for (const batch of item.batches) {
+        const sellQty = parseFloat(batch.sell_quantity) || 0
+        if (sellQty > 0) {
+            // Validate against available quantity
+            if (sellQty > batch.remaining_quantity) {
+                batch.sell_quantity = batch.remaining_quantity
+            }
+            totalQty += parseFloat(batch.sell_quantity) || 0
+            item.batch_selections.push({
+                batch_id: batch.id,
+                quantity: parseFloat(batch.sell_quantity) || 0
+            })
+        }
+    }
+
+    item.quantity = totalQty
+}
+
+const getBatchSelectionTotal = (index) => {
+    const item = form.items[index]
+    if (!item.batches) return 0
+    return item.batches.reduce((sum, b) => sum + (parseFloat(b.sell_quantity) || 0), 0)
+}
+
+const getAverageCost = (index) => {
+    const item = form.items[index]
+    if (!item.batches) return 0
+
+    let totalCost = 0
+    let totalQty = 0
+
+    for (const batch of item.batches) {
+        const sellQty = parseFloat(batch.sell_quantity) || 0
+        if (sellQty > 0) {
+            totalCost += sellQty * batch.unit_price
+            totalQty += sellQty
+        }
+    }
+
+    return totalQty > 0 ? totalCost / totalQty : 0
+}
+
+const getTotalAvailable = (batches) => {
+    if (!batches) return 0
+    return batches.reduce((sum, b) => sum + (parseFloat(b.remaining_quantity) || 0), 0)
 }
 
 const getProductUnit = (productId) => {
@@ -205,9 +341,28 @@ const saveSale = async () => {
         return
     }
 
+    // Validate that all items have batch selections
+    for (const item of form.items) {
+        if (item.product_id && item.quantity <= 0) {
+            alert('Please select batch quantities for all products')
+            return
+        }
+    }
+
     saving.value = true
     try {
-        await api.post('/sales', form)
+        // Prepare data with batch_selections
+        const payload = {
+            ...form,
+            items: form.items.map(item => ({
+                product_id: item.product_id,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                batch_selections: item.batch_selections || []
+            }))
+        }
+
+        await api.post('/sales', payload)
         router.push({ name: 'sales' })
     } catch (error) {
         console.error('Error:', error)
@@ -246,3 +401,17 @@ const saveCustomer = async () => {
 
 onMounted(() => fetchData())
 </script>
+
+<style scoped>
+.batch-table {
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 4px;
+}
+.batch-table th {
+    background-color: rgba(0, 0, 0, 0.04);
+    font-size: 0.75rem;
+}
+.batch-table td {
+    font-size: 0.875rem;
+}
+</style>
