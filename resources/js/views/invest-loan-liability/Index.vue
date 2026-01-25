@@ -88,9 +88,12 @@
                         </v-chip>
                     </v-card-title>
                     <v-card-subtitle>
-                        <v-chip :color="getTypeColor(item.type)" size="small" variant="tonal">
+                        <v-chip :color="getTypeColor(item.type)" size="small" variant="tonal" class="mr-1">
                             {{ getTypeLabel(item.type) }}
                         </v-chip>
+                        <span v-if="item.phone" class="text-caption">
+                            <v-icon size="x-small">mdi-phone</v-icon> {{ item.phone }}
+                        </span>
                     </v-card-subtitle>
                     <v-card-text>
                         <v-row dense>
@@ -104,10 +107,14 @@
                             </v-col>
                         </v-row>
                         <!-- Investor specific fields -->
-                        <v-row dense class="mt-2" v-if="item.type === 'investor' && item.invest_period">
-                            <v-col cols="6">
+                        <v-row dense class="mt-2" v-if="item.type === 'investor'">
+                            <v-col cols="6" v-if="item.invest_period">
                                 <div class="text-caption text-grey">Invest Period</div>
                                 <div class="text-subtitle-2">{{ item.invest_period }} Months</div>
+                            </v-col>
+                            <v-col cols="6" v-if="item.profit_rate">
+                                <div class="text-caption text-grey">Expected Profit Rate</div>
+                                <div class="text-subtitle-2">{{ item.profit_rate }}%</div>
                             </v-col>
                         </v-row>
                         <!-- Share Value - for shareholder/partner -->
@@ -141,7 +148,13 @@
                                 <div class="text-caption text-grey">Loan Type</div>
                                 <div class="text-subtitle-2">{{ item.loan_type === 'with_profit' ? 'With Profit' : 'Without Profit' }}</div>
                             </v-col>
-                            <v-col cols="6" v-if="item.loan_type === 'with_profit'">
+                            <v-col cols="6" v-if="item.loan_type === 'with_profit' && item.contact_person">
+                                <div class="text-caption text-grey">Contact Person</div>
+                                <div class="text-subtitle-2">{{ item.contact_person }}</div>
+                            </v-col>
+                        </v-row>
+                        <v-row dense class="mt-2" v-if="item.type === 'loan' && item.loan_type === 'with_profit'">
+                            <v-col cols="6">
                                 <div class="text-caption text-grey">Received Amount</div>
                                 <div class="text-subtitle-2">৳{{ formatNumber(item.received_amount) }}</div>
                             </v-col>
@@ -220,7 +233,7 @@
                     <v-form @submit.prevent="save">
                         <v-row>
                             <v-col cols="12" lg="6">
-                                <v-text-field v-model="form.name" label="Name / Title" required></v-text-field>
+                                <v-text-field v-model="form.name" :label="form.type === 'loan' && form.loan_type === 'with_profit' ? 'Organization Name' : 'Name'" required></v-text-field>
                             </v-col>
                             <v-col cols="12" lg="6">
                                 <v-select
@@ -229,6 +242,12 @@
                                     label="Type"
                                     required
                                 ></v-select>
+                            </v-col>
+                            <v-col cols="12" lg="6">
+                                <v-text-field v-model="form.phone" label="Phone" type="tel"></v-text-field>
+                            </v-col>
+                            <v-col cols="12" lg="6" v-if="form.type === 'loan' && form.loan_type === 'with_profit'">
+                                <v-text-field v-model="form.contact_person" label="Contact Person"></v-text-field>
                             </v-col>
                             <v-col cols="12" lg="6" v-if="form.type !== 'loan'">
                                 <v-text-field v-model.number="form.amount" :label="form.type === 'investor' ? 'Invest Amount' : 'Amount'" type="number" prefix="৳" required></v-text-field>
@@ -275,6 +294,10 @@
                                     label="Invest Period"
                                     clearable
                                 ></v-select>
+                            </v-col>
+                            <!-- Profit Rate - for investor -->
+                            <v-col cols="12" lg="6" v-if="form.type === 'investor'">
+                                <v-text-field v-model.number="form.profit_rate" label="Expected Profit Rate" type="number" suffix="%" hint="Expected yearly profit rate"></v-text-field>
                             </v-col>
                             <!-- Share Value - for shareholder/partner -->
                             <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
@@ -548,12 +571,15 @@ const summaryCards = [
 
 const form = reactive({
     name: '',
+    phone: '',
+    contact_person: '',
     type: 'investor',
     amount: 0,
     share_value: 0,
     honorarium: 0,
     honorarium_type: 'monthly',
     invest_period: null,
+    profit_rate: 0,
     loan_type: 'with_profit',
     received_amount: 0,
     total_payable: 0,
@@ -690,12 +716,15 @@ const openDialog = (item = null) => {
     if (item) {
         Object.assign(form, {
             name: item.name,
+            phone: item.phone || '',
+            contact_person: item.contact_person || '',
             type: item.type,
             amount: item.amount,
             share_value: item.share_value || 0,
             honorarium: item.honorarium || 0,
             honorarium_type: item.honorarium_type || 'monthly',
             invest_period: item.invest_period || null,
+            profit_rate: item.profit_rate || 0,
             loan_type: item.loan_type || 'with_profit',
             received_amount: item.received_amount || 0,
             total_payable: item.total_payable || 0,
@@ -711,12 +740,15 @@ const openDialog = (item = null) => {
         const defaultType = activeTab.value !== 'all' ? activeTab.value : 'investor'
         Object.assign(form, {
             name: '',
+            phone: '',
+            contact_person: '',
             type: defaultType,
             amount: 0,
             share_value: 0,
             honorarium: 0,
             honorarium_type: 'monthly',
             invest_period: null,
+            profit_rate: 0,
             loan_type: 'with_profit',
             received_amount: 0,
             total_payable: 0,

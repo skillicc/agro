@@ -9,12 +9,15 @@ class InvestLoanLiability extends Model
 {
     protected $fillable = [
         'name',
+        'phone',
+        'contact_person',
         'type',
         'amount',
         'share_value',
         'honorarium',
         'honorarium_type',
         'invest_period',
+        'profit_rate',
         'loan_type',
         'received_amount',
         'total_payable',
@@ -31,6 +34,7 @@ class InvestLoanLiability extends Model
         'share_value' => 'decimal:2',
         'honorarium' => 'decimal:2',
         'invest_period' => 'integer',
+        'profit_rate' => 'decimal:2',
         'received_amount' => 'decimal:2',
         'total_payable' => 'decimal:2',
         'date' => 'date',
