@@ -76,6 +76,11 @@ class Product extends Model
         return $this->hasMany(Production::class);
     }
 
+    public function stockBatches()
+    {
+        return $this->hasMany(StockBatch::class);
+    }
+
     /**
      * Prepare a date for array / JSON serialization.
      */
