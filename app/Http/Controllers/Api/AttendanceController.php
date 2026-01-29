@@ -145,7 +145,25 @@ class AttendanceController extends Controller
             'date' => 'required|date',
         ]);
 
-        Attendance::whereDate('date', $request->date)->update(['status' => 'absent']);
+        // Get all active non-Administration employees
+        $employees = Employee::where('is_active', true)
+            ->whereDoesntHave('project', function ($q) {
+                $q->where('name', 'Administration');
+            })
+            ->get();
+
+        // Create or update attendance as absent for each employee
+        foreach ($employees as $employee) {
+            Attendance::updateOrCreate(
+                [
+                    'employee_id' => $employee->id,
+                    'date' => $request->date,
+                ],
+                [
+                    'status' => 'absent',
+                ]
+            );
+        }
 
         return response()->json(['message' => 'All attendances cancelled for ' . $request->date]);
     }
@@ -157,7 +175,25 @@ class AttendanceController extends Controller
             'date' => 'required|date',
         ]);
 
-        Attendance::whereDate('date', $request->date)->update(['status' => 'present']);
+        // Get all active non-Administration employees
+        $employees = Employee::where('is_active', true)
+            ->whereDoesntHave('project', function ($q) {
+                $q->where('name', 'Administration');
+            })
+            ->get();
+
+        // Create or update attendance as present for each employee
+        foreach ($employees as $employee) {
+            Attendance::updateOrCreate(
+                [
+                    'employee_id' => $employee->id,
+                    'date' => $request->date,
+                ],
+                [
+                    'status' => 'present',
+                ]
+            );
+        }
 
         return response()->json(['message' => 'All marked present for ' . $request->date]);
     }
@@ -360,16 +396,24 @@ class AttendanceController extends Controller
             'date' => 'required|date',
         ]);
 
-        // Get Administration employee IDs
-        $employeeIds = Employee::where('is_active', true)
+        // Get Administration employees
+        $employees = Employee::where('is_active', true)
             ->whereHas('project', function ($q) {
                 $q->where('name', 'Administration');
             })
-            ->pluck('id');
+            ->get();
 
-        Attendance::whereDate('date', $request->date)
-            ->whereIn('employee_id', $employeeIds)
-            ->update(['status' => 'absent']);
+        foreach ($employees as $employee) {
+            Attendance::updateOrCreate(
+                [
+                    'employee_id' => $employee->id,
+                    'date' => $request->date,
+                ],
+                [
+                    'status' => 'absent',
+                ]
+            );
+        }
 
         return response()->json(['message' => 'All Administration attendances cancelled for ' . $request->date]);
     }
@@ -381,16 +425,24 @@ class AttendanceController extends Controller
             'date' => 'required|date',
         ]);
 
-        // Get Administration employee IDs
-        $employeeIds = Employee::where('is_active', true)
+        // Get Administration employees
+        $employees = Employee::where('is_active', true)
             ->whereHas('project', function ($q) {
                 $q->where('name', 'Administration');
             })
-            ->pluck('id');
+            ->get();
 
-        Attendance::whereDate('date', $request->date)
-            ->whereIn('employee_id', $employeeIds)
-            ->update(['status' => 'present']);
+        foreach ($employees as $employee) {
+            Attendance::updateOrCreate(
+                [
+                    'employee_id' => $employee->id,
+                    'date' => $request->date,
+                ],
+                [
+                    'status' => 'present',
+                ]
+            );
+        }
 
         return response()->json(['message' => 'All Administration marked present for ' . $request->date]);
     }
