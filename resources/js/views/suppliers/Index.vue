@@ -16,6 +16,34 @@
             </div>
         </div>
 
+        <!-- Summary Cards -->
+        <v-row class="mb-4">
+            <v-col cols="4">
+                <v-card color="primary" variant="tonal">
+                    <v-card-text class="pa-2 pa-sm-3 text-center">
+                        <div class="text-subtitle-1 text-sm-h6 font-weight-bold">৳{{ formatNumber(totalPurchase) }}</div>
+                        <div class="text-caption">Total Purchase</div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="4">
+                <v-card color="success" variant="tonal">
+                    <v-card-text class="pa-2 pa-sm-3 text-center">
+                        <div class="text-subtitle-1 text-sm-h6 font-weight-bold">৳{{ formatNumber(totalPaid) }}</div>
+                        <div class="text-caption">Total Paid</div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="4">
+                <v-card color="error" variant="tonal">
+                    <v-card-text class="pa-2 pa-sm-3 text-center">
+                        <div class="text-subtitle-1 text-sm-h6 font-weight-bold">৳{{ formatNumber(totalDue) }}</div>
+                        <div class="text-caption">Total Due</div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+        </v-row>
+
         <v-card>
             <v-card-text class="pa-2 pa-sm-4">
                 <!-- Mobile Card View -->
@@ -272,6 +300,10 @@ const responsiveHeaders = computed(() => {
 })
 
 const form = reactive({ name: '', phone: '', email: '', address: '' })
+
+const totalPurchase = computed(() => suppliers.value.reduce((sum, s) => sum + Number(s.total_purchase || 0), 0))
+const totalPaid = computed(() => suppliers.value.reduce((sum, s) => sum + Number(s.total_paid || 0), 0))
+const totalDue = computed(() => suppliers.value.reduce((sum, s) => sum + Number(s.total_due || 0), 0))
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
 
