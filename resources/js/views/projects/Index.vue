@@ -1,7 +1,7 @@
 <template>
     <div>
-        <div class="d-flex justify-space-between align-center mb-4">
-            <h1 class="text-h4">Projects</h1>
+        <div class="d-flex flex-wrap justify-space-between align-center mb-4 ga-2">
+            <h1 class="text-h5 text-sm-h4">Projects</h1>
             <div class="d-flex align-center ga-2">
                 <v-switch
                     v-model="showInactive"
@@ -9,10 +9,12 @@
                     color="primary"
                     density="compact"
                     hide-details
+                    class="flex-shrink-0"
                 ></v-switch>
-                <v-btn color="primary" @click="openDialog()">
+                <v-btn color="primary" @click="openDialog()" :size="$vuetify.display.xs ? 'small' : 'default'">
                     <v-icon left>mdi-plus</v-icon>
-                    Add Project
+                    <span class="d-none d-sm-inline">Add Project</span>
+                    <span class="d-inline d-sm-none">Add</span>
                 </v-btn>
             </div>
         </div>
