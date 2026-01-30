@@ -11,7 +11,8 @@ class InvestLoanLiabilityController extends Controller
 {
     public function index(Request $request)
     {
-        $query = InvestLoanLiability::withSum('sharePayments as total_share_paid', 'amount')
+        $query = InvestLoanLiability::with(['payments'])
+            ->withSum('sharePayments as total_share_paid', 'amount')
             ->withSum('profitWithdrawals as total_profit_withdrawn', 'amount')
             ->withSum('loanPayments as total_loan_paid', 'amount');
 
