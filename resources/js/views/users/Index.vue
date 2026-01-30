@@ -10,7 +10,7 @@
 
         <v-card>
             <v-card-text>
-                <v-data-table :headers="headers" :items="users" :loading="loading">
+                <v-data-table :headers="headers" :items="users" :loading="loading" :density="$vuetify.display.smAndDown ? 'compact' : 'default'">
                     <template v-slot:item.role="{ item }">
                         <v-chip :color="getRoleColor(item.role)" size="small">
                             {{ item.role }}
@@ -105,7 +105,7 @@
         </v-dialog>
 
         <!-- Delete Confirm -->
-        <v-dialog v-model="deleteDialog" max-width="400">
+        <v-dialog v-model="deleteDialog" max-width="400" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>Confirm Delete</v-card-title>
                 <v-card-text>Are you sure you want to delete "{{ selectedUser?.name }}"?</v-card-text>

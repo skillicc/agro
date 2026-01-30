@@ -30,7 +30,7 @@
 
         <v-card>
             <v-card-text>
-                <v-data-table :headers="headers" :items="expenses" :loading="loading">
+                <v-data-table :headers="headers" :items="expenses" :loading="loading" :density="$vuetify.display.smAndDown ? 'compact' : 'default'">
                     <template v-slot:item.sl="{ index }">
                         {{ index + 1 }}
                     </template>
@@ -120,7 +120,7 @@
         </v-dialog>
 
         <!-- Delete Confirm -->
-        <v-dialog v-model="deleteDialog" max-width="400">
+        <v-dialog v-model="deleteDialog" max-width="400" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>Confirm Delete</v-card-title>
                 <v-card-text>Are you sure you want to delete this expense?</v-card-text>
@@ -133,7 +133,7 @@
         </v-dialog>
 
         <!-- Add Category Dialog -->
-        <v-dialog v-model="categoryDialog" max-width="400">
+        <v-dialog v-model="categoryDialog" max-width="400" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>Add New Category</v-card-title>
                 <v-card-text>

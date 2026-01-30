@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div class="d-flex align-center mb-4">
+        <div class="d-flex flex-wrap align-center mb-4 ga-2">
             <v-btn icon variant="text" @click="$router.back()">
                 <v-icon>mdi-arrow-left</v-icon>
             </v-btn>
@@ -127,7 +127,7 @@
                         </div>
                     </v-card>
 
-                    <v-btn color="secondary" @click="addItem" class="mt-2">
+                    <v-btn color="secondary" :size="$vuetify.display.xs ? 'small' : 'default'" @click="addItem" class="mt-2">
                         <v-icon left>mdi-plus</v-icon>
                         Add Item
                     </v-btn>

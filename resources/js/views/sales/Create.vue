@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div class="d-flex align-center mb-4">
+        <div class="d-flex flex-wrap align-center mb-4 ga-2">
             <v-btn icon variant="text" @click="$router.back()">
                 <v-icon>mdi-arrow-left</v-icon>
             </v-btn>

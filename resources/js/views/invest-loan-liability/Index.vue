@@ -1,8 +1,8 @@
 <template>
     <div>
-        <div class="d-flex justify-space-between align-center mb-4">
-            <h1 class="text-h4">Invest, Loan & Liability</h1>
-            <v-btn color="primary" @click="openDialog()">
+        <div class="d-flex flex-wrap justify-space-between align-center mb-4 ga-2">
+            <h1 class="text-h5 text-sm-h4">Invest, Loan & Liability</h1>
+            <v-btn color="primary" :size="$vuetify.display.xs ? 'small' : 'default'" @click="openDialog()">
                 <v-icon left>mdi-plus</v-icon>
                 Add New
             </v-btn>
@@ -436,7 +436,7 @@
         </v-dialog>
 
         <!-- Delete Confirm Dialog -->
-        <v-dialog v-model="deleteDialog" max-width="400">
+        <v-dialog v-model="deleteDialog" max-width="400" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>Confirm Delete</v-card-title>
                 <v-card-text>Are you sure you want to delete "{{ selectedItem?.name }}"?</v-card-text>
@@ -449,7 +449,7 @@
         </v-dialog>
 
         <!-- Delete Payment Confirm Dialog -->
-        <v-dialog v-model="deletePaymentDialog" max-width="400">
+        <v-dialog v-model="deletePaymentDialog" max-width="400" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>Confirm Delete Payment</v-card-title>
                 <v-card-text>Are you sure you want to delete this payment of ৳{{ formatNumber(selectedPayment?.amount) }}?</v-card-text>
