@@ -11,7 +11,7 @@
         <!-- Summary Cards -->
         <v-row class="mb-4">
             <v-col cols="6" sm="4" lg="2" v-for="card in summaryCards" :key="card.type">
-                <v-card :color="card.color" variant="tonal">
+                <v-card :color="card.color" variant="tonal" style="cursor: pointer;" @click="scrollToSection(card.type)">
                     <v-card-text class="text-center pa-3">
                         <v-icon :icon="card.icon" size="28" class="mb-1"></v-icon>
                         <div class="text-caption">{{ card.label }}</div>
@@ -42,7 +42,7 @@
 
         <!-- Sections Grid -->
         <template v-for="section in sections" :key="section.key">
-            <div v-if="section.items.length" class="mb-6">
+            <div v-if="section.items.length" :id="'section-' + section.key" class="mb-6">
                 <h2 class="text-h6 mb-3 d-flex align-center">
                     <v-icon :color="section.color" class="mr-2">{{ section.icon }}</v-icon>
                     {{ section.label }} ({{ section.items.length }})
@@ -615,6 +615,23 @@ const sections = computed(() => [
     { key: 'loan', label: 'Loan', icon: 'mdi-bank', color: 'warning', items: loanItems.value },
     { key: 'other', label: 'Others', icon: 'mdi-dots-horizontal', color: 'grey', items: otherItems.value },
 ])
+
+const scrollToSection = (type) => {
+    const sectionMap = {
+        investor: 'investor',
+        partner: 'partner',
+        shareholder: 'shareholder',
+        investment_day_term: 'other',
+        loan: 'loan',
+        account_payable: 'other',
+        account_receivable: 'other',
+    }
+    const key = sectionMap[type] || 'other'
+    const el = document.getElementById('section-' + key)
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+}
 
 const getTypeCount = (type) => {
     return items.value.filter(item => item.type === type).length
