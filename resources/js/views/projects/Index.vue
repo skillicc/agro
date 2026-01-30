@@ -80,7 +80,7 @@
         </v-alert>
 
         <!-- Add/Edit Dialog -->
-        <v-dialog v-model="dialog" max-width="500">
+        <v-dialog v-model="dialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>{{ editMode ? 'Edit Project' : 'Add Project' }}</v-card-title>
                 <v-card-text>

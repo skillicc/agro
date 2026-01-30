@@ -128,7 +128,7 @@
         </v-dialog>
 
         <!-- Status Update Dialog -->
-        <v-dialog v-model="statusDialog" max-width="450">
+        <v-dialog v-model="statusDialog" :max-width="$vuetify.display.xs ? '100%' : '450'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>Update Attendance</v-card-title>
                 <v-card-text>

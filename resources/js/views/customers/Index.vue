@@ -99,7 +99,7 @@
         </v-card>
 
         <!-- Add/Edit Dialog -->
-        <v-dialog v-model="dialog" max-width="500">
+        <v-dialog v-model="dialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>{{ editMode ? 'Edit Customer' : 'Add Customer' }}</v-card-title>
                 <v-card-text>
@@ -119,7 +119,7 @@
         </v-dialog>
 
         <!-- Ledger Dialog -->
-        <v-dialog v-model="ledgerDialog" max-width="800">
+        <v-dialog v-model="ledgerDialog" :max-width="$vuetify.display.xs ? '100%' : '800'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>{{ selectedCustomer?.name }} - Ledger</v-card-title>
                 <v-card-text>
@@ -159,7 +159,7 @@
         </v-dialog>
 
         <!-- Payment Dialog -->
-        <v-dialog v-model="paymentDialog" max-width="500">
+        <v-dialog v-model="paymentDialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>Add Customer Payment</v-card-title>
                 <v-card-text>

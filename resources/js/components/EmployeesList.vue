@@ -37,7 +37,7 @@
         </v-data-table>
 
         <!-- Add/Edit Employee Dialog -->
-        <v-dialog v-model="employeeDialog" max-width="500">
+        <v-dialog v-model="employeeDialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>{{ editMode ? 'Edit Employee' : 'Add Employee' }}</v-card-title>
                 <v-card-text>
@@ -59,7 +59,7 @@
         </v-dialog>
 
         <!-- Pay Salary Dialog -->
-        <v-dialog v-model="salaryDialog" max-width="500">
+        <v-dialog v-model="salaryDialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>Pay Salary</v-card-title>
                 <v-card-text>
@@ -87,7 +87,7 @@
         </v-dialog>
 
         <!-- Salary History Dialog -->
-        <v-dialog v-model="historyDialog" max-width="600">
+        <v-dialog v-model="historyDialog" :max-width="$vuetify.display.xs ? '100%' : '600'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>Salary History - {{ selectedEmployee?.name }}</v-card-title>
                 <v-card-text>

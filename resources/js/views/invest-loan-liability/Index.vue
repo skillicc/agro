@@ -226,7 +226,7 @@
         </v-alert>
 
         <!-- Add/Edit Dialog -->
-        <v-dialog v-model="dialog" max-width="600">
+        <v-dialog v-model="dialog" :max-width="$vuetify.display.xs ? '100%' : '600'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>{{ editMode ? 'Edit Entry' : 'Add New Entry' }}</v-card-title>
                 <v-card-text>
@@ -349,7 +349,7 @@
         </v-dialog>
 
         <!-- Payment Dialog -->
-        <v-dialog v-model="paymentDialog" max-width="500">
+        <v-dialog v-model="paymentDialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>Add Payment - {{ selectedItem?.name }}</v-card-title>
                 <v-card-text>
@@ -395,7 +395,7 @@
         </v-dialog>
 
         <!-- Payment History Dialog -->
-        <v-dialog v-model="paymentsHistoryDialog" max-width="700">
+        <v-dialog v-model="paymentsHistoryDialog" :max-width="$vuetify.display.xs ? '100%' : '700'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title class="d-flex align-center">
                     Payment History - {{ selectedItem?.name }}

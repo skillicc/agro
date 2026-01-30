@@ -34,7 +34,7 @@
         </v-data-table>
 
         <!-- View Dialog -->
-        <v-dialog v-model="viewDialog" max-width="600">
+        <v-dialog v-model="viewDialog" :max-width="$vuetify.display.xs ? '100%' : '600'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>Purchase Details</v-card-title>
                 <v-card-text>

@@ -131,7 +131,7 @@
         </v-card>
 
         <!-- Add/Edit Product Dialog -->
-        <v-dialog v-model="dialog" max-width="600">
+        <v-dialog v-model="dialog" :max-width="$vuetify.display.xs ? '100%' : '600'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>{{ editMode ? 'Edit Product' : 'Add Product' }}</v-card-title>
                 <v-card-text>
@@ -217,7 +217,7 @@
         </v-dialog>
 
         <!-- Category Management Dialog -->
-        <v-dialog v-model="categoryDialog" max-width="600">
+        <v-dialog v-model="categoryDialog" :max-width="$vuetify.display.xs ? '100%' : '600'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title class="d-flex justify-space-between align-center">
                     <span>Product Categories</span>
@@ -301,7 +301,7 @@
         </v-dialog>
 
         <!-- Stock Batches Dialog -->
-        <v-dialog v-model="batchDialog" max-width="700">
+        <v-dialog v-model="batchDialog" :max-width="$vuetify.display.xs ? '100%' : '700'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title class="d-flex align-center">
                     <v-icon class="mr-2">mdi-package-variant</v-icon>

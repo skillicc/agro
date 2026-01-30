@@ -26,7 +26,7 @@
         </v-data-table>
 
         <!-- Add/Edit Dialog -->
-        <v-dialog v-model="dialog" max-width="500">
+        <v-dialog v-model="dialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>{{ editMode ? 'Edit Damage' : 'Record Damage' }}</v-card-title>
                 <v-card-text>
