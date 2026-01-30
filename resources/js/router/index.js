@@ -27,6 +27,7 @@ const Reports = () => import('../views/reports/Index.vue')
 const Users = () => import('../views/users/Index.vue')
 const Warehouses = () => import('../views/warehouses/Index.vue')
 const InvestLoanLiability = () => import('../views/invest-loan-liability/Index.vue')
+const InvestLoanLiabilityShow = () => import('../views/invest-loan-liability/Show.vue')
 const Profile = () => import('../views/profile/Index.vue')
 
 const routes = [
@@ -144,6 +145,11 @@ const routes = [
                 path: 'invest-loan-liability',
                 name: 'invest-loan-liability',
                 component: InvestLoanLiability,
+            },
+            {
+                path: 'invest-loan-liability/:type',
+                name: 'invest-loan-liability-show',
+                component: InvestLoanLiabilityShow,
             },
             {
                 path: 'users',
