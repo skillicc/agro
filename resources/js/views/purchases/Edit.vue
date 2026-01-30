@@ -186,8 +186,6 @@
                                             type="number"
                                             density="comfortable"
                                             hide-details
-                                            readonly
-                                            bg-color="grey-lighten-4"
                                         ></v-text-field>
                                     </v-col>
                                     <v-col cols="6" sm="3">
