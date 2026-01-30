@@ -4,7 +4,7 @@
             <v-btn icon variant="text" @click="$router.back()">
                 <v-icon>mdi-arrow-left</v-icon>
             </v-btn>
-            <h1 class="text-h4 ml-2">New Sale</h1>
+            <h1 class="text-h5 text-sm-h4 ml-2">New Sale</h1>
         </div>
 
         <v-card>
@@ -70,12 +70,13 @@
                         <!-- Batch Selection Section -->
                         <div v-if="item.product_id && item.batches && item.batches.length > 0" class="mt-3">
                             <v-divider class="mb-3"></v-divider>
-                            <div class="d-flex align-center mb-2">
-                                <v-icon size="small" class="mr-2">mdi-package-variant</v-icon>
-                                <span class="text-subtitle-2 font-weight-bold">Select Batches to Sell From:</span>
-                                <v-chip size="x-small" color="info" class="ml-2">Total Available: {{ getTotalAvailable(item.batches) }}</v-chip>
+                            <div class="d-flex flex-wrap align-center mb-2 ga-1">
+                                <v-icon size="small" class="mr-1">mdi-package-variant</v-icon>
+                                <span class="text-subtitle-2 font-weight-bold">Select Batches:</span>
+                                <v-chip size="x-small" color="info">Available: {{ getTotalAvailable(item.batches) }}</v-chip>
                             </div>
 
+                            <div style="overflow-x: auto;">
                             <v-table density="compact" class="batch-table">
                                 <thead>
                                     <tr>
@@ -115,6 +116,7 @@
                                     </tr>
                                 </tbody>
                             </v-table>
+                            </div>
 
                             <div v-if="getBatchSelectionTotal(index) > 0" class="mt-2 text-right">
                                 <v-chip color="primary" size="small">
@@ -131,7 +133,7 @@
                         </div>
                     </v-card>
 
-                    <v-btn color="secondary" @click="addItem" class="mt-2">
+                    <v-btn color="secondary" :size="$vuetify.display.xs ? 'small' : 'default'" @click="addItem" class="mt-2">
                         <v-icon left>mdi-plus</v-icon>
                         Add Item
                     </v-btn>
@@ -159,7 +161,7 @@
         </v-card>
 
         <!-- Quick Customer Create Dialog -->
-        <v-dialog v-model="showCustomerDialog" max-width="500px">
+        <v-dialog v-model="showCustomerDialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>
                     <span class="text-h5">Add New Customer</span>

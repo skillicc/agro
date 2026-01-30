@@ -4,7 +4,7 @@
             <v-btn icon variant="text" @click="$router.back()">
                 <v-icon>mdi-arrow-left</v-icon>
             </v-btn>
-            <h1 class="text-h4 ml-2">Edit Sale</h1>
+            <h1 class="text-h5 text-sm-h4 ml-2">Edit Sale</h1>
         </div>
 
         <v-card :loading="loading">
@@ -64,12 +64,13 @@
                         <!-- Batch Selection Section -->
                         <div v-if="item.product_id && item.batches && item.batches.length > 0" class="mt-3">
                             <v-divider class="mb-3"></v-divider>
-                            <div class="d-flex align-center mb-2">
-                                <v-icon size="small" class="mr-2">mdi-package-variant</v-icon>
-                                <span class="text-subtitle-2 font-weight-bold">Select Batches to Sell From:</span>
-                                <v-chip size="x-small" color="info" class="ml-2">Total Available: {{ getTotalAvailable(item.batches) }}</v-chip>
+                            <div class="d-flex flex-wrap align-center mb-2 ga-1">
+                                <v-icon size="small" class="mr-1">mdi-package-variant</v-icon>
+                                <span class="text-subtitle-2 font-weight-bold">Select Batches:</span>
+                                <v-chip size="x-small" color="info">Available: {{ getTotalAvailable(item.batches) }}</v-chip>
                             </div>
 
+                            <div style="overflow-x: auto;">
                             <v-table density="compact" class="batch-table">
                                 <thead>
                                     <tr>
@@ -109,6 +110,7 @@
                                     </tr>
                                 </tbody>
                             </v-table>
+                            </div>
 
                             <div v-if="getBatchSelectionTotal(index) > 0" class="mt-2 text-right">
                                 <v-chip color="primary" size="small">

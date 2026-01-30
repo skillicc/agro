@@ -1,13 +1,13 @@
 <template>
     <div>
-        <div class="d-flex justify-space-between align-center mb-4">
-            <h1 class="text-h4">Employees</h1>
-            <div class="d-flex ga-2">
-                <v-btn color="info" @click="openCalculateELDialog()">
+        <div class="d-flex flex-wrap justify-space-between align-center mb-4 ga-2">
+            <h1 class="text-h5 text-sm-h4">Employees</h1>
+            <div class="d-flex flex-wrap ga-2">
+                <v-btn color="info" :size="$vuetify.display.xs ? 'small' : 'default'" @click="openCalculateELDialog()">
                     <v-icon left>mdi-calculator</v-icon>
                     Calculate EL
                 </v-btn>
-                <v-btn color="primary" @click="openDialog()">
+                <v-btn color="primary" :size="$vuetify.display.xs ? 'small' : 'default'" @click="openDialog()">
                     <v-icon left>mdi-plus</v-icon>
                     Add Employee
                 </v-btn>
@@ -289,7 +289,7 @@
         </v-dialog>
 
         <!-- History Dialog -->
-        <v-dialog v-model="historyDialog" max-width="800">
+        <v-dialog v-model="historyDialog" :max-width="$vuetify.display.xs ? '100%' : '800'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>
                     Payment History - {{ selectedEmployee?.name }}
@@ -477,7 +477,7 @@
         </v-dialog>
 
         <!-- Calculate EL Dialog -->
-        <v-dialog v-model="calculateELDialog" max-width="800">
+        <v-dialog v-model="calculateELDialog" :max-width="$vuetify.display.xs ? '100%' : '800'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>
                     <v-icon class="mr-2">mdi-calculator</v-icon>
@@ -616,7 +616,7 @@
         </v-dialog>
 
         <!-- All Summary Dialog -->
-        <v-dialog v-model="summaryDialog" max-width="900">
+        <v-dialog v-model="summaryDialog" :max-width="$vuetify.display.xs ? '100%' : '900'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title class="d-flex align-center">
                     <v-icon class="mr-2">mdi-chart-box</v-icon>
@@ -692,7 +692,7 @@
                         <!-- Salary Matrix -->
                         <v-window-item value="matrix">
                             <div class="mt-4">
-                                <div class="d-flex ga-4 mb-3">
+                                <div class="d-flex flex-wrap ga-2 ga-sm-4 mb-3">
                                     <div class="d-flex align-center"><div class="status-box bg-success mr-2"></div> Paid</div>
                                     <div class="d-flex align-center"><div class="status-box bg-error mr-2"></div> Not Paid</div>
                                     <div class="d-flex align-center"><div class="status-box bg-warning mr-2"></div> Pending</div>

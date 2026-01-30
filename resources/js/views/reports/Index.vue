@@ -1,11 +1,11 @@
 <template>
     <div>
-        <h1 class="text-h4 mb-4">Reports</h1>
+        <h1 class="text-h5 text-sm-h4 mb-4">Reports</h1>
 
-        <v-tabs v-model="tab" color="primary" class="mb-4">
-            <v-tab value="monthly">Monthly Report</v-tab>
-            <v-tab value="custom">Custom Report</v-tab>
-            <v-tab value="profit-loss">Profit & Loss</v-tab>
+        <v-tabs v-model="tab" color="primary" class="mb-4" show-arrows>
+            <v-tab value="monthly">Monthly</v-tab>
+            <v-tab value="custom">Custom</v-tab>
+            <v-tab value="profit-loss">P&L</v-tab>
             <v-tab value="warehouses">Warehouses</v-tab>
         </v-tabs>
 
@@ -164,8 +164,9 @@
                         <div v-if="plReport">
                             <!-- Revenue Section -->
                             <v-card class="mb-4">
-                                <v-card-title class="bg-success text-white">Revenue (Income)</v-card-title>
-                                <v-card-text>
+                                <v-card-title class="bg-success text-white text-body-1 text-sm-h6">Revenue (Income)</v-card-title>
+                                <v-card-text class="pa-2 pa-sm-4">
+                                    <div style="overflow-x: auto;">
                                     <v-table density="compact">
                                         <tbody>
                                             <tr>
@@ -182,13 +183,15 @@
                                             </tr>
                                         </tbody>
                                     </v-table>
+                                    </div>
                                 </v-card-text>
                             </v-card>
 
                             <!-- Expenses Section -->
                             <v-card class="mb-4">
-                                <v-card-title class="bg-error text-white">Expenses (Costs)</v-card-title>
-                                <v-card-text>
+                                <v-card-title class="bg-error text-white text-body-1 text-sm-h6">Expenses (Costs)</v-card-title>
+                                <v-card-text class="pa-2 pa-sm-4">
+                                    <div style="overflow-x: auto;">
                                     <v-table density="compact">
                                         <tbody>
                                             <tr>
@@ -221,13 +224,15 @@
                                             </tr>
                                         </tbody>
                                     </v-table>
+                                    </div>
                                 </v-card-text>
                             </v-card>
 
                             <!-- Asset Value Reduction -->
                             <v-card class="mb-4" v-if="plReport.assets && plReport.assets.length > 0">
-                                <v-card-title class="bg-warning">Asset Value Reduction (Depreciation)</v-card-title>
-                                <v-card-text>
+                                <v-card-title class="bg-warning text-body-1 text-sm-h6">Asset Depreciation</v-card-title>
+                                <v-card-text class="pa-2 pa-sm-4">
+                                    <div style="overflow-x: auto;">
                                     <v-table density="compact">
                                         <thead>
                                             <tr>
@@ -255,6 +260,7 @@
                                             </tr>
                                         </tfoot>
                                     </v-table>
+                                    </div>
                                 </v-card-text>
                             </v-card>
 
@@ -263,7 +269,7 @@
                                 <v-col cols="12" sm="6" lg="4">
                                     <v-card color="success" variant="tonal">
                                         <v-card-text class="text-center">
-                                            <div class="text-h4">৳{{ formatNumber(plReport.gross_profit) }}</div>
+                                            <div class="text-h5 text-sm-h4">৳{{ formatNumber(plReport.gross_profit) }}</div>
                                             <div class="text-body-1">Gross Profit</div>
                                             <div class="text-caption">(Sales - Purchases)</div>
                                         </v-card-text>
@@ -272,7 +278,7 @@
                                 <v-col cols="12" sm="6" lg="4">
                                     <v-card color="info" variant="tonal">
                                         <v-card-text class="text-center">
-                                            <div class="text-h4">৳{{ formatNumber(plReport.operating_profit) }}</div>
+                                            <div class="text-h5 text-sm-h4">৳{{ formatNumber(plReport.operating_profit) }}</div>
                                             <div class="text-body-1">Operating Profit</div>
                                             <div class="text-caption">(Gross Profit - Operating Expenses)</div>
                                         </v-card-text>
@@ -281,7 +287,7 @@
                                 <v-col cols="12" sm="6" lg="4">
                                     <v-card :color="plReport.net_profit >= 0 ? 'success' : 'error'">
                                         <v-card-text class="text-center text-white">
-                                            <div class="text-h4">৳{{ formatNumber(plReport.net_profit) }}</div>
+                                            <div class="text-h5 text-sm-h4">৳{{ formatNumber(plReport.net_profit) }}</div>
                                             <div class="text-body-1">{{ plReport.net_profit >= 0 ? 'Net Profit' : 'Net Loss' }}</div>
                                             <div class="text-caption">(Revenue - All Expenses - Depreciation)</div>
                                         </v-card-text>

@@ -1,8 +1,8 @@
 <template>
     <div>
-        <div class="d-flex justify-space-between align-center mb-4">
-            <h1 class="text-h4">Expenses</h1>
-            <v-btn color="primary" @click="openDialog()">
+        <div class="d-flex flex-wrap justify-space-between align-center mb-4 ga-2">
+            <h1 class="text-h5 text-sm-h4">Expenses</h1>
+            <v-btn color="primary" :size="$vuetify.display.xs ? 'small' : 'default'" @click="openDialog()">
                 <v-icon left>mdi-plus</v-icon>
                 Add Expense
             </v-btn>
@@ -55,7 +55,7 @@
         </v-card>
 
         <!-- Add/Edit Dialog -->
-        <v-dialog v-model="dialog" max-width="500">
+        <v-dialog v-model="dialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>{{ editMode ? 'Edit Expense' : 'Add Expense' }}</v-card-title>
                 <v-card-text>

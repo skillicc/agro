@@ -5,7 +5,7 @@
                 <v-btn icon variant="text" @click="$router.back()">
                     <v-icon>mdi-arrow-left</v-icon>
                 </v-btn>
-                <span class="text-h4 ml-2">{{ project.name }}</span>
+                <span class="text-h5 text-sm-h4 ml-2">{{ project.name }}</span>
                 <v-chip class="ml-2" :color="getProjectColor(project.type)">
                     {{ project.type }}
                 </v-chip>

@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="d-flex justify-space-between align-center mb-4">
-            <h1 class="text-h4">My Profile</h1>
+            <h1 class="text-h5 text-sm-h4">My Profile</h1>
         </div>
 
         <v-row>

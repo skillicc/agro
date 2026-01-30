@@ -1,8 +1,8 @@
 <template>
     <div>
-        <div class="d-flex justify-space-between align-center mb-4">
-            <h1 class="text-h4">User Management</h1>
-            <v-btn color="primary" @click="openDialog()">
+        <div class="d-flex flex-wrap justify-space-between align-center mb-4 ga-2">
+            <h1 class="text-h5 text-sm-h4">User Management</h1>
+            <v-btn color="primary" :size="$vuetify.display.xs ? 'small' : 'default'" @click="openDialog()">
                 <v-icon left>mdi-plus</v-icon>
                 Add User
             </v-btn>
@@ -40,7 +40,7 @@
         </v-card>
 
         <!-- Add/Edit Dialog -->
-        <v-dialog v-model="dialog" max-width="500">
+        <v-dialog v-model="dialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>{{ editMode ? 'Edit User' : 'Add User' }}</v-card-title>
                 <v-card-text>
@@ -60,7 +60,7 @@
         </v-dialog>
 
         <!-- Project Assignment Dialog -->
-        <v-dialog v-model="projectDialog" max-width="600">
+        <v-dialog v-model="projectDialog" :max-width="$vuetify.display.xs ? '100%' : '600'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>Assign Projects - {{ selectedUser?.name }}</v-card-title>
                 <v-card-text>
