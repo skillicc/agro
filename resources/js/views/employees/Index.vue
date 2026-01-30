@@ -167,28 +167,44 @@
                         </v-chip>
                     </template>
                     <template v-slot:item.actions="{ item }">
-                        <v-btn icon size="small" color="info" @click="viewHistory(item)" title="View History">
-                            <v-icon>mdi-history</v-icon>
-                        </v-btn>
-                        <v-btn icon size="small" color="success" @click="openSalaryDialog(item)" title="Pay Salary">
-                            <v-icon>mdi-cash</v-icon>
-                        </v-btn>
-                        <v-btn v-if="item.employee_type === 'regular'" icon size="small" color="purple" @click="openAdjustSalaryDialog(item)" title="Adjust Salary">
-                            <v-icon>mdi-trending-up</v-icon>
-                        </v-btn>
-                        <v-btn icon size="small" color="warning" @click="openBonusDialog(item)" title="Bonus/Incentive">
-                            <v-icon>mdi-gift</v-icon>
-                        </v-btn>
-                        <v-btn icon size="small" @click="openDialog(item)" title="Edit">
-                            <v-icon>mdi-pencil</v-icon>
-                        </v-btn>
+                        <template v-if="smAndUp">
+                            <v-btn icon size="small" color="info" @click="viewHistory(item)" title="View History">
+                                <v-icon>mdi-history</v-icon>
+                            </v-btn>
+                            <v-btn icon size="small" color="success" @click="openSalaryDialog(item)" title="Pay Salary">
+                                <v-icon>mdi-cash</v-icon>
+                            </v-btn>
+                            <v-btn v-if="item.employee_type === 'regular'" icon size="small" color="purple" @click="openAdjustSalaryDialog(item)" title="Adjust Salary">
+                                <v-icon>mdi-trending-up</v-icon>
+                            </v-btn>
+                            <v-btn icon size="small" color="warning" @click="openBonusDialog(item)" title="Bonus/Incentive">
+                                <v-icon>mdi-gift</v-icon>
+                            </v-btn>
+                            <v-btn icon size="small" @click="openDialog(item)" title="Edit">
+                                <v-icon>mdi-pencil</v-icon>
+                            </v-btn>
+                        </template>
+                        <v-menu v-else>
+                            <template v-slot:activator="{ props }">
+                                <v-btn icon size="small" variant="text" v-bind="props">
+                                    <v-icon>mdi-dots-vertical</v-icon>
+                                </v-btn>
+                            </template>
+                            <v-list density="compact">
+                                <v-list-item @click="viewHistory(item)" prepend-icon="mdi-history" title="History"></v-list-item>
+                                <v-list-item @click="openSalaryDialog(item)" prepend-icon="mdi-cash" title="Pay Salary"></v-list-item>
+                                <v-list-item v-if="item.employee_type === 'regular'" @click="openAdjustSalaryDialog(item)" prepend-icon="mdi-trending-up" title="Adjust Salary"></v-list-item>
+                                <v-list-item @click="openBonusDialog(item)" prepend-icon="mdi-gift" title="Bonus"></v-list-item>
+                                <v-list-item @click="openDialog(item)" prepend-icon="mdi-pencil" title="Edit"></v-list-item>
+                            </v-list>
+                        </v-menu>
                     </template>
                 </v-data-table>
             </v-card-text>
         </v-card>
 
         <!-- Add/Edit Dialog -->
-        <v-dialog v-model="dialog" max-width="500">
+        <v-dialog v-model="dialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>{{ editMode ? 'Edit Employee' : 'Add Employee' }}</v-card-title>
                 <v-card-text>
@@ -240,7 +256,7 @@
         </v-dialog>
 
         <!-- Salary Dialog -->
-        <v-dialog v-model="salaryDialog" max-width="450">
+        <v-dialog v-model="salaryDialog" :max-width="$vuetify.display.xs ? '100%' : '450'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>Pay Salary - {{ selectedEmployee?.name }}</v-card-title>
                 <v-card-text>
@@ -546,7 +562,7 @@
         </v-dialog>
 
         <!-- Adjust Salary Dialog -->
-        <v-dialog v-model="adjustSalaryDialog" max-width="450">
+        <v-dialog v-model="adjustSalaryDialog" :max-width="$vuetify.display.xs ? '100%' : '450'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>
                     <v-icon class="mr-2">mdi-trending-up</v-icon>
@@ -586,7 +602,7 @@
         </v-dialog>
 
         <!-- Bonus/Incentive Dialog -->
-        <v-dialog v-model="bonusDialog" max-width="450">
+        <v-dialog v-model="bonusDialog" :max-width="$vuetify.display.xs ? '100%' : '450'" :fullscreen="$vuetify.display.xs">
             <v-card>
                 <v-card-title>
                     <v-icon class="mr-2">mdi-gift</v-icon>
@@ -866,11 +882,11 @@ const headers = computed(() => {
     }
     // Mobile/Tablet: minimal columns
     return [
-        { title: '#', key: 'sl', width: '50px' },
+        { title: '#', key: 'sl', width: '40px' },
         { title: 'Name', key: 'name_position' },
         { title: 'Salary', key: 'salary_display' },
         { title: 'Due', key: 'current_month_due' },
-        { title: 'Actions', key: 'actions', sortable: false },
+        { title: '', key: 'actions', sortable: false, width: '40px' },
     ]
 })
 
