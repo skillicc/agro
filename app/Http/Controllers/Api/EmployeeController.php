@@ -74,6 +74,9 @@ class EmployeeController extends Controller
                 ->pluck('date')
                 ->map(fn($d) => \Carbon\Carbon::parse($d)->format('d M'))
                 ->toArray();
+
+            // EL balance - auto calculated based on joining date (5 days/month for regular)
+            $employee->el_balance = $employee->calculated_earn_leave;
         });
 
         return response()->json($employees);
@@ -115,8 +118,8 @@ class EmployeeController extends Controller
             // Salary amount
             $employee->salary = $employee->salary_amount;
 
-            // Earn Leave balance
-            $employee->el_balance = $employee->earn_leave ?? 0;
+            // Earn Leave balance - auto calculated based on joining date (5 days/month for regular)
+            $employee->el_balance = $employee->calculated_earn_leave;
 
             // Absent count this month
             $employee->absent_count = $employee->attendances()
