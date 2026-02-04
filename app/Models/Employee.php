@@ -84,10 +84,10 @@ class Employee extends Model
         // 5 days EL per month from January to current month
         $totalEarned = $currentMonth * 5;
 
-        // Subtract leaves taken this year
+        // Subtract all types of leaves taken this year (leave, sick_leave, etc.)
         $leavesTaken = $this->attendances()
             ->whereYear('date', $currentYear)
-            ->where('status', 'leave')
+            ->whereIn('status', ['leave', 'sick_leave'])
             ->count();
 
         return max(0, $totalEarned - $leavesTaken);
