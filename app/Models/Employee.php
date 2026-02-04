@@ -67,26 +67,17 @@ class Employee extends Model
     }
 
     /**
-     * Calculate earned leave based on joining date
+     * Calculate earned leave for current month
      * Regular employees earn 5 days per month
      */
     public function getCalculatedEarnLeaveAttribute(): float
     {
-        if (!$this->isRegular() || !$this->joining_date) {
+        if (!$this->isRegular()) {
             return 0;
         }
 
-        $joinDate = $this->joining_date instanceof \DateTime
-            ? $this->joining_date
-            : new \DateTime($this->joining_date);
-        $now = new \DateTime();
-
-        // Calculate total months worked
-        $diff = $joinDate->diff($now);
-        $months = $diff->m + ($diff->y * 12);
-
-        // 5 days EL per month for regular employees
-        return $months * 5;
+        // 5 days EL per month for regular employees (current month only)
+        return 5;
     }
 
     public function isContractual(): bool
