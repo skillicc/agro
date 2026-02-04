@@ -68,7 +68,7 @@ class Employee extends Model
 
     /**
      * Calculate accumulated earned leave from January of current year
-     * Regular employees earn 5 days per month
+     * Regular employees earn 5 days per month, minus leaves taken
      */
     public function getCalculatedEarnLeaveAttribute(): float
     {
@@ -77,11 +77,20 @@ class Employee extends Model
         }
 
         $now = new \DateTime();
+        $currentYear = (int) $now->format('Y');
         // Current month number (1-12)
         $currentMonth = (int) $now->format('n');
 
         // 5 days EL per month from January to current month
-        return $currentMonth * 5;
+        $totalEarned = $currentMonth * 5;
+
+        // Subtract leaves taken this year
+        $leavesTaken = $this->attendances()
+            ->whereYear('date', $currentYear)
+            ->where('status', 'leave')
+            ->count();
+
+        return max(0, $totalEarned - $leavesTaken);
     }
 
     public function isContractual(): bool
