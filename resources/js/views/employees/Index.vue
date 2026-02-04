@@ -138,7 +138,7 @@
                         <span
                             :style="item.absent_dates && item.absent_dates.length > 0 ? 'cursor: help; text-decoration: underline dotted;' : ''"
                             :title="item.absent_dates && item.absent_dates.length > 0 ? 'Absent: ' + item.absent_dates.join(', ') : ''"
-                        >{{ item.earn_leave || 0 }}</span>
+                        >{{ item.el_balance || item.earn_leave || 0 }}</span>
                     </template>
                     <template v-slot:item.absent_count="{ item }">
                         <v-chip
