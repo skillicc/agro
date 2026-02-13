@@ -46,7 +46,7 @@
                                 </v-autocomplete>
                             </v-col>
                             <v-col cols="6" sm="4" lg="2">
-                                <v-text-field v-model.number="item.quantity" :label="`Qty (${getProductUnit(item.product_id).toUpperCase()})`" type="number" min="0.01" step="0.01" required readonly></v-text-field>
+                                <v-text-field v-model.number="item.quantity" :label="`Qty (${getProductUnit(item.product_id).toUpperCase()})`" type="number" min="0.01" step="0.01" required :readonly="item.product_type !== 'own_production'"></v-text-field>
                             </v-col>
                             <v-col cols="6" sm="4" lg="2">
                                 <v-text-field v-model.number="item.unit_price" label="Unit Price" type="number" required></v-text-field>
@@ -61,8 +61,8 @@
                             </v-col>
                         </v-row>
 
-                        <!-- Batch Selection Section -->
-                        <div v-if="item.product_id && item.batches && item.batches.length > 0" class="mt-3">
+                        <!-- Batch Selection Section (only for purchased products, not own production) -->
+                        <div v-if="item.product_id && item.product_type !== 'own_production' && item.batches && item.batches.length > 0" class="mt-3">
                             <v-divider class="mb-3"></v-divider>
                             <div class="d-flex flex-wrap align-center mb-2 ga-1">
                                 <v-icon size="small" class="mr-1">mdi-package-variant</v-icon>
@@ -120,7 +120,7 @@
                             </div>
                         </div>
 
-                        <div v-else-if="item.product_id && (!item.batches || item.batches.length === 0)" class="mt-3">
+                        <div v-else-if="item.product_id && item.product_type !== 'own_production' && (!item.batches || item.batches.length === 0)" class="mt-3">
                             <v-alert type="warning" density="compact" variant="tonal">
                                 No available batches for this product
                             </v-alert>
@@ -199,17 +199,20 @@ const onProductSelect = async (index) => {
         item.quantity = 0
         item.batches = []
         item.batch_selections = []
+        item.product_type = product.type
 
-        // Fetch available batches for this product
-        try {
-            const response = await api.get(`/products/${product.id}/batches`)
-            item.batches = (response.data.batches || []).map(b => ({
-                ...b,
-                sell_quantity: 0
-            }))
-        } catch (error) {
-            console.error('Error fetching batches:', error)
-            item.batches = []
+        // Only fetch batches for purchased products, not own production
+        if (product.type !== 'own_production') {
+            try {
+                const response = await api.get(`/products/${product.id}/batches`)
+                item.batches = (response.data.batches || []).map(b => ({
+                    ...b,
+                    sell_quantity: 0
+                }))
+            } catch (error) {
+                console.error('Error fetching batches:', error)
+                item.batches = []
+            }
         }
     }
 }
@@ -302,24 +305,28 @@ const fetchData = async () => {
         // Load items with batches
         form.items = []
         for (const item of sale.items) {
+            const product = products.value.find(p => p.id === item.product_id)
             const newItem = {
                 id: item.id,
                 product_id: item.product_id,
                 quantity: parseFloat(item.quantity) || 0,
                 unit_price: parseFloat(item.unit_price) || 0,
+                product_type: product?.type || '',
                 batches: [],
                 batch_selections: []
             }
 
-            // Fetch available batches for each product
-            try {
-                const batchRes = await api.get(`/products/${item.product_id}/batches`)
-                newItem.batches = (batchRes.data.batches || []).map(b => ({
-                    ...b,
-                    sell_quantity: 0
-                }))
-            } catch (error) {
-                console.error('Error fetching batches:', error)
+            // Only fetch batches for purchased products, not own production
+            if (product?.type !== 'own_production') {
+                try {
+                    const batchRes = await api.get(`/products/${item.product_id}/batches`)
+                    newItem.batches = (batchRes.data.batches || []).map(b => ({
+                        ...b,
+                        sell_quantity: 0
+                    }))
+                } catch (error) {
+                    console.error('Error fetching batches:', error)
+                }
             }
 
             form.items.push(newItem)
