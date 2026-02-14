@@ -234,6 +234,10 @@
                     <v-window-item v-if="routeType === 'partner'" value="honorarium">
                         <div class="d-flex flex-wrap justify-space-between align-center mb-4 ga-2">
                             <h2 class="text-h6">Honorarium Payments</h2>
+                            <v-btn color="primary" @click="openHonorariumDialog()" :size="$vuetify.display.xs ? 'small' : 'default'">
+                                <v-icon left>mdi-plus</v-icon>
+                                Add Honorarium
+                            </v-btn>
                         </div>
                         <v-data-table
                             :headers="honorariumHeaders"
@@ -435,6 +439,28 @@
             </v-card>
         </v-dialog>
 
+        <!-- Honorarium Dialog -->
+        <v-dialog v-model="honorariumDialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
+            <v-card>
+                <v-card-title>Add Honorarium Payment</v-card-title>
+                <v-card-text>
+                    <v-form @submit.prevent="saveHonorarium">
+                        <v-select v-model="honorariumForm.member_id" :items="memberOptions" item-title="name" item-value="id" label="Select Partner" required></v-select>
+                        <v-text-field v-model.number="honorariumForm.amount" label="Amount" type="number" prefix="৳" required></v-text-field>
+                        <v-text-field v-model="honorariumForm.for_month" label="For Month (Optional)" type="month" hint="Select month for monthly honorarium"></v-text-field>
+                        <v-text-field v-model.number="honorariumForm.for_year" label="For Year" type="number" :placeholder="new Date().getFullYear().toString()" required></v-text-field>
+                        <v-text-field v-model="honorariumForm.date" label="Date" type="date" required></v-text-field>
+                        <v-text-field v-model="honorariumForm.note" label="Note (Optional)"></v-text-field>
+                    </v-form>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="honorariumDialog = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="saveHonorarium" :loading="savingHonorarium">Save</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <!-- Delete Confirm Dialog -->
         <v-dialog v-model="deleteDialog" max-width="400">
             <v-card>
@@ -515,6 +541,9 @@ const savingShareAmount = ref(false)
 
 const profitWithdrawalDialog = ref(false)
 const savingProfitWithdrawal = ref(false)
+
+const honorariumDialog = ref(false)
+const savingHonorarium = ref(false)
 
 // Member table headers based on type
 const memberHeaders = computed(() => {
@@ -723,6 +752,14 @@ const shareAmountForm = reactive({
 
 const profitWithdrawalForm = reactive({
     member_id: null, amount: 0,
+    for_year: new Date().getFullYear(),
+    date: new Date().toISOString().split('T')[0],
+    note: '',
+})
+
+const honorariumForm = reactive({
+    member_id: null, amount: 0,
+    for_month: '',
     for_year: new Date().getFullYear(),
     date: new Date().toISOString().split('T')[0],
     note: '',
@@ -946,6 +983,46 @@ const saveProfitWithdrawal = async () => {
         console.error('Error:', error)
     }
     savingProfitWithdrawal.value = false
+}
+
+const openHonorariumDialog = () => {
+    Object.assign(honorariumForm, {
+        member_id: null, amount: 0,
+        for_month: '',
+        for_year: new Date().getFullYear(),
+        date: new Date().toISOString().split('T')[0],
+        note: '',
+    })
+    honorariumDialog.value = true
+}
+
+const saveHonorarium = async () => {
+    if (!honorariumForm.member_id) {
+        alert('Please select a partner')
+        return
+    }
+    savingHonorarium.value = true
+    try {
+        // If for_month is specified, add it to the note
+        let note = honorariumForm.note || ''
+        if (honorariumForm.for_month) {
+            const monthName = new Date(honorariumForm.for_month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+            note = note ? `${monthName} - ${note}` : monthName
+        }
+
+        await api.post(`/invest-loan-liabilities/${honorariumForm.member_id}/payment`, {
+            type: 'honorarium_payment',
+            amount: honorariumForm.amount,
+            for_year: honorariumForm.for_year,
+            date: honorariumForm.date,
+            note: note,
+        })
+        honorariumDialog.value = false
+        fetchItems()
+    } catch (error) {
+        console.error('Error:', error)
+    }
+    savingHonorarium.value = false
 }
 
 onMounted(() => {
