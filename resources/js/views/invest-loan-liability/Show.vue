@@ -167,6 +167,10 @@
                     <v-window-item v-if="hasSharePayments" value="share_payments">
                         <div class="d-flex flex-wrap justify-space-between align-center mb-4 ga-2">
                             <h2 class="text-h6">Share Amount</h2>
+                            <v-btn color="primary" @click="openShareAmountDialog()" :size="$vuetify.display.xs ? 'small' : 'default'">
+                                <v-icon left>mdi-plus</v-icon>
+                                Add Share Amount
+                            </v-btn>
                         </div>
                         <v-data-table
                             :headers="sharePaymentHeaders"
@@ -386,6 +390,26 @@
             </v-card>
         </v-dialog>
 
+        <!-- Share Amount Dialog -->
+        <v-dialog v-model="shareAmountDialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
+            <v-card>
+                <v-card-title>Add Share Amount</v-card-title>
+                <v-card-text>
+                    <v-form @submit.prevent="saveShareAmount">
+                        <v-select v-model="shareAmountForm.member_id" :items="memberOptions" item-title="name" item-value="id" label="Select Member" required></v-select>
+                        <v-text-field v-model.number="shareAmountForm.amount" label="Amount" type="number" prefix="৳" required></v-text-field>
+                        <v-text-field v-model="shareAmountForm.date" label="Date" type="date" required></v-text-field>
+                        <v-text-field v-model="shareAmountForm.note" label="Note (Optional)"></v-text-field>
+                    </v-form>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="shareAmountDialog = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="saveShareAmount" :loading="savingShareAmount">Save</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <!-- Delete Confirm Dialog -->
         <v-dialog v-model="deleteDialog" max-width="400">
             <v-card>
@@ -460,6 +484,9 @@ const savingPayment = ref(false)
 const deletePaymentDialog = ref(false)
 const selectedPayment = ref(null)
 const deletingPayment = ref(false)
+
+const shareAmountDialog = ref(false)
+const savingShareAmount = ref(false)
 
 // Member table headers based on type
 const memberHeaders = computed(() => {
@@ -660,9 +687,19 @@ const paymentForm = reactive({
     for_year: null, note: '',
 })
 
+const shareAmountForm = reactive({
+    member_id: null, amount: 0,
+    date: new Date().toISOString().split('T')[0],
+    note: '',
+})
+
 const filteredItems = computed(() => {
     if (!searchQuery.value) return items.value
     return items.value.filter(item => item.name.toLowerCase().includes(searchQuery.value.toLowerCase()))
+})
+
+const memberOptions = computed(() => {
+    return items.value.map(item => ({ id: item.id, name: item.name }))
 })
 
 const totalAmount = computed(() => items.value.reduce((sum, i) => sum + Number(i.amount || 0), 0))
@@ -812,6 +849,36 @@ const deletePayment = async () => {
         console.error('Error:', error)
     }
     deletingPayment.value = false
+}
+
+const openShareAmountDialog = () => {
+    Object.assign(shareAmountForm, {
+        member_id: null, amount: 0,
+        date: new Date().toISOString().split('T')[0],
+        note: '',
+    })
+    shareAmountDialog.value = true
+}
+
+const saveShareAmount = async () => {
+    if (!shareAmountForm.member_id) {
+        alert('Please select a member')
+        return
+    }
+    savingShareAmount.value = true
+    try {
+        await api.post(`/invest-loan-liabilities/${shareAmountForm.member_id}/payment`, {
+            type: 'share_payment',
+            amount: shareAmountForm.amount,
+            date: shareAmountForm.date,
+            note: shareAmountForm.note,
+        })
+        shareAmountDialog.value = false
+        fetchItems()
+    } catch (error) {
+        console.error('Error:', error)
+    }
+    savingShareAmount.value = false
 }
 
 onMounted(() => {
