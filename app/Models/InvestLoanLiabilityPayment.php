@@ -13,6 +13,7 @@ class InvestLoanLiabilityPayment extends Model
         'amount',
         'date',
         'for_year',
+        'for_period',
         'note',
         'created_by',
     ];
@@ -21,6 +22,7 @@ class InvestLoanLiabilityPayment extends Model
         'amount' => 'decimal:2',
         'date' => 'date',
         'for_year' => 'integer',
+        'for_period' => 'integer',
     ];
 
     public function investLoanLiability()

@@ -225,6 +225,9 @@
                             <template v-slot:item.for_year="{ item }">
                                 {{ item.for_year || '-' }}
                             </template>
+                            <template v-slot:item.for_period="{ item }">
+                                {{ item.for_period ? item.for_period + ' months' : '-' }}
+                            </template>
                             <template v-slot:item.actions="{ item }">
                                 <v-btn icon size="x-small" @click="editProfitWithdrawal(item)" title="Edit" class="mr-1">
                                     <v-icon>mdi-pencil</v-icon>
@@ -435,7 +438,8 @@
                     <v-form @submit.prevent="saveProfitWithdrawal">
                         <v-select v-model="profitWithdrawalForm.member_id" :items="memberOptions" item-title="name" item-value="id" label="Select Member" required></v-select>
                         <v-text-field v-model.number="profitWithdrawalForm.amount" label="Amount" type="number" prefix="৳" required></v-text-field>
-                        <v-text-field v-model.number="profitWithdrawalForm.for_year" label="For Year" type="number" :placeholder="new Date().getFullYear().toString()" required></v-text-field>
+                        <v-select v-if="routeType === 'investor'" v-model="profitWithdrawalForm.for_period" :items="investPeriodOptions" label="For Period" required></v-select>
+                        <v-text-field v-else v-model.number="profitWithdrawalForm.for_year" label="For Year" type="number" :placeholder="new Date().getFullYear().toString()" required></v-text-field>
                         <v-text-field v-model="profitWithdrawalForm.date" label="Date" type="date" required></v-text-field>
                         <v-text-field v-model="profitWithdrawalForm.note" label="Note (Optional)"></v-text-field>
                     </v-form>
@@ -631,14 +635,26 @@ const sharePaymentHeaders = [
     { title: '', key: 'actions', width: '50px', sortable: false },
 ]
 
-const profitWithdrawalHeaders = [
-    { title: 'Name', key: 'member_name' },
-    { title: 'Amount', key: 'amount', width: '130px' },
-    { title: 'For Year', key: 'for_year', width: '100px' },
-    { title: 'Date', key: 'date', width: '120px' },
-    { title: 'Note', key: 'note' },
-    { title: '', key: 'actions', width: '50px', sortable: false },
-]
+const profitWithdrawalHeaders = computed(() => {
+    const headers = [
+        { title: 'Name', key: 'member_name' },
+        { title: 'Amount', key: 'amount', width: '130px' },
+    ]
+
+    if (routeType === 'investor') {
+        headers.push({ title: 'Period', key: 'for_period', width: '100px' })
+    } else {
+        headers.push({ title: 'For Year', key: 'for_year', width: '100px' })
+    }
+
+    headers.push(
+        { title: 'Date', key: 'date', width: '120px' },
+        { title: 'Note', key: 'note' },
+        { title: '', key: 'actions', width: '50px', sortable: false }
+    )
+
+    return headers
+})
 
 const honorariumHeaders = [
     { title: 'Name', key: 'member_name' },
@@ -774,6 +790,7 @@ const shareAmountForm = reactive({
 const profitWithdrawalForm = reactive({
     member_id: null, amount: 0,
     for_year: new Date().getFullYear(),
+    for_period: null,
     date: new Date().toISOString().split('T')[0],
     note: '',
 })
@@ -1002,6 +1019,7 @@ const openProfitWithdrawalDialog = () => {
     Object.assign(profitWithdrawalForm, {
         member_id: null, amount: 0,
         for_year: new Date().getFullYear(),
+        for_period: null,
         date: new Date().toISOString().split('T')[0],
         note: '',
     })
@@ -1015,6 +1033,7 @@ const editProfitWithdrawal = (payment) => {
         member_id: payment.member_id,
         amount: payment.amount,
         for_year: payment.for_year || new Date().getFullYear(),
+        for_period: payment.for_period || null,
         date: payment.date ? payment.date.split('T')[0] : new Date().toISOString().split('T')[0],
         note: payment.note || '',
     })
@@ -1031,9 +1050,15 @@ const saveProfitWithdrawal = async () => {
         const payload = {
             type: 'profit_withdrawal',
             amount: profitWithdrawalForm.amount,
-            for_year: profitWithdrawalForm.for_year,
             date: profitWithdrawalForm.date,
             note: profitWithdrawalForm.note,
+        }
+
+        // For investors, use for_period instead of for_year
+        if (routeType === 'investor') {
+            payload.for_period = profitWithdrawalForm.for_period
+        } else {
+            payload.for_year = profitWithdrawalForm.for_year
         }
 
         if (editingProfitWithdrawal.value && selectedProfitWithdrawal.value) {

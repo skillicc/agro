@@ -171,6 +171,7 @@ class InvestLoanLiabilityController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'date' => 'required|date',
             'for_year' => 'nullable|integer|min:2000|max:2100',
+            'for_period' => 'nullable|integer|in:4,6,12,18,24',
             'note' => 'nullable|string|max:255',
         ]);
 
@@ -179,6 +180,7 @@ class InvestLoanLiabilityController extends Controller
             'amount' => $request->amount,
             'date' => $request->date,
             'for_year' => $request->for_year,
+            'for_period' => $request->for_period,
             'note' => $request->note,
             'created_by' => auth()->id(),
         ]);
@@ -224,6 +226,7 @@ class InvestLoanLiabilityController extends Controller
             'amount' => 'nullable|numeric|min:0.01',
             'date' => 'nullable|date',
             'for_year' => 'nullable|integer|min:2000|max:2100',
+            'for_period' => 'nullable|integer|in:4,6,12,18,24',
             'note' => 'nullable|string|max:255',
         ]);
 
@@ -231,7 +234,7 @@ class InvestLoanLiabilityController extends Controller
         $oldType = $payment->type;
         $oldAmount = $payment->amount;
 
-        $payment->update($request->only(['type', 'amount', 'date', 'for_year', 'note']));
+        $payment->update($request->only(['type', 'amount', 'date', 'for_year', 'for_period', 'note']));
 
         // Update total amount if it's a share payment (type changed or amount changed)
         if ($payment->type === 'share_payment' || $oldType === 'share_payment') {
