@@ -44,12 +44,15 @@ class InvestLoanLiabilityController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:20',
+            'contact_person' => 'nullable|string|max:255',
             'type' => 'required|in:investor,partner,shareholder,investment_day_term,loan,account_payable,account_receivable',
             'amount' => 'required|numeric|min:0',
             'share_value' => 'nullable|numeric|min:0',
             'honorarium' => 'nullable|numeric|min:0',
             'honorarium_type' => 'nullable|in:monthly,yearly',
             'invest_period' => 'nullable|integer|in:4,6,12,18,24',
+            'profit_rate' => 'nullable|numeric|min:0|max:100',
             'loan_type' => 'nullable|in:with_profit,without_profit',
             'received_amount' => 'nullable|numeric|min:0',
             'total_payable' => 'nullable|numeric|min:0',
@@ -94,12 +97,15 @@ class InvestLoanLiabilityController extends Controller
     {
         $request->validate([
             'name' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|max:20',
+            'contact_person' => 'nullable|string|max:255',
             'type' => 'nullable|in:investor,partner,shareholder,investment_day_term,loan,account_payable,account_receivable',
             'amount' => 'nullable|numeric|min:0',
             'share_value' => 'nullable|numeric|min:0',
             'honorarium' => 'nullable|numeric|min:0',
             'honorarium_type' => 'nullable|in:monthly,yearly',
             'invest_period' => 'nullable|integer|in:4,6,12,18,24',
+            'profit_rate' => 'nullable|numeric|min:0|max:100',
             'loan_type' => 'nullable|in:with_profit,without_profit',
             'received_amount' => 'nullable|numeric|min:0',
             'total_payable' => 'nullable|numeric|min:0',
