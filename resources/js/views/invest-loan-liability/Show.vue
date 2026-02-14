@@ -199,6 +199,10 @@
                     <v-window-item v-if="hasProfitWithdrawals" value="profit_withdrawals">
                         <div class="d-flex flex-wrap justify-space-between align-center mb-4 ga-2">
                             <h2 class="text-h6">Profit Withdrawals</h2>
+                            <v-btn color="primary" @click="openProfitWithdrawalDialog()" :size="$vuetify.display.xs ? 'small' : 'default'">
+                                <v-icon left>mdi-plus</v-icon>
+                                Add Profit Withdrawal
+                            </v-btn>
                         </div>
                         <v-data-table
                             :headers="profitWithdrawalHeaders"
@@ -410,6 +414,27 @@
             </v-card>
         </v-dialog>
 
+        <!-- Profit Withdrawal Dialog -->
+        <v-dialog v-model="profitWithdrawalDialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
+            <v-card>
+                <v-card-title>Add Profit Withdrawal</v-card-title>
+                <v-card-text>
+                    <v-form @submit.prevent="saveProfitWithdrawal">
+                        <v-select v-model="profitWithdrawalForm.member_id" :items="memberOptions" item-title="name" item-value="id" label="Select Member" required></v-select>
+                        <v-text-field v-model.number="profitWithdrawalForm.amount" label="Amount" type="number" prefix="৳" required></v-text-field>
+                        <v-text-field v-model.number="profitWithdrawalForm.for_year" label="For Year" type="number" :placeholder="new Date().getFullYear().toString()" required></v-text-field>
+                        <v-text-field v-model="profitWithdrawalForm.date" label="Date" type="date" required></v-text-field>
+                        <v-text-field v-model="profitWithdrawalForm.note" label="Note (Optional)"></v-text-field>
+                    </v-form>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="profitWithdrawalDialog = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="saveProfitWithdrawal" :loading="savingProfitWithdrawal">Save</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <!-- Delete Confirm Dialog -->
         <v-dialog v-model="deleteDialog" max-width="400">
             <v-card>
@@ -487,6 +512,9 @@ const deletingPayment = ref(false)
 
 const shareAmountDialog = ref(false)
 const savingShareAmount = ref(false)
+
+const profitWithdrawalDialog = ref(false)
+const savingProfitWithdrawal = ref(false)
 
 // Member table headers based on type
 const memberHeaders = computed(() => {
@@ -693,6 +721,13 @@ const shareAmountForm = reactive({
     note: '',
 })
 
+const profitWithdrawalForm = reactive({
+    member_id: null, amount: 0,
+    for_year: new Date().getFullYear(),
+    date: new Date().toISOString().split('T')[0],
+    note: '',
+})
+
 const filteredItems = computed(() => {
     if (!searchQuery.value) return items.value
     return items.value.filter(item => item.name.toLowerCase().includes(searchQuery.value.toLowerCase()))
@@ -879,6 +914,38 @@ const saveShareAmount = async () => {
         console.error('Error:', error)
     }
     savingShareAmount.value = false
+}
+
+const openProfitWithdrawalDialog = () => {
+    Object.assign(profitWithdrawalForm, {
+        member_id: null, amount: 0,
+        for_year: new Date().getFullYear(),
+        date: new Date().toISOString().split('T')[0],
+        note: '',
+    })
+    profitWithdrawalDialog.value = true
+}
+
+const saveProfitWithdrawal = async () => {
+    if (!profitWithdrawalForm.member_id) {
+        alert('Please select a member')
+        return
+    }
+    savingProfitWithdrawal.value = true
+    try {
+        await api.post(`/invest-loan-liabilities/${profitWithdrawalForm.member_id}/payment`, {
+            type: 'profit_withdrawal',
+            amount: profitWithdrawalForm.amount,
+            for_year: profitWithdrawalForm.for_year,
+            date: profitWithdrawalForm.date,
+            note: profitWithdrawalForm.note,
+        })
+        profitWithdrawalDialog.value = false
+        fetchItems()
+    } catch (error) {
+        console.error('Error:', error)
+    }
+    savingProfitWithdrawal.value = false
 }
 
 onMounted(() => {
