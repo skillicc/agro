@@ -188,6 +188,9 @@
                                 {{ formatDate(item.date) }}
                             </template>
                             <template v-slot:item.actions="{ item }">
+                                <v-btn icon size="x-small" @click="editShareAmount(item)" title="Edit" class="mr-1">
+                                    <v-icon>mdi-pencil</v-icon>
+                                </v-btn>
                                 <v-btn icon size="x-small" color="error" @click="confirmDeletePayment(item)" title="Delete">
                                     <v-icon>mdi-delete</v-icon>
                                 </v-btn>
@@ -223,6 +226,9 @@
                                 {{ item.for_year || '-' }}
                             </template>
                             <template v-slot:item.actions="{ item }">
+                                <v-btn icon size="x-small" @click="editProfitWithdrawal(item)" title="Edit" class="mr-1">
+                                    <v-icon>mdi-pencil</v-icon>
+                                </v-btn>
                                 <v-btn icon size="x-small" color="error" @click="confirmDeletePayment(item)" title="Delete">
                                     <v-icon>mdi-delete</v-icon>
                                 </v-btn>
@@ -255,6 +261,9 @@
                                 {{ formatDate(item.date) }}
                             </template>
                             <template v-slot:item.actions="{ item }">
+                                <v-btn icon size="x-small" @click="editHonorarium(item)" title="Edit" class="mr-1">
+                                    <v-icon>mdi-pencil</v-icon>
+                                </v-btn>
                                 <v-btn icon size="x-small" color="error" @click="confirmDeletePayment(item)" title="Delete">
                                     <v-icon>mdi-delete</v-icon>
                                 </v-btn>
@@ -401,7 +410,7 @@
         <!-- Share Amount Dialog -->
         <v-dialog v-model="shareAmountDialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
             <v-card>
-                <v-card-title>Add Share Amount</v-card-title>
+                <v-card-title>{{ editingShareAmount ? 'Edit' : 'Add' }} Share Amount</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="saveShareAmount">
                         <v-select v-model="shareAmountForm.member_id" :items="memberOptions" item-title="name" item-value="id" label="Select Member" required></v-select>
@@ -421,7 +430,7 @@
         <!-- Profit Withdrawal Dialog -->
         <v-dialog v-model="profitWithdrawalDialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
             <v-card>
-                <v-card-title>Add Profit Withdrawal</v-card-title>
+                <v-card-title>{{ editingProfitWithdrawal ? 'Edit' : 'Add' }} Profit Withdrawal</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="saveProfitWithdrawal">
                         <v-select v-model="profitWithdrawalForm.member_id" :items="memberOptions" item-title="name" item-value="id" label="Select Member" required></v-select>
@@ -442,7 +451,7 @@
         <!-- Honorarium Dialog -->
         <v-dialog v-model="honorariumDialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
             <v-card>
-                <v-card-title>Add Honorarium Payment</v-card-title>
+                <v-card-title>{{ editingHonorarium ? 'Edit' : 'Add' }} Honorarium Payment</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="saveHonorarium">
                         <v-select v-model="honorariumForm.member_id" :items="memberOptions" item-title="name" item-value="id" label="Select Partner" required></v-select>
@@ -539,12 +548,18 @@ const deletingPayment = ref(false)
 
 const shareAmountDialog = ref(false)
 const savingShareAmount = ref(false)
+const editingShareAmount = ref(false)
+const selectedSharePayment = ref(null)
 
 const profitWithdrawalDialog = ref(false)
 const savingProfitWithdrawal = ref(false)
+const editingProfitWithdrawal = ref(false)
+const selectedProfitWithdrawal = ref(null)
 
 const honorariumDialog = ref(false)
 const savingHonorarium = ref(false)
+const editingHonorarium = ref(false)
+const selectedHonorariumPayment = ref(null)
 
 // Member table headers based on type
 const memberHeaders = computed(() => {
@@ -932,10 +947,24 @@ const deletePayment = async () => {
 }
 
 const openShareAmountDialog = () => {
+    editingShareAmount.value = false
+    selectedSharePayment.value = null
     Object.assign(shareAmountForm, {
         member_id: null, amount: 0,
         date: new Date().toISOString().split('T')[0],
         note: '',
+    })
+    shareAmountDialog.value = true
+}
+
+const editShareAmount = (payment) => {
+    editingShareAmount.value = true
+    selectedSharePayment.value = payment
+    Object.assign(shareAmountForm, {
+        member_id: payment.member_id,
+        amount: payment.amount,
+        date: payment.date ? payment.date.split('T')[0] : new Date().toISOString().split('T')[0],
+        note: payment.note || '',
     })
     shareAmountDialog.value = true
 }
@@ -947,12 +976,18 @@ const saveShareAmount = async () => {
     }
     savingShareAmount.value = true
     try {
-        await api.post(`/invest-loan-liabilities/${shareAmountForm.member_id}/payment`, {
+        const payload = {
             type: 'share_payment',
             amount: shareAmountForm.amount,
             date: shareAmountForm.date,
             note: shareAmountForm.note,
-        })
+        }
+
+        if (editingShareAmount.value && selectedSharePayment.value) {
+            await api.put(`/invest-loan-liability-payments/${selectedSharePayment.value.id}`, payload)
+        } else {
+            await api.post(`/invest-loan-liabilities/${shareAmountForm.member_id}/payment`, payload)
+        }
         shareAmountDialog.value = false
         fetchItems()
     } catch (error) {
@@ -962,11 +997,26 @@ const saveShareAmount = async () => {
 }
 
 const openProfitWithdrawalDialog = () => {
+    editingProfitWithdrawal.value = false
+    selectedProfitWithdrawal.value = null
     Object.assign(profitWithdrawalForm, {
         member_id: null, amount: 0,
         for_year: new Date().getFullYear(),
         date: new Date().toISOString().split('T')[0],
         note: '',
+    })
+    profitWithdrawalDialog.value = true
+}
+
+const editProfitWithdrawal = (payment) => {
+    editingProfitWithdrawal.value = true
+    selectedProfitWithdrawal.value = payment
+    Object.assign(profitWithdrawalForm, {
+        member_id: payment.member_id,
+        amount: payment.amount,
+        for_year: payment.for_year || new Date().getFullYear(),
+        date: payment.date ? payment.date.split('T')[0] : new Date().toISOString().split('T')[0],
+        note: payment.note || '',
     })
     profitWithdrawalDialog.value = true
 }
@@ -978,13 +1028,19 @@ const saveProfitWithdrawal = async () => {
     }
     savingProfitWithdrawal.value = true
     try {
-        await api.post(`/invest-loan-liabilities/${profitWithdrawalForm.member_id}/payment`, {
+        const payload = {
             type: 'profit_withdrawal',
             amount: profitWithdrawalForm.amount,
             for_year: profitWithdrawalForm.for_year,
             date: profitWithdrawalForm.date,
             note: profitWithdrawalForm.note,
-        })
+        }
+
+        if (editingProfitWithdrawal.value && selectedProfitWithdrawal.value) {
+            await api.put(`/invest-loan-liability-payments/${selectedProfitWithdrawal.value.id}`, payload)
+        } else {
+            await api.post(`/invest-loan-liabilities/${profitWithdrawalForm.member_id}/payment`, payload)
+        }
         profitWithdrawalDialog.value = false
         fetchItems()
     } catch (error) {
@@ -994,6 +1050,8 @@ const saveProfitWithdrawal = async () => {
 }
 
 const openHonorariumDialog = () => {
+    editingHonorarium.value = false
+    selectedHonorariumPayment.value = null
     Object.assign(honorariumForm, {
         member_id: null,
         payment_type: 'monthly',
@@ -1002,6 +1060,37 @@ const openHonorariumDialog = () => {
         for_year: new Date().getFullYear(),
         date: new Date().toISOString().split('T')[0],
         note: '',
+    })
+    honorariumDialog.value = true
+}
+
+const editHonorarium = (payment) => {
+    editingHonorarium.value = true
+    selectedHonorariumPayment.value = payment
+
+    // Extract month from note if it exists (format: "January 2024 - note" or just "January 2024")
+    let extractedMonth = ''
+    let cleanNote = payment.note || ''
+    if (cleanNote) {
+        const monthMatch = cleanNote.match(/^(\w+ \d{4})/)
+        if (monthMatch) {
+            const monthStr = monthMatch[1]
+            const date = new Date(monthStr)
+            if (!isNaN(date.getTime())) {
+                extractedMonth = date.toISOString().slice(0, 7) // Format: YYYY-MM
+                cleanNote = cleanNote.replace(/^(\w+ \d{4})\s*-?\s*/, '')
+            }
+        }
+    }
+
+    Object.assign(honorariumForm, {
+        member_id: payment.member_id,
+        payment_type: extractedMonth ? 'monthly' : 'yearly',
+        amount: payment.amount,
+        for_month: extractedMonth,
+        for_year: payment.for_year || new Date().getFullYear(),
+        date: payment.date ? payment.date.split('T')[0] : new Date().toISOString().split('T')[0],
+        note: cleanNote,
     })
     honorariumDialog.value = true
 }
@@ -1020,13 +1109,19 @@ const saveHonorarium = async () => {
             note = note ? `${monthName} - ${note}` : monthName
         }
 
-        await api.post(`/invest-loan-liabilities/${honorariumForm.member_id}/payment`, {
+        const payload = {
             type: 'honorarium_payment',
             amount: honorariumForm.amount,
             for_year: honorariumForm.for_year,
             date: honorariumForm.date,
             note: note,
-        })
+        }
+
+        if (editingHonorarium.value && selectedHonorariumPayment.value) {
+            await api.put(`/invest-loan-liability-payments/${selectedHonorariumPayment.value.id}`, payload)
+        } else {
+            await api.post(`/invest-loan-liabilities/${honorariumForm.member_id}/payment`, payload)
+        }
         honorariumDialog.value = false
         fetchItems()
     } catch (error) {

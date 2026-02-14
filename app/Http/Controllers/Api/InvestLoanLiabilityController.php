@@ -209,6 +209,43 @@ class InvestLoanLiabilityController extends Controller
     }
 
     /**
+     * Update a payment
+     */
+    public function updatePayment(Request $request, InvestLoanLiabilityPayment $payment)
+    {
+        $request->validate([
+            'type' => 'nullable|in:share_payment,profit_withdrawal,honorarium_payment,loan_payment',
+            'amount' => 'nullable|numeric|min:0.01',
+            'date' => 'nullable|date',
+            'for_year' => 'nullable|integer|min:2000|max:2100',
+            'note' => 'nullable|string|max:255',
+        ]);
+
+        $investLoanLiability = $payment->investLoanLiability;
+        $oldType = $payment->type;
+        $oldAmount = $payment->amount;
+
+        $payment->update($request->only(['type', 'amount', 'date', 'for_year', 'note']));
+
+        // Update total amount if it's a share payment (type changed or amount changed)
+        if ($payment->type === 'share_payment' || $oldType === 'share_payment') {
+            $investLoanLiability->amount = $investLoanLiability->sharePayments()->sum('amount');
+            $investLoanLiability->save();
+        }
+
+        // Update amount for loans (type changed or amount changed)
+        if ($payment->type === 'loan_payment' || $oldType === 'loan_payment') {
+            $investLoanLiability->amount = $investLoanLiability->loanPayments()->sum('amount');
+            $investLoanLiability->save();
+        }
+
+        return response()->json([
+            'message' => 'Payment updated successfully',
+            'payment' => $payment,
+        ]);
+    }
+
+    /**
      * Delete a payment
      */
     public function deletePayment(InvestLoanLiabilityPayment $payment)

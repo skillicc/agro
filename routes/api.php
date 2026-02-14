@@ -207,6 +207,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/invest-loan-liabilities-summary', [InvestLoanLiabilityController::class, 'summary']);
     Route::post('/invest-loan-liabilities/{investLoanLiability}/payment', [InvestLoanLiabilityController::class, 'addPayment']);
     Route::get('/invest-loan-liabilities/{investLoanLiability}/payments', [InvestLoanLiabilityController::class, 'getPayments']);
+    Route::put('/invest-loan-liability-payments/{payment}', [InvestLoanLiabilityController::class, 'updatePayment']);
     Route::delete('/invest-loan-liability-payments/{payment}', [InvestLoanLiabilityController::class, 'deletePayment']);
 
     // Stock Batches (batch-wise stock tracking)
