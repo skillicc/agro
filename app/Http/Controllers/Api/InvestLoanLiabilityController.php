@@ -31,8 +31,7 @@ class InvestLoanLiabilityController extends Controller
         // Calculate loan rest amount for each loan item
         $items->transform(function ($item) {
             if ($item->type === 'loan') {
-                $totalPayable = $item->loan_type === 'with_profit' ? $item->total_payable : $item->received_amount;
-                $item->loan_rest_amount = $totalPayable - ($item->total_loan_paid ?? 0);
+                $item->loan_rest_amount = $item->total_payable - ($item->total_loan_paid ?? 0);
             }
             return $item;
         });
@@ -71,9 +70,11 @@ class InvestLoanLiabilityController extends Controller
             $data['due_date'] = date('Y-m-d', strtotime($request->appoint_date . ' + ' . $request->invest_period . ' months'));
         }
 
-        // For loan without profit, total_payable equals received_amount
+        // For loan without profit, set received_amount to 0 if not provided
         if ($request->type === 'loan' && $request->loan_type === 'without_profit') {
-            $data['total_payable'] = $request->received_amount;
+            if (!isset($data['received_amount'])) {
+                $data['received_amount'] = 0;
+            }
         }
 
         $item = InvestLoanLiability::create($data);
@@ -128,11 +129,12 @@ class InvestLoanLiabilityController extends Controller
             $data['due_date'] = date('Y-m-d', strtotime($appointDate . ' + ' . $investPeriod . ' months'));
         }
 
-        // For loan without profit, total_payable equals received_amount
+        // For loan without profit, set received_amount to 0 if not provided
         $loanType = $request->loan_type ?? $investLoanLiability->loan_type;
-        $receivedAmount = $request->received_amount ?? $investLoanLiability->received_amount;
         if ($type === 'loan' && $loanType === 'without_profit') {
-            $data['total_payable'] = $receivedAmount;
+            if (!isset($data['received_amount'])) {
+                $data['received_amount'] = 0;
+            }
         }
 
         $investLoanLiability->update($data);

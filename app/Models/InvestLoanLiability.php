@@ -85,8 +85,7 @@ class InvestLoanLiability extends Model
 
     public function getLoanRestAmountAttribute()
     {
-        $totalPayable = $this->loan_type === 'with_profit' ? $this->total_payable : $this->received_amount;
-        return $totalPayable - $this->loanPayments()->sum('amount');
+        return $this->total_payable - $this->loanPayments()->sum('amount');
     }
 
     /**
