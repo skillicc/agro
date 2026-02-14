@@ -446,8 +446,9 @@
                 <v-card-text>
                     <v-form @submit.prevent="saveHonorarium">
                         <v-select v-model="honorariumForm.member_id" :items="memberOptions" item-title="name" item-value="id" label="Select Partner" required></v-select>
+                        <v-select v-model="honorariumForm.payment_type" :items="honorariumPaymentTypes" label="Payment Type" required></v-select>
                         <v-text-field v-model.number="honorariumForm.amount" label="Amount" type="number" prefix="৳" required></v-text-field>
-                        <v-text-field v-model="honorariumForm.for_month" label="For Month (Optional)" type="month" hint="Select month for monthly honorarium"></v-text-field>
+                        <v-text-field v-if="honorariumForm.payment_type === 'monthly'" v-model="honorariumForm.for_month" label="For Month" type="month" required></v-text-field>
                         <v-text-field v-model.number="honorariumForm.for_year" label="For Year" type="number" :placeholder="new Date().getFullYear().toString()" required></v-text-field>
                         <v-text-field v-model="honorariumForm.date" label="Date" type="date" required></v-text-field>
                         <v-text-field v-model="honorariumForm.note" label="Note (Optional)"></v-text-field>
@@ -700,6 +701,11 @@ const honorariumTypes = [
     { title: 'Yearly', value: 'yearly' },
 ]
 
+const honorariumPaymentTypes = [
+    { title: 'Monthly', value: 'monthly' },
+    { title: 'Yearly', value: 'yearly' },
+]
+
 const investPeriodOptions = [
     { title: '4 Months', value: 4 },
     { title: '6 Months', value: 6 },
@@ -758,7 +764,9 @@ const profitWithdrawalForm = reactive({
 })
 
 const honorariumForm = reactive({
-    member_id: null, amount: 0,
+    member_id: null,
+    payment_type: 'monthly',
+    amount: 0,
     for_month: '',
     for_year: new Date().getFullYear(),
     date: new Date().toISOString().split('T')[0],
@@ -987,7 +995,9 @@ const saveProfitWithdrawal = async () => {
 
 const openHonorariumDialog = () => {
     Object.assign(honorariumForm, {
-        member_id: null, amount: 0,
+        member_id: null,
+        payment_type: 'monthly',
+        amount: 0,
         for_month: '',
         for_year: new Date().getFullYear(),
         date: new Date().toISOString().split('T')[0],
