@@ -69,7 +69,7 @@
         <v-card class="mt-4">
             <v-tabs v-model="tab" color="primary">
                 <v-tab value="members">{{ sectionConfig.label }}</v-tab>
-                <v-tab v-if="hasSharePayments" value="share_payments">Share Amount</v-tab>
+                <v-tab v-if="hasSharePayments" value="share_payments">Transaction History</v-tab>
                 <v-tab v-if="hasProfitWithdrawals" value="profit_withdrawals">Profit Withdrawals</v-tab>
                 <v-tab v-if="routeType === 'partner'" value="honorarium">Honorarium</v-tab>
                 <v-tab v-if="routeType === 'loan'" value="loan_payments">Loan Payments</v-tab>
@@ -178,13 +178,13 @@
                         </v-data-table>
                     </v-window-item>
 
-                    <!-- Share Amount Tab -->
+                    <!-- Transaction History Tab -->
                     <v-window-item v-if="hasSharePayments" value="share_payments">
                         <div class="d-flex flex-wrap justify-space-between align-center mb-4 ga-2">
-                            <h2 class="text-h6">Share Amount</h2>
+                            <h2 class="text-h6">Transaction History</h2>
                             <v-btn color="primary" @click="openShareAmountDialog()" :size="$vuetify.display.xs ? 'small' : 'default'">
                                 <v-icon left>mdi-plus</v-icon>
-                                Add Share Amount
+                                Add Transaction
                             </v-btn>
                         </div>
                         <v-data-table
@@ -446,10 +446,10 @@
             </v-card>
         </v-dialog>
 
-        <!-- Share Amount Dialog -->
+        <!-- Transaction History Dialog -->
         <v-dialog v-model="shareAmountDialog" :max-width="$vuetify.display.xs ? '100%' : '500'" :fullscreen="$vuetify.display.xs">
             <v-card>
-                <v-card-title>{{ editingShareAmount ? 'Edit' : 'Add' }} Share Amount</v-card-title>
+                <v-card-title>{{ editingShareAmount ? 'Edit' : 'Add' }} Transaction</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="saveShareAmount">
                         <v-select v-model="shareAmountForm.member_id" :items="memberOptions" item-title="name" item-value="id" label="Select Member" required></v-select>
