@@ -124,6 +124,12 @@
                             <template v-slot:item.total_share_value="{ item }">
                                 ৳{{ formatNumber(item.total_share_value || 0) }}
                             </template>
+                            <template v-slot:item.current_rate="{ item }">
+                                ৳{{ formatNumber((item.face_value_per_share || 0) + (item.premium_value_per_share || 0)) }}
+                            </template>
+                            <template v-slot:item.current_value="{ item }">
+                                ৳{{ formatNumber(item.total_share_value || 0) }}
+                            </template>
                             <template v-slot:item.honorarium="{ item }">
                                 <span v-if="item.honorarium">৳{{ formatNumber(item.honorarium) }} / {{ item.honorarium_type }}</span>
                                 <span v-else>-</span>
@@ -589,26 +595,25 @@ const memberHeaders = computed(() => {
     if (type === 'partner') {
         return [
             { title: 'Name', key: 'name' },
-            { title: 'Appoint Date', key: 'appoint_date', width: '120px' },
-            { title: 'No. of Shares', key: 'number_of_shares', width: '110px' },
-            { title: 'Total Share Value', key: 'total_share_value', width: '140px' },
-            { title: 'Honorarium', key: 'honorarium', width: '120px' },
-            { title: 'Share Paid', key: 'total_share_paid', width: '120px' },
-            { title: 'Profit', key: 'total_profit_withdrawn', width: '120px' },
+            { title: 'App Date', key: 'appoint_date', width: '110px' },
+            { title: 'Number of Share', key: 'number_of_shares', width: '130px' },
+            { title: 'Appoint Value', key: 'total_share_value', width: '130px' },
+            { title: 'Current Rate', key: 'current_rate', width: '120px' },
+            { title: 'Current Value', key: 'current_value', width: '130px' },
             { title: 'Status', key: 'status', width: '90px' },
-            { title: 'Actions', key: 'actions', width: '120px', sortable: false },
+            { title: 'Action', key: 'actions', width: '100px', sortable: false },
         ]
     }
     if (type === 'shareholder') {
         return [
             { title: 'Name', key: 'name' },
-            { title: 'Appoint Date', key: 'appoint_date', width: '120px' },
-            { title: 'No. of Shares', key: 'number_of_shares', width: '110px' },
-            { title: 'Total Share Value', key: 'total_share_value', width: '140px' },
-            { title: 'Share Paid', key: 'total_share_paid', width: '120px' },
-            { title: 'Profit', key: 'total_profit_withdrawn', width: '120px' },
+            { title: 'App Date', key: 'appoint_date', width: '110px' },
+            { title: 'Number of Share', key: 'number_of_shares', width: '130px' },
+            { title: 'Appoint Value', key: 'total_share_value', width: '130px' },
+            { title: 'Current Rate', key: 'current_rate', width: '120px' },
+            { title: 'Current Value', key: 'current_value', width: '130px' },
             { title: 'Status', key: 'status', width: '90px' },
-            { title: 'Actions', key: 'actions', width: '120px', sortable: false },
+            { title: 'Action', key: 'actions', width: '100px', sortable: false },
         ]
     }
     if (type === 'investor') {
