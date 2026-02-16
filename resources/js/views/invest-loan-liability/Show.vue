@@ -330,7 +330,7 @@
                             <v-col cols="12" lg="6" v-if="routeType === 'others'">
                                 <v-select v-model="form.type" :items="otherTypeOptions" label="Type" required></v-select>
                             </v-col>
-                            <v-col cols="12" lg="6">
+                            <v-col cols="12" lg="6" v-if="!['shareholder', 'partner'].includes(form.type)">
                                 <v-text-field v-model="form.phone" label="Phone" type="tel"></v-text-field>
                             </v-col>
                             <v-col cols="12" lg="6" v-if="form.type === 'loan' && form.loan_type === 'with_profit'">
@@ -339,10 +339,10 @@
                             <v-col cols="12" v-if="['shareholder', 'partner'].includes(form.type)">
                                 <v-textarea v-model="form.address" label="Address" rows="2"></v-textarea>
                             </v-col>
-                            <v-col cols="12" lg="6" v-if="form.type !== 'loan'">
-                                <v-text-field v-model.number="form.amount" :label="form.type === 'investor' ? 'Invest Amount' : 'Amount'" type="number" prefix="৳" required></v-text-field>
+                            <v-col cols="12" lg="6" v-if="form.type === 'investor'">
+                                <v-text-field v-model.number="form.amount" label="Invest Amount" type="number" prefix="৳" required></v-text-field>
                             </v-col>
-                            <v-col cols="12" lg="6" v-if="form.type !== 'loan'">
+                            <v-col cols="12" lg="6" v-if="form.type === 'investor'">
                                 <v-text-field v-model="form.date" label="Date" type="date" required></v-text-field>
                             </v-col>
                             <v-col cols="12" lg="6" v-if="form.type === 'loan'">
