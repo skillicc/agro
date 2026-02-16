@@ -327,93 +327,132 @@
                 <v-card-text>
                     <v-form @submit.prevent="save">
                         <v-row>
-                            <v-col cols="12" lg="6">
-                                <v-text-field v-model="form.name" :label="form.type === 'loan' && form.loan_type === 'with_profit' ? 'Organization Name' : 'Name'" required></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
-                                <v-text-field v-model="form.partner_id" label="Partner ID" hint="Unique identifier for Partner/Shareholder"></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="routeType === 'others'">
-                                <v-select v-model="form.type" :items="otherTypeOptions" label="Type" required></v-select>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="!['shareholder', 'partner'].includes(form.type)">
-                                <v-text-field v-model="form.phone" label="Phone" type="tel"></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="form.type === 'loan' && form.loan_type === 'with_profit'">
-                                <v-text-field v-model="form.contact_person" label="Contact Person"></v-text-field>
-                            </v-col>
-                            <v-col cols="12" v-if="['shareholder', 'partner'].includes(form.type)">
-                                <v-textarea v-model="form.address" label="Address" rows="2"></v-textarea>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="form.type === 'investor'">
-                                <v-text-field v-model.number="form.amount" label="Invest Amount" type="number" prefix="৳" required></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="form.type === 'investor'">
-                                <v-text-field v-model="form.date" label="Date" type="date" required></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="form.type === 'loan'">
-                                <v-select v-model="form.loan_type" :items="loanTypeOptions" label="Loan Type" required></v-select>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="form.type === 'loan'">
-                                <v-text-field v-model.number="form.total_payable" :label="form.loan_type === 'with_profit' ? 'Loan Amount (Total Payable)' : 'Loan Amount'" type="number" prefix="৳" required></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="form.type === 'loan' && form.loan_type === 'with_profit'">
-                                <v-text-field v-model.number="form.received_amount" label="Received Amount" type="number" prefix="৳"></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="form.type === 'loan' && form.loan_type === 'with_profit'">
-                                <v-text-field v-model="form.receive_date" label="Receive Date" type="date"></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="form.type === 'loan'">
-                                <v-text-field v-model="form.date" label="Loan Date" type="date" required></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="form.type === 'investor'">
-                                <v-select v-model="form.invest_period" :items="investPeriodOptions" label="Invest Period" clearable></v-select>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="form.type === 'investor'">
-                                <v-text-field v-model.number="form.profit_rate" label="Expected Profit Rate" type="number" suffix="%"></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
-                                <v-text-field v-model.number="form.number_of_shares" label="Number of Shares" type="number"></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
-                                <v-text-field v-model.number="form.face_value_per_share" label="Face Value per Share" type="number" prefix="৳"></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
-                                <v-text-field v-model.number="form.premium_value_per_share" label="Premium Value per Share" type="number" prefix="৳"></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
-                                <v-text-field :model-value="totalShareValue" label="Total Value of Share (Appoint Value)" type="number" prefix="৳" readonly hint="Calculated: Number × (Face Value + Premium)"></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
-                                <v-text-field v-model.number="form.current_rate_per_share" label="Current Rate per Share" type="number" prefix="৳"></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
-                                <v-text-field :model-value="currentValue" label="Current Value" type="number" prefix="৳" readonly hint="Calculated: Number of Shares × Current Rate"></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="form.type === 'partner'">
-                                <v-text-field v-model.number="form.honorarium" label="Honorarium" type="number" prefix="৳"></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="form.type === 'partner' && form.honorarium > 0">
-                                <v-select v-model="form.honorarium_type" :items="honorariumTypes" label="Honorarium Type"></v-select>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="form.type !== 'loan'">
-                                <v-text-field v-model="form.appoint_date" :label="form.type === 'investor' ? 'Start Date' : 'Appoint Date'" type="date"></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
-                                <v-text-field v-model="form.withdraw_date" label="Withdraw Date" type="date"></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="form.type === 'investor'">
-                                <v-text-field v-model="form.due_date" label="Due Date (Auto-calculated)" type="date" readonly hint="Auto-calculated from Start Date + Invest Period"></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6" v-if="form.type === 'loan'">
-                                <v-text-field v-model="form.due_date" label="Due Date" type="date"></v-text-field>
-                            </v-col>
-                            <v-col cols="12" lg="6">
-                                <v-select v-model="form.status" :items="statusOptions" label="Status"></v-select>
-                            </v-col>
-                            <v-col cols="12">
-                                <v-textarea v-model="form.description" label="Description (Optional)" rows="2"></v-textarea>
-                            </v-col>
+                            <!-- Partner/Shareholder Fields -->
+                            <template v-if="['shareholder', 'partner'].includes(form.type)">
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model="form.name" label="Name" required></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model="form.partner_id" label="Partner ID" hint="Unique identifier for Partner/Shareholder"></v-text-field>
+                                </v-col>
+                                <v-col cols="12">
+                                    <v-textarea v-model="form.address" label="Address" rows="2"></v-textarea>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model.number="form.number_of_shares" label="Number of Shares" type="number"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model.number="form.face_value_per_share" label="Face Value per Share" type="number" prefix="৳"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model.number="form.premium_value_per_share" label="Premium Value per Share" type="number" prefix="৳"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field :model-value="totalShareValue" label="Total Value of Share" type="number" prefix="৳" readonly hint="Calculated: Number × (Face Value + Premium)"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model="form.appoint_date" label="Appoint Date" type="date"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model="form.withdraw_date" label="Withdraw Date" type="date"></v-text-field>
+                                </v-col>
+                            </template>
+
+                            <!-- Investor Fields -->
+                            <template v-if="form.type === 'investor'">
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model="form.name" label="Name" required></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model="form.phone" label="Phone" type="tel"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model.number="form.amount" label="Invest Amount" type="number" prefix="৳" required></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model="form.date" label="Date" type="date" required></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-select v-model="form.invest_period" :items="investPeriodOptions" label="Invest Period" clearable></v-select>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model.number="form.profit_rate" label="Expected Profit Rate" type="number" suffix="%"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model="form.appoint_date" label="Start Date" type="date"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model="form.due_date" label="Due Date (Auto-calculated)" type="date" readonly hint="Auto-calculated from Start Date + Invest Period"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-select v-model="form.status" :items="statusOptions" label="Status"></v-select>
+                                </v-col>
+                                <v-col cols="12">
+                                    <v-textarea v-model="form.description" label="Description (Optional)" rows="2"></v-textarea>
+                                </v-col>
+                            </template>
+
+                            <!-- Loan Fields -->
+                            <template v-if="form.type === 'loan'">
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model="form.name" :label="form.loan_type === 'with_profit' ? 'Organization Name' : 'Name'" required></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model="form.phone" label="Phone" type="tel"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6" v-if="form.loan_type === 'with_profit'">
+                                    <v-text-field v-model="form.contact_person" label="Contact Person"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-select v-model="form.loan_type" :items="loanTypeOptions" label="Loan Type" required></v-select>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model.number="form.total_payable" :label="form.loan_type === 'with_profit' ? 'Loan Amount (Total Payable)' : 'Loan Amount'" type="number" prefix="৳" required></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6" v-if="form.loan_type === 'with_profit'">
+                                    <v-text-field v-model.number="form.received_amount" label="Received Amount" type="number" prefix="৳"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6" v-if="form.loan_type === 'with_profit'">
+                                    <v-text-field v-model="form.receive_date" label="Receive Date" type="date"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model="form.date" label="Loan Date" type="date" required></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model="form.due_date" label="Due Date" type="date"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-select v-model="form.status" :items="statusOptions" label="Status"></v-select>
+                                </v-col>
+                                <v-col cols="12">
+                                    <v-textarea v-model="form.description" label="Description (Optional)" rows="2"></v-textarea>
+                                </v-col>
+                            </template>
+
+                            <!-- Others Type Fields -->
+                            <template v-if="routeType === 'others'">
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model="form.name" label="Name" required></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-select v-model="form.type" :items="otherTypeOptions" label="Type" required></v-select>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model="form.phone" label="Phone" type="tel"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model.number="form.amount" label="Amount" type="number" prefix="৳"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-text-field v-model="form.date" label="Date" type="date"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" lg="6">
+                                    <v-select v-model="form.status" :items="statusOptions" label="Status"></v-select>
+                                </v-col>
+                                <v-col cols="12">
+                                    <v-textarea v-model="form.description" label="Description (Optional)" rows="2"></v-textarea>
+                                </v-col>
+                            </template>
                         </v-row>
                     </v-form>
                 </v-card-text>
