@@ -45,6 +45,7 @@ class InvestLoanLiabilityController extends Controller
     public function store(Request $request)
     {
         $request->validate([
+            'partner_id' => 'nullable|string|max:50|unique:invest_loan_liabilities,partner_id',
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'contact_person' => 'nullable|string|max:255',
@@ -105,6 +106,7 @@ class InvestLoanLiabilityController extends Controller
     public function update(Request $request, InvestLoanLiability $investLoanLiability)
     {
         $request->validate([
+            'partner_id' => 'nullable|string|max:50|unique:invest_loan_liabilities,partner_id,' . $investLoanLiability->id,
             'name' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'contact_person' => 'nullable|string|max:255',

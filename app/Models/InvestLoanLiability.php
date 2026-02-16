@@ -8,6 +8,7 @@ use DateTimeInterface;
 class InvestLoanLiability extends Model
 {
     protected $fillable = [
+        'partner_id',
         'name',
         'phone',
         'contact_person',

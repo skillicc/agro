@@ -112,6 +112,9 @@
                             <template v-slot:item.date="{ item }">
                                 {{ formatDate(item.date) }}
                             </template>
+                            <template v-slot:item.partner_id="{ item }">
+                                {{ item.partner_id || '-' }}
+                            </template>
                             <template v-slot:item.amount="{ item }">
                                 ৳{{ formatNumber(item.amount) }}
                             </template>
@@ -326,6 +329,9 @@
                         <v-row>
                             <v-col cols="12" lg="6">
                                 <v-text-field v-model="form.name" :label="form.type === 'loan' && form.loan_type === 'with_profit' ? 'Organization Name' : 'Name'" required></v-text-field>
+                            </v-col>
+                            <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
+                                <v-text-field v-model="form.partner_id" label="Partner ID" hint="Unique identifier for Partner/Shareholder"></v-text-field>
                             </v-col>
                             <v-col cols="12" lg="6" v-if="routeType === 'others'">
                                 <v-select v-model="form.type" :items="otherTypeOptions" label="Type" required></v-select>
@@ -594,6 +600,7 @@ const memberHeaders = computed(() => {
     const type = routeType.value
     if (type === 'partner') {
         return [
+            { title: 'Partner ID', key: 'partner_id', width: '110px' },
             { title: 'Name', key: 'name' },
             { title: 'App Date', key: 'appoint_date', width: '110px' },
             { title: 'Number of Share', key: 'number_of_shares', width: '130px' },
@@ -606,6 +613,7 @@ const memberHeaders = computed(() => {
     }
     if (type === 'shareholder') {
         return [
+            { title: 'Partner ID', key: 'partner_id', width: '110px' },
             { title: 'Name', key: 'name' },
             { title: 'App Date', key: 'appoint_date', width: '110px' },
             { title: 'Number of Share', key: 'number_of_shares', width: '130px' },
@@ -790,7 +798,7 @@ const getPaymentTypes = computed(() => {
 })
 
 const form = reactive({
-    name: '', phone: '', contact_person: '', address: '', type: 'investor',
+    partner_id: '', name: '', phone: '', contact_person: '', address: '', type: 'investor',
     amount: 0, share_value: 0, number_of_shares: 0, face_value_per_share: 0, premium_value_per_share: 0,
     honorarium: 0, honorarium_type: 'monthly',
     invest_period: null, profit_rate: 0, loan_type: 'with_profit',
