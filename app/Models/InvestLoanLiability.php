@@ -11,9 +11,13 @@ class InvestLoanLiability extends Model
         'name',
         'phone',
         'contact_person',
+        'address',
         'type',
         'amount',
         'share_value',
+        'number_of_shares',
+        'face_value_per_share',
+        'premium_value_per_share',
         'honorarium',
         'honorarium_type',
         'invest_period',
@@ -25,6 +29,7 @@ class InvestLoanLiability extends Model
         'date',
         'appoint_date',
         'due_date',
+        'withdraw_date',
         'description',
         'status',
     ];
@@ -32,6 +37,9 @@ class InvestLoanLiability extends Model
     protected $casts = [
         'amount' => 'decimal:2',
         'share_value' => 'decimal:2',
+        'number_of_shares' => 'integer',
+        'face_value_per_share' => 'decimal:2',
+        'premium_value_per_share' => 'decimal:2',
         'honorarium' => 'decimal:2',
         'invest_period' => 'integer',
         'profit_rate' => 'decimal:2',
@@ -40,6 +48,7 @@ class InvestLoanLiability extends Model
         'date' => 'date',
         'appoint_date' => 'date',
         'due_date' => 'date',
+        'withdraw_date' => 'date',
         'receive_date' => 'date',
     ];
 
@@ -86,6 +95,14 @@ class InvestLoanLiability extends Model
     public function getLoanRestAmountAttribute()
     {
         return $this->total_payable - $this->loanPayments()->sum('amount');
+    }
+
+    public function getTotalShareValueAttribute()
+    {
+        if ($this->number_of_shares && $this->face_value_per_share !== null) {
+            return $this->number_of_shares * ($this->face_value_per_share + ($this->premium_value_per_share ?? 0));
+        }
+        return 0;
     }
 
     /**

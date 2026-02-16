@@ -28,10 +28,13 @@ class InvestLoanLiabilityController extends Controller
 
         $items = $query->orderBy('date', 'desc')->get();
 
-        // Calculate loan rest amount for each loan item
+        // Calculate loan rest amount and total share value for each item
         $items->transform(function ($item) {
             if ($item->type === 'loan') {
                 $item->loan_rest_amount = $item->total_payable - ($item->total_loan_paid ?? 0);
+            }
+            if (in_array($item->type, ['partner', 'shareholder'])) {
+                $item->total_share_value = $item->total_share_value;
             }
             return $item;
         });
@@ -45,9 +48,13 @@ class InvestLoanLiabilityController extends Controller
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'contact_person' => 'nullable|string|max:255',
+            'address' => 'nullable|string',
             'type' => 'required|in:investor,partner,shareholder,investment_day_term,loan,account_payable,account_receivable',
             'amount' => 'required|numeric|min:0',
             'share_value' => 'nullable|numeric|min:0',
+            'number_of_shares' => 'nullable|integer|min:0',
+            'face_value_per_share' => 'nullable|numeric|min:0',
+            'premium_value_per_share' => 'nullable|numeric|min:0',
             'honorarium' => 'nullable|numeric|min:0',
             'honorarium_type' => 'nullable|in:monthly,yearly',
             'invest_period' => 'nullable|integer|in:4,6,12,18,24',
@@ -59,6 +66,7 @@ class InvestLoanLiabilityController extends Controller
             'date' => 'required|date',
             'appoint_date' => 'nullable|date',
             'due_date' => 'nullable|date',
+            'withdraw_date' => 'nullable|date',
             'description' => 'nullable|string',
             'status' => 'nullable|in:active,completed,cancelled',
         ]);
@@ -100,9 +108,13 @@ class InvestLoanLiabilityController extends Controller
             'name' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'contact_person' => 'nullable|string|max:255',
+            'address' => 'nullable|string',
             'type' => 'nullable|in:investor,partner,shareholder,investment_day_term,loan,account_payable,account_receivable',
             'amount' => 'nullable|numeric|min:0',
             'share_value' => 'nullable|numeric|min:0',
+            'number_of_shares' => 'nullable|integer|min:0',
+            'face_value_per_share' => 'nullable|numeric|min:0',
+            'premium_value_per_share' => 'nullable|numeric|min:0',
             'honorarium' => 'nullable|numeric|min:0',
             'honorarium_type' => 'nullable|in:monthly,yearly',
             'invest_period' => 'nullable|integer|in:4,6,12,18,24',
@@ -114,6 +126,7 @@ class InvestLoanLiabilityController extends Controller
             'date' => 'nullable|date',
             'appoint_date' => 'nullable|date',
             'due_date' => 'nullable|date',
+            'withdraw_date' => 'nullable|date',
             'description' => 'nullable|string',
             'status' => 'nullable|in:active,completed,cancelled',
         ]);

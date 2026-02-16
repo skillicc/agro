@@ -118,6 +118,12 @@
                             <template v-slot:item.share_value="{ item }">
                                 ৳{{ formatNumber(item.share_value) }}
                             </template>
+                            <template v-slot:item.number_of_shares="{ item }">
+                                {{ item.number_of_shares || '-' }}
+                            </template>
+                            <template v-slot:item.total_share_value="{ item }">
+                                ৳{{ formatNumber(item.total_share_value || 0) }}
+                            </template>
                             <template v-slot:item.honorarium="{ item }">
                                 <span v-if="item.honorarium">৳{{ formatNumber(item.honorarium) }} / {{ item.honorarium_type }}</span>
                                 <span v-else>-</span>
@@ -324,6 +330,9 @@
                             <v-col cols="12" lg="6" v-if="form.type === 'loan' && form.loan_type === 'with_profit'">
                                 <v-text-field v-model="form.contact_person" label="Contact Person"></v-text-field>
                             </v-col>
+                            <v-col cols="12" v-if="['shareholder', 'partner'].includes(form.type)">
+                                <v-textarea v-model="form.address" label="Address" rows="2"></v-textarea>
+                            </v-col>
                             <v-col cols="12" lg="6" v-if="form.type !== 'loan'">
                                 <v-text-field v-model.number="form.amount" :label="form.type === 'investor' ? 'Invest Amount' : 'Amount'" type="number" prefix="৳" required></v-text-field>
                             </v-col>
@@ -352,7 +361,16 @@
                                 <v-text-field v-model.number="form.profit_rate" label="Expected Profit Rate" type="number" suffix="%"></v-text-field>
                             </v-col>
                             <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
-                                <v-text-field v-model.number="form.share_value" label="Share Value" type="number" prefix="৳"></v-text-field>
+                                <v-text-field v-model.number="form.number_of_shares" label="Number of Shares" type="number"></v-text-field>
+                            </v-col>
+                            <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
+                                <v-text-field v-model.number="form.face_value_per_share" label="Face Value per Share" type="number" prefix="৳"></v-text-field>
+                            </v-col>
+                            <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
+                                <v-text-field v-model.number="form.premium_value_per_share" label="Premium Value per Share" type="number" prefix="৳"></v-text-field>
+                            </v-col>
+                            <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
+                                <v-text-field :model-value="totalShareValue" label="Total Value of Share" type="number" prefix="৳" readonly hint="Calculated: Number × (Face Value + Premium)"></v-text-field>
                             </v-col>
                             <v-col cols="12" lg="6" v-if="form.type === 'partner'">
                                 <v-text-field v-model.number="form.honorarium" label="Honorarium" type="number" prefix="৳"></v-text-field>
@@ -363,8 +381,8 @@
                             <v-col cols="12" lg="6" v-if="form.type !== 'loan'">
                                 <v-text-field v-model="form.appoint_date" :label="form.type === 'investor' ? 'Start Date' : 'Appoint Date'" type="date"></v-text-field>
                             </v-col>
-                            <v-col cols="12" lg="6" v-if="!['investor', 'loan'].includes(form.type)">
-                                <v-text-field v-model="form.due_date" label="Due Date (Optional)" type="date"></v-text-field>
+                            <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
+                                <v-text-field v-model="form.withdraw_date" label="Withdraw Date" type="date"></v-text-field>
                             </v-col>
                             <v-col cols="12" lg="6" v-if="form.type === 'investor'">
                                 <v-text-field v-model="form.due_date" label="Due Date (Auto-calculated)" type="date" readonly hint="Auto-calculated from Start Date + Invest Period"></v-text-field>
@@ -572,9 +590,9 @@ const memberHeaders = computed(() => {
         return [
             { title: 'Name', key: 'name' },
             { title: 'Appoint Date', key: 'appoint_date', width: '120px' },
-            { title: 'Amount', key: 'amount', width: '120px' },
-            { title: 'Share Value', key: 'share_value', width: '120px' },
-            { title: 'Honorarium', key: 'honorarium', width: '150px' },
+            { title: 'No. of Shares', key: 'number_of_shares', width: '110px' },
+            { title: 'Total Share Value', key: 'total_share_value', width: '140px' },
+            { title: 'Honorarium', key: 'honorarium', width: '120px' },
             { title: 'Share Paid', key: 'total_share_paid', width: '120px' },
             { title: 'Profit', key: 'total_profit_withdrawn', width: '120px' },
             { title: 'Status', key: 'status', width: '90px' },
@@ -585,8 +603,8 @@ const memberHeaders = computed(() => {
         return [
             { title: 'Name', key: 'name' },
             { title: 'Appoint Date', key: 'appoint_date', width: '120px' },
-            { title: 'Amount', key: 'amount', width: '120px' },
-            { title: 'Share Value', key: 'share_value', width: '120px' },
+            { title: 'No. of Shares', key: 'number_of_shares', width: '110px' },
+            { title: 'Total Share Value', key: 'total_share_value', width: '140px' },
             { title: 'Share Paid', key: 'total_share_paid', width: '120px' },
             { title: 'Profit', key: 'total_profit_withdrawn', width: '120px' },
             { title: 'Status', key: 'status', width: '90px' },
@@ -767,12 +785,13 @@ const getPaymentTypes = computed(() => {
 })
 
 const form = reactive({
-    name: '', phone: '', contact_person: '', type: 'investor',
-    amount: 0, share_value: 0, honorarium: 0, honorarium_type: 'monthly',
+    name: '', phone: '', contact_person: '', address: '', type: 'investor',
+    amount: 0, share_value: 0, number_of_shares: 0, face_value_per_share: 0, premium_value_per_share: 0,
+    honorarium: 0, honorarium_type: 'monthly',
     invest_period: null, profit_rate: 0, loan_type: 'with_profit',
     received_amount: 0, total_payable: 0, receive_date: '',
     date: new Date().toISOString().split('T')[0],
-    appoint_date: '', due_date: '', description: '', status: 'active',
+    appoint_date: '', due_date: '', withdraw_date: '', description: '', status: 'active',
 })
 
 const paymentForm = reactive({
@@ -803,6 +822,13 @@ const honorariumForm = reactive({
     for_year: new Date().getFullYear(),
     date: new Date().toISOString().split('T')[0],
     note: '',
+})
+
+const totalShareValue = computed(() => {
+    const numShares = form.number_of_shares || 0
+    const faceValue = form.face_value_per_share || 0
+    const premiumValue = form.premium_value_per_share || 0
+    return numShares * (faceValue + premiumValue)
 })
 
 const filteredItems = computed(() => {
