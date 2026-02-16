@@ -28,13 +28,14 @@ class InvestLoanLiabilityController extends Controller
 
         $items = $query->orderBy('date', 'desc')->get();
 
-        // Calculate loan rest amount and total share value for each item
+        // Calculate loan rest amount, total share value, and current value for each item
         $items->transform(function ($item) {
             if ($item->type === 'loan') {
                 $item->loan_rest_amount = $item->total_payable - ($item->total_loan_paid ?? 0);
             }
             if (in_array($item->type, ['partner', 'shareholder'])) {
                 $item->total_share_value = $item->total_share_value;
+                $item->current_value = $item->current_value;
             }
             return $item;
         });
@@ -56,6 +57,7 @@ class InvestLoanLiabilityController extends Controller
             'number_of_shares' => 'nullable|integer|min:0',
             'face_value_per_share' => 'nullable|numeric|min:0',
             'premium_value_per_share' => 'nullable|numeric|min:0',
+            'current_rate_per_share' => 'nullable|numeric|min:0',
             'honorarium' => 'nullable|numeric|min:0',
             'honorarium_type' => 'nullable|in:monthly,yearly',
             'invest_period' => 'nullable|integer|in:4,6,12,18,24',
@@ -117,6 +119,7 @@ class InvestLoanLiabilityController extends Controller
             'number_of_shares' => 'nullable|integer|min:0',
             'face_value_per_share' => 'nullable|numeric|min:0',
             'premium_value_per_share' => 'nullable|numeric|min:0',
+            'current_rate_per_share' => 'nullable|numeric|min:0',
             'honorarium' => 'nullable|numeric|min:0',
             'honorarium_type' => 'nullable|in:monthly,yearly',
             'invest_period' => 'nullable|integer|in:4,6,12,18,24',

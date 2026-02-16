@@ -128,10 +128,10 @@
                                 ৳{{ formatNumber(item.total_share_value || 0) }}
                             </template>
                             <template v-slot:item.current_rate="{ item }">
-                                ৳{{ formatNumber((item.face_value_per_share || 0) + (item.premium_value_per_share || 0)) }}
+                                ৳{{ formatNumber(item.current_rate_per_share || 0) }}
                             </template>
                             <template v-slot:item.current_value="{ item }">
-                                ৳{{ formatNumber(item.total_share_value || 0) }}
+                                ৳{{ formatNumber(item.current_value || 0) }}
                             </template>
                             <template v-slot:item.honorarium="{ item }">
                                 <span v-if="item.honorarium">৳{{ formatNumber(item.honorarium) }} / {{ item.honorarium_type }}</span>
@@ -382,7 +382,13 @@
                                 <v-text-field v-model.number="form.premium_value_per_share" label="Premium Value per Share" type="number" prefix="৳"></v-text-field>
                             </v-col>
                             <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
-                                <v-text-field :model-value="totalShareValue" label="Total Value of Share" type="number" prefix="৳" readonly hint="Calculated: Number × (Face Value + Premium)"></v-text-field>
+                                <v-text-field :model-value="totalShareValue" label="Total Value of Share (Appoint Value)" type="number" prefix="৳" readonly hint="Calculated: Number × (Face Value + Premium)"></v-text-field>
+                            </v-col>
+                            <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
+                                <v-text-field v-model.number="form.current_rate_per_share" label="Current Rate per Share" type="number" prefix="৳"></v-text-field>
+                            </v-col>
+                            <v-col cols="12" lg="6" v-if="['shareholder', 'partner'].includes(form.type)">
+                                <v-text-field :model-value="currentValue" label="Current Value" type="number" prefix="৳" readonly hint="Calculated: Number of Shares × Current Rate"></v-text-field>
                             </v-col>
                             <v-col cols="12" lg="6" v-if="form.type === 'partner'">
                                 <v-text-field v-model.number="form.honorarium" label="Honorarium" type="number" prefix="৳"></v-text-field>
@@ -800,6 +806,7 @@ const getPaymentTypes = computed(() => {
 const form = reactive({
     partner_id: '', name: '', phone: '', contact_person: '', address: '', type: 'investor',
     amount: 0, share_value: 0, number_of_shares: 0, face_value_per_share: 0, premium_value_per_share: 0,
+    current_rate_per_share: 0,
     honorarium: 0, honorarium_type: 'monthly',
     invest_period: null, profit_rate: 0, loan_type: 'with_profit',
     received_amount: 0, total_payable: 0, receive_date: '',
@@ -842,6 +849,12 @@ const totalShareValue = computed(() => {
     const faceValue = form.face_value_per_share || 0
     const premiumValue = form.premium_value_per_share || 0
     return numShares * (faceValue + premiumValue)
+})
+
+const currentValue = computed(() => {
+    const numShares = form.number_of_shares || 0
+    const currentRate = form.current_rate_per_share || 0
+    return numShares * currentRate
 })
 
 const filteredItems = computed(() => {
@@ -896,8 +909,14 @@ const openDialog = (item = null) => {
     selectedItem.value = item
     if (item) {
         Object.assign(form, {
+            partner_id: item.partner_id || '',
             name: item.name, phone: item.phone || '', contact_person: item.contact_person || '',
+            address: item.address || '',
             type: item.type, amount: item.amount, share_value: item.share_value || 0,
+            number_of_shares: item.number_of_shares || 0,
+            face_value_per_share: item.face_value_per_share || 0,
+            premium_value_per_share: item.premium_value_per_share || 0,
+            current_rate_per_share: item.current_rate_per_share || 0,
             honorarium: item.honorarium || 0, honorarium_type: item.honorarium_type || 'monthly',
             invest_period: item.invest_period || null, profit_rate: item.profit_rate || 0,
             loan_type: item.loan_type || 'with_profit', received_amount: item.received_amount || 0,
@@ -906,16 +925,19 @@ const openDialog = (item = null) => {
             date: item.date ? item.date.split('T')[0] : '',
             appoint_date: item.appoint_date ? item.appoint_date.split('T')[0] : '',
             due_date: item.due_date ? item.due_date.split('T')[0] : '',
+            withdraw_date: item.withdraw_date ? item.withdraw_date.split('T')[0] : '',
             description: item.description || '', status: item.status,
         })
     } else {
         Object.assign(form, {
-            name: '', phone: '', contact_person: '', type: getDefaultType(),
-            amount: 0, share_value: 0, honorarium: 0, honorarium_type: 'monthly',
+            partner_id: '', name: '', phone: '', contact_person: '', address: '', type: getDefaultType(),
+            amount: 0, share_value: 0,
+            number_of_shares: 0, face_value_per_share: 0, premium_value_per_share: 0, current_rate_per_share: 0,
+            honorarium: 0, honorarium_type: 'monthly',
             invest_period: null, profit_rate: 0, loan_type: 'with_profit',
             received_amount: 0, total_payable: 0, receive_date: '',
             date: new Date().toISOString().split('T')[0],
-            appoint_date: '', due_date: '', description: '', status: 'active',
+            appoint_date: '', due_date: '', withdraw_date: '', description: '', status: 'active',
         })
     }
     dialog.value = true

@@ -19,6 +19,7 @@ class InvestLoanLiability extends Model
         'number_of_shares',
         'face_value_per_share',
         'premium_value_per_share',
+        'current_rate_per_share',
         'honorarium',
         'honorarium_type',
         'invest_period',
@@ -41,6 +42,7 @@ class InvestLoanLiability extends Model
         'number_of_shares' => 'integer',
         'face_value_per_share' => 'decimal:2',
         'premium_value_per_share' => 'decimal:2',
+        'current_rate_per_share' => 'decimal:2',
         'honorarium' => 'decimal:2',
         'invest_period' => 'integer',
         'profit_rate' => 'decimal:2',
@@ -102,6 +104,14 @@ class InvestLoanLiability extends Model
     {
         if ($this->number_of_shares && $this->face_value_per_share !== null) {
             return $this->number_of_shares * ($this->face_value_per_share + ($this->premium_value_per_share ?? 0));
+        }
+        return 0;
+    }
+
+    public function getCurrentValueAttribute()
+    {
+        if ($this->number_of_shares && $this->current_rate_per_share !== null) {
+            return $this->number_of_shares * $this->current_rate_per_share;
         }
         return 0;
     }
