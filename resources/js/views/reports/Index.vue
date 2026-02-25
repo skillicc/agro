@@ -7,6 +7,7 @@
             <v-tab value="custom">Custom</v-tab>
             <v-tab value="profit-loss">P&L</v-tab>
             <v-tab value="warehouses">Warehouses</v-tab>
+            <v-tab value="product-sales">Product Sales</v-tab>
         </v-tabs>
 
         <v-card>
@@ -422,6 +423,92 @@
                             </v-card>
                         </div>
                     </v-window-item>
+
+                    <!-- Product Sales Report -->
+                    <v-window-item value="product-sales">
+                        <v-row class="mb-4" align="center">
+                            <v-col cols="12" sm="6" lg="3">
+                                <v-text-field v-model="productSalesFilters.start_date" label="Start Date" type="date" clearable hide-details></v-text-field>
+                            </v-col>
+                            <v-col cols="12" sm="6" lg="3">
+                                <v-text-field v-model="productSalesFilters.end_date" label="End Date" type="date" clearable hide-details></v-text-field>
+                            </v-col>
+                            <v-col cols="12" sm="6" lg="3">
+                                <v-select v-model="productSalesFilters.project_id" :items="projects" item-title="name" item-value="id" label="Project" clearable hide-details></v-select>
+                            </v-col>
+                            <v-col cols="12" sm="6" lg="3">
+                                <v-btn color="primary" @click="fetchProductSales" :loading="loading" block>
+                                    Show Report
+                                </v-btn>
+                            </v-col>
+                        </v-row>
+
+                        <div v-if="productSalesReport">
+                            <!-- Summary Cards -->
+                            <v-row class="mb-4">
+                                <v-col cols="6" sm="4">
+                                    <v-card color="primary" variant="tonal">
+                                        <v-card-text class="text-center">
+                                            <div class="text-h6">{{ productSalesReport.products.length }}</div>
+                                            <div class="text-caption">Products Sold</div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                                <v-col cols="6" sm="4">
+                                    <v-card color="success" variant="tonal">
+                                        <v-card-text class="text-center">
+                                            <div class="text-h6">৳{{ formatNumber(productSalesReport.total_amount) }}</div>
+                                            <div class="text-caption">Total Sales Amount</div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                            </v-row>
+
+                            <!-- Search within results -->
+                            <v-text-field
+                                v-model="productSearch"
+                                label="Search Product..."
+                                prepend-inner-icon="mdi-magnify"
+                                clearable
+                                hide-details
+                                density="compact"
+                                class="mb-3"
+                                style="max-width: 300px;"
+                            ></v-text-field>
+
+                            <div style="overflow-x: auto;">
+                            <v-data-table
+                                :headers="productSalesHeaders"
+                                :items="filteredProductSales"
+                                :loading="loading"
+                                density="comfortable"
+                                :items-per-page="25"
+                                class="elevation-0"
+                            >
+                                <template v-slot:item.sl="{ index }">{{ index + 1 }}</template>
+                                <template v-slot:item.type="{ item }">
+                                    <v-chip size="x-small" :color="item.type === 'own_production' ? 'success' : 'info'">
+                                        {{ item.type === 'own_production' ? 'নিজস্ব' : 'ক্রয়' }}
+                                    </v-chip>
+                                </template>
+                                <template v-slot:item.total_quantity="{ item }">
+                                    <span class="font-weight-bold">{{ formatNumber(item.total_quantity) }} {{ item.unit }}</span>
+                                </template>
+                                <template v-slot:item.total_amount="{ item }">
+                                    <span class="text-success font-weight-bold">৳{{ formatNumber(item.total_amount) }}</span>
+                                </template>
+                                <template v-slot:item.avg_price="{ item }">
+                                    ৳{{ formatNumber(item.total_quantity > 0 ? item.total_amount / item.total_quantity : 0) }}
+                                </template>
+                                <template v-slot:bottom>
+                                    <div class="d-flex justify-end pa-3 font-weight-bold bg-grey-lighten-4">
+                                        <span class="mr-8">Total Amount: ৳{{ formatNumber(productSalesReport.total_amount) }}</span>
+                                    </div>
+                                </template>
+                            </v-data-table>
+                            </div>
+                        </div>
+                    </v-window-item>
                 </v-window>
             </v-card-text>
         </v-card>
@@ -429,7 +516,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import api from '../../services/api'
 
 const tab = ref('monthly')
@@ -440,11 +527,14 @@ const monthlyReport = ref(null)
 const customReport = ref(null)
 const plReport = ref(null)
 const warehouseReport = ref(null)
+const productSalesReport = ref(null)
+const productSearch = ref('')
 
 const monthlyFilters = reactive({ month: new Date().toISOString().slice(0, 7), project_id: null })
 const customFilters = reactive({ start_date: '', end_date: '', project_id: null })
 const plFilters = reactive({ start_date: '', end_date: '', project_id: null })
 const warehouseFilters = reactive({ start_date: '', end_date: '', warehouse_id: null })
+const productSalesFilters = reactive({ start_date: '', end_date: '', project_id: null })
 
 const warehouseHeaders = [
     { title: 'Warehouse', key: 'name' },
@@ -455,6 +545,22 @@ const warehouseHeaders = [
     { title: 'Transfers In', key: 'transfers_in' },
     { title: 'Transfers Out', key: 'transfers_out' },
 ]
+
+const productSalesHeaders = [
+    { title: 'SL', key: 'sl', width: '50px', sortable: false },
+    { title: 'Product', key: 'name' },
+    { title: 'Type', key: 'type' },
+    { title: 'Total Sold', key: 'total_quantity' },
+    { title: 'Total Amount', key: 'total_amount' },
+    { title: 'Avg Price/Unit', key: 'avg_price', sortable: false },
+]
+
+const filteredProductSales = computed(() => {
+    if (!productSalesReport.value) return []
+    const search = productSearch.value?.toLowerCase() || ''
+    if (!search) return productSalesReport.value.products
+    return productSalesReport.value.products.filter(p => p.name.toLowerCase().includes(search))
+})
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
 
@@ -529,6 +635,22 @@ const fetchWarehouseReport = async () => {
         if (warehouseFilters.warehouse_id) params.append('warehouse_id', warehouseFilters.warehouse_id)
         const response = await api.get(`/reports/warehouses?${params}`)
         warehouseReport.value = response.data
+    } catch (error) {
+        console.error('Error:', error)
+    }
+    loading.value = false
+}
+
+const fetchProductSales = async () => {
+    loading.value = true
+    try {
+        const params = new URLSearchParams()
+        if (productSalesFilters.start_date) params.append('start_date', productSalesFilters.start_date)
+        if (productSalesFilters.end_date) params.append('end_date', productSalesFilters.end_date)
+        if (productSalesFilters.project_id) params.append('project_id', productSalesFilters.project_id)
+        const response = await api.get(`/reports/product-sales-summary?${params}`)
+        productSalesReport.value = response.data
+        productSearch.value = ''
     } catch (error) {
         console.error('Error:', error)
     }

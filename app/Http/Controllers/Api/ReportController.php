@@ -560,4 +560,39 @@ class ReportController extends Controller
             'expense_breakdown' => $expenseBreakdown,
         ]);
     }
+
+    public function productSalesSummary(Request $request)
+    {
+        $query = DB::table('sale_items')
+            ->join('products', 'sale_items.product_id', '=', 'products.id')
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->select(
+                'products.id',
+                'products.name',
+                'products.unit',
+                'products.type',
+                DB::raw('SUM(sale_items.quantity) as total_quantity'),
+                DB::raw('SUM(sale_items.total) as total_amount')
+            )
+            ->groupBy('products.id', 'products.name', 'products.unit', 'products.type')
+            ->orderByDesc('total_quantity');
+
+        if ($request->start_date) {
+            $query->where('sales.date', '>=', $request->start_date);
+        }
+        if ($request->end_date) {
+            $query->where('sales.date', '<=', $request->end_date);
+        }
+        if ($request->project_id) {
+            $query->where('sales.project_id', $request->project_id);
+        }
+
+        $products = $query->get();
+
+        return response()->json([
+            'products' => $products,
+            'total_quantity' => $products->sum('total_quantity'),
+            'total_amount' => $products->sum('total_amount'),
+        ]);
+    }
 }
