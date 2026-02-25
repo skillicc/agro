@@ -11,18 +11,43 @@
 
         <v-card>
             <v-card-text class="pa-2 pa-sm-4">
-                <v-select
-                    v-model="selectedCustomer"
-                    :items="customerOptions"
-                    item-title="name"
-                    item-value="id"
-                    label="Filter by Customer"
-                    clearable
-                    hide-details
-                    density="compact"
-                    class="mb-4"
-                    style="max-width: 300px;"
-                ></v-select>
+                <v-row dense class="mb-3" align="center">
+                    <v-col cols="12" sm="6" md="3">
+                        <v-text-field
+                            v-model="filterStartDate"
+                            label="From Date"
+                            type="date"
+                            clearable
+                            hide-details
+                            density="compact"
+                        ></v-text-field>
+                    </v-col>
+                    <v-col cols="12" sm="6" md="3">
+                        <v-text-field
+                            v-model="filterEndDate"
+                            label="To Date"
+                            type="date"
+                            clearable
+                            hide-details
+                            density="compact"
+                        ></v-text-field>
+                    </v-col>
+                    <v-col cols="12" sm="6" md="3">
+                        <v-select
+                            v-model="selectedCustomer"
+                            :items="customerOptions"
+                            item-title="name"
+                            item-value="id"
+                            label="Filter by Customer"
+                            clearable
+                            hide-details
+                            density="compact"
+                        ></v-select>
+                    </v-col>
+                    <v-col cols="auto">
+                        <v-btn size="small" variant="tonal" @click="clearFilters">Clear</v-btn>
+                    </v-col>
+                </v-row>
                 <div class="table-responsive">
                 <v-data-table
                     :headers="responsiveHeaders"
@@ -151,6 +176,8 @@ const display = useDisplay()
 const sales = ref([])
 const loading = ref(false)
 const selectedCustomer = ref(null)
+const filterStartDate = ref('')
+const filterEndDate = ref('')
 const viewDialog = ref(false)
 const selectedSale = ref(null)
 const deleteDialog = ref(false)
@@ -187,9 +214,19 @@ const customerOptions = computed(() => {
 })
 
 const filteredSales = computed(() => {
-    if (!selectedCustomer.value) return sales.value
-    return sales.value.filter(s => s.customer?.id === selectedCustomer.value)
+    return sales.value.filter(s => {
+        if (selectedCustomer.value && s.customer?.id !== selectedCustomer.value) return false
+        if (filterStartDate.value && s.date < filterStartDate.value) return false
+        if (filterEndDate.value && s.date > filterEndDate.value) return false
+        return true
+    })
 })
+
+const clearFilters = () => {
+    selectedCustomer.value = null
+    filterStartDate.value = ''
+    filterEndDate.value = ''
+}
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
 
