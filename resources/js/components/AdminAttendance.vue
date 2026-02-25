@@ -222,12 +222,36 @@ const fetchAttendances = async () => {
         })
         attendances.value = response.data.attendances || []
         summary.value = response.data.summary || { total: 0, present: 0, absent: 0, leave: 0, sick_leave: 0 }
+
+        // Auto mark all present if no one has been marked yet for today
+        const today = new Date().toISOString().split('T')[0]
+        const totalMarked = summary.value.present + summary.value.absent + summary.value.leave + summary.value.sick_leave
+        if (selectedDate.value === today && summary.value.total > 0 && totalMarked === 0) {
+            await autoMarkAllPresent()
+        }
     } catch (error) {
         console.error('Error:', error)
         attendances.value = []
         summary.value = { total: 0, present: 0, absent: 0, leave: 0, sick_leave: 0 }
     }
     loading.value = false
+}
+
+const autoMarkAllPresent = async () => {
+    try {
+        await api.post('/attendances/admin/mark-all-present', {
+            date: selectedDate.value,
+            project_id: props.projectId
+        })
+        // Refetch to get updated data
+        const response = await api.get('/attendances/admin', {
+            params: { date: selectedDate.value, project_id: props.projectId }
+        })
+        attendances.value = response.data.attendances || []
+        summary.value = response.data.summary || { total: 0, present: 0, absent: 0, leave: 0, sick_leave: 0 }
+    } catch (error) {
+        console.error('Auto mark error:', error)
+    }
 }
 
 const toggleAttendance = async (attendance) => {
