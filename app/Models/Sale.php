@@ -35,6 +35,21 @@ class Sale extends Model
         'date' => 'date',
     ];
 
+    protected static function booted()
+    {
+        static::saved(function ($sale) {
+            if ($sale->customer_id) {
+                $sale->customer->updateBalance();
+            }
+        });
+
+        static::deleted(function ($sale) {
+            if ($sale->customer_id) {
+                $sale->customer->updateBalance();
+            }
+        });
+    }
+
     public function project()
     {
         return $this->belongsTo(Project::class);

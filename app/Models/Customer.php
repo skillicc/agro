@@ -46,7 +46,8 @@ class Customer extends Model
     public function updateBalance()
     {
         $this->total_sale = $this->sales()->sum('total');
-        $this->total_paid = $this->payments()->sum('amount');
+        // total_paid = amount paid at time of sale + separate customer payments
+        $this->total_paid = $this->sales()->sum('paid') + $this->payments()->sum('amount');
         // Due should only be positive (what customer owes us)
         // If paid more than sale, due = 0 (they have credit/advance)
         $this->total_due = max(0, $this->total_sale - $this->total_paid);
