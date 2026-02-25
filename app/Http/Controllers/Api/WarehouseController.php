@@ -262,13 +262,22 @@ class WarehouseController extends Controller
             ]
         );
 
-        // Check if source warehouse has enough stock
+        // Check if source has enough stock.
+        // If warehouse_stocks is not populated (purchases were project-based, not warehouse-based),
+        // initialize it from global product stock so the transfer works correctly.
         foreach ($request->items as $item) {
-            $stock = $fromWarehouse->getStockQuantity($item['product_id']);
-            if ($stock < $item['quantity']) {
-                $product = Product::find($item['product_id']);
+            $product = Product::find($item['product_id']);
+            $warehouseStock = $fromWarehouse->getStockQuantity($item['product_id']);
+
+            if ($warehouseStock <= 0 && ($product->stock_quantity ?? 0) > 0) {
+                // Purchases were made at project level — sync warehouse stock from global stock
+                $fromWarehouse->updateStock($item['product_id'], $product->stock_quantity, true);
+                $warehouseStock = $product->stock_quantity;
+            }
+
+            if ($warehouseStock < $item['quantity']) {
                 return response()->json([
-                    'message' => "Insufficient stock for {$product->name} in {$fromProject->name}. Available: {$stock}, Required: {$item['quantity']}"
+                    'message' => "Insufficient stock for {$product->name} in {$fromProject->name}. Available: {$warehouseStock}, Required: {$item['quantity']}"
                 ], 400);
             }
         }
