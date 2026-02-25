@@ -11,10 +11,22 @@
 
         <v-card>
             <v-card-text class="pa-2 pa-sm-4">
+                <v-select
+                    v-model="selectedCustomer"
+                    :items="customerOptions"
+                    item-title="name"
+                    item-value="id"
+                    label="Filter by Customer"
+                    clearable
+                    hide-details
+                    density="compact"
+                    class="mb-4"
+                    style="max-width: 300px;"
+                ></v-select>
                 <div class="table-responsive">
                 <v-data-table
                     :headers="responsiveHeaders"
-                    :items="sales"
+                    :items="filteredSales"
                     :loading="loading"
                     density="comfortable"
                     :items-per-page="10"
@@ -138,6 +150,7 @@ import api from '../../services/api'
 const display = useDisplay()
 const sales = ref([])
 const loading = ref(false)
+const selectedCustomer = ref(null)
 const viewDialog = ref(false)
 const selectedSale = ref(null)
 const deleteDialog = ref(false)
@@ -164,6 +177,18 @@ const responsiveHeaders = computed(() => {
         return headers.filter(h => !['project.name'].includes(h.key))
     }
     return headers
+})
+
+const customerOptions = computed(() => {
+    const seen = new Set()
+    return sales.value
+        .filter(s => s.customer && !seen.has(s.customer.id) && seen.add(s.customer.id))
+        .map(s => ({ id: s.customer.id, name: s.customer.name }))
+})
+
+const filteredSales = computed(() => {
+    if (!selectedCustomer.value) return sales.value
+    return sales.value.filter(s => s.customer?.id === selectedCustomer.value)
 })
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
