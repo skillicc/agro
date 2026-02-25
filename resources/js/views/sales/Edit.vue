@@ -46,13 +46,13 @@
                                 </v-autocomplete>
                             </v-col>
                             <v-col cols="6" sm="4" lg="2">
-                                <v-text-field v-model.number="item.quantity" :label="`Qty (${getProductUnit(item.product_id).toUpperCase()})`" type="number" min="0.01" step="0.01" required :readonly="item.product_type !== 'own_production'"></v-text-field>
+                                <v-text-field v-model.number="item.quantity" :label="`Qty (${getProductUnit(item.product_id).toUpperCase()})`" type="number" min="0.01" step="0.01" required :readonly="item.product_type !== 'own_production'" @update:model-value="onQtyChange(index)"></v-text-field>
                             </v-col>
                             <v-col cols="6" sm="4" lg="2">
-                                <v-text-field v-model.number="item.unit_price" label="Unit Price" type="number" required></v-text-field>
+                                <v-text-field v-model.number="item.unit_price" label="Unit Price" type="number" min="0" step="0.01" @update:model-value="onUnitPriceChange(index)"></v-text-field>
                             </v-col>
                             <v-col cols="6" sm="4" lg="2">
-                                <v-text-field :model-value="formatNumber(item.quantity * item.unit_price)" label="Total" readonly></v-text-field>
+                                <v-text-field v-model.number="item.total" label="Total" type="number" min="0" step="0.01" @update:model-value="onTotalChange(index)"></v-text-field>
                             </v-col>
                             <v-col cols="6" sm="4" lg="2">
                                 <v-btn icon color="error" @click="removeItem(index)" :disabled="form.items.length === 1">
@@ -182,12 +182,12 @@ const form = reactive({
     items: [],
 })
 
-const subtotal = computed(() => form.items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0))
+const subtotal = computed(() => form.items.reduce((sum, item) => sum + (item.total || 0), 0))
 const total = computed(() => subtotal.value - form.discount)
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
 
-const addItem = () => form.items.push({ product_id: null, quantity: 0, unit_price: 0, batches: [], batch_selections: [] })
+const addItem = () => form.items.push({ product_id: null, quantity: 0, unit_price: 0, total: 0, batches: [], batch_selections: [] })
 const removeItem = (index) => form.items.splice(index, 1)
 
 const onProductSelect = async (index) => {
@@ -197,6 +197,7 @@ const onProductSelect = async (index) => {
     if (product) {
         item.unit_price = product.selling_price
         item.quantity = 0
+        item.total = 0
         item.batches = []
         item.batch_selections = []
         item.product_type = product.type
@@ -239,6 +240,28 @@ const updateItemQuantity = (index) => {
     }
 
     item.quantity = totalQty
+    item.total = parseFloat((item.quantity * item.unit_price).toFixed(2))
+}
+
+const onUnitPriceChange = (index) => {
+    const item = form.items[index]
+    item.total = parseFloat((item.quantity * item.unit_price).toFixed(2))
+}
+
+const onTotalChange = (index) => {
+    const item = form.items[index]
+    if (item.quantity > 0) {
+        item.unit_price = parseFloat((item.total / item.quantity).toFixed(4))
+    }
+}
+
+const onQtyChange = (index) => {
+    const item = form.items[index]
+    if (item.unit_price > 0) {
+        item.total = parseFloat((item.quantity * item.unit_price).toFixed(2))
+    } else if (item.total > 0 && item.quantity > 0) {
+        item.unit_price = parseFloat((item.total / item.quantity).toFixed(4))
+    }
 }
 
 const getBatchSelectionTotal = (index) => {
@@ -306,11 +329,14 @@ const fetchData = async () => {
         form.items = []
         for (const item of sale.items) {
             const product = products.value.find(p => p.id === item.product_id)
+            const qty = parseFloat(item.quantity) || 0
+            const price = parseFloat(item.unit_price) || 0
             const newItem = {
                 id: item.id,
                 product_id: item.product_id,
-                quantity: parseFloat(item.quantity) || 0,
-                unit_price: parseFloat(item.unit_price) || 0,
+                quantity: qty,
+                unit_price: price,
+                total: parseFloat((qty * price).toFixed(2)),
                 product_type: product?.type || '',
                 batches: [],
                 batch_selections: []
