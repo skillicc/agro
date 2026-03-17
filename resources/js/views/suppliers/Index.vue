@@ -209,6 +209,7 @@
                                 <th class="text-right">Amount</th>
                                 <th class="text-right">Discount</th>
                                 <th>Note</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -218,6 +219,11 @@
                                 <td class="text-right text-success">৳{{ formatNumber(payment.amount) }}</td>
                                 <td class="text-right text-orange">{{ payment.discount > 0 ? '৳' + formatNumber(payment.discount) : '-' }}</td>
                                 <td>{{ payment.note || '-' }}</td>
+                                <td>
+                                    <v-btn icon size="x-small" color="error" variant="text" @click="deleteSupplierPayment(payment.id)" :loading="deletingPaymentId === payment.id">
+                                        <v-icon size="16">mdi-delete</v-icon>
+                                    </v-btn>
+                                </td>
                             </tr>
                         </tbody>
                     </v-table>
@@ -320,6 +326,7 @@ const selectedSupplier = ref(null)
 const saving = ref(false)
 const deleting = ref(false)
 const savingPayment = ref(false)
+const deletingPaymentId = ref(null)
 const ledger = ref({})
 
 const paymentMethods = ['cash', 'bank', 'bkash', 'nagad', 'check', 'other']
@@ -416,6 +423,21 @@ const viewLedger = async (supplier) => {
     } catch (error) {
         console.error('Error:', error)
     }
+}
+
+const deleteSupplierPayment = async (paymentId) => {
+    if (!confirm('Are you sure you want to delete this payment?')) return
+    deletingPaymentId.value = paymentId
+    try {
+        await api.delete(`/supplier-payments/${paymentId}`)
+        // Refresh ledger data
+        const response = await api.get(`/suppliers/${selectedSupplier.value.id}/ledger`)
+        ledger.value = response.data
+        fetchSuppliers()
+    } catch (error) {
+        console.error('Error:', error)
+    }
+    deletingPaymentId.value = null
 }
 
 const confirmDelete = (supplier) => {
