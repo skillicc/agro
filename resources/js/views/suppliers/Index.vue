@@ -207,6 +207,7 @@
                                 <th>Date</th>
                                 <th>Method</th>
                                 <th class="text-right">Amount</th>
+                                <th class="text-right">Discount</th>
                                 <th>Note</th>
                             </tr>
                         </thead>
@@ -215,6 +216,7 @@
                                 <td>{{ payment.date }}</td>
                                 <td>{{ payment.payment_method }}</td>
                                 <td class="text-right text-success">৳{{ formatNumber(payment.amount) }}</td>
+                                <td class="text-right text-orange">{{ payment.discount > 0 ? '৳' + formatNumber(payment.discount) : '-' }}</td>
                                 <td>{{ payment.note || '-' }}</td>
                             </tr>
                         </tbody>
@@ -260,6 +262,7 @@
                             label="Supplier"
                             required
                             density="comfortable"
+                            @update:model-value="onSupplierSelect"
                         >
                             <template v-slot:item="{ item, props }">
                                 <v-list-item v-bind="props">
@@ -271,7 +274,14 @@
                                 </v-list-item>
                             </template>
                         </v-select>
+                        <v-alert v-if="selectedPaymentSupplierDue > 0" type="error" density="compact" variant="tonal" class="mb-3">
+                            Total Due: <strong>৳{{ formatNumber(selectedPaymentSupplierDue) }}</strong>
+                        </v-alert>
+                        <v-alert v-else-if="paymentForm.supplier_id" type="success" density="compact" variant="tonal" class="mb-3">
+                            No due amount
+                        </v-alert>
                         <v-text-field v-model.number="paymentForm.amount" label="Amount" type="number" prefix="৳" required density="comfortable"></v-text-field>
+                        <v-text-field v-model.number="paymentForm.discount" label="Discount" type="number" prefix="৳" density="comfortable"></v-text-field>
                         <v-text-field v-model="paymentForm.date" label="Date" type="date" required density="comfortable"></v-text-field>
                         <v-select
                             v-model="paymentForm.payment_method"
@@ -314,13 +324,21 @@ const ledger = ref({})
 
 const paymentMethods = ['cash', 'bank', 'bkash', 'nagad', 'check', 'other']
 
+const selectedPaymentSupplierDue = ref(0)
+
 const paymentForm = reactive({
     supplier_id: null,
     amount: 0,
+    discount: 0,
     date: new Date().toISOString().split('T')[0],
     payment_method: 'cash',
     note: '',
 })
+
+const onSupplierSelect = (supplierId) => {
+    const supplier = suppliers.value.find(s => s.id === supplierId)
+    selectedPaymentSupplierDue.value = supplier ? Number(supplier.total_due) : 0
+}
 
 const allHeaders = [
     { title: 'SL', key: 'sl', width: '60px' },
@@ -420,10 +438,13 @@ const deleteSupplier = async () => {
 const openPaymentDialog = (supplier = null) => {
     if (supplier) {
         paymentForm.supplier_id = supplier.id
+        selectedPaymentSupplierDue.value = Number(supplier.total_due)
     } else {
         paymentForm.supplier_id = null
+        selectedPaymentSupplierDue.value = 0
     }
     paymentForm.amount = 0
+    paymentForm.discount = 0
     paymentForm.date = new Date().toISOString().split('T')[0]
     paymentForm.payment_method = 'cash'
     paymentForm.note = ''
@@ -431,7 +452,7 @@ const openPaymentDialog = (supplier = null) => {
 }
 
 const savePayment = async () => {
-    if (!paymentForm.supplier_id || !paymentForm.amount) return
+    if (!paymentForm.supplier_id || (!paymentForm.amount && !paymentForm.discount)) return
 
     savingPayment.value = true
     try {

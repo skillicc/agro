@@ -14,6 +14,7 @@ class SupplierPayment extends Model
         'supplier_id',
         'purchase_id',
         'amount',
+        'discount',
         'date',
         'payment_method',
         'note',
@@ -22,6 +23,7 @@ class SupplierPayment extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'discount' => 'decimal:2',
         'date' => 'date',
     ];
 

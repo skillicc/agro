@@ -87,7 +87,8 @@ class SupplierController extends Controller
     public function addPayment(Request $request, Supplier $supplier)
     {
         $request->validate([
-            'amount' => 'required|numeric|min:0.01',
+            'amount' => 'required|numeric|min:0',
+            'discount' => 'nullable|numeric|min:0',
             'date' => 'required|date',
             'payment_method' => 'nullable|string|max:50',
             'note' => 'nullable|string',
@@ -96,6 +97,7 @@ class SupplierController extends Controller
         $payment = SupplierPayment::create([
             'supplier_id' => $supplier->id,
             'amount' => $request->amount,
+            'discount' => $request->discount ?? 0,
             'date' => $request->date,
             'payment_method' => $request->payment_method ?? 'cash',
             'note' => $request->note,

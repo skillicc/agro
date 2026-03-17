@@ -46,7 +46,9 @@ class Supplier extends Model
     public function updateBalance()
     {
         $this->total_purchase = $this->purchases()->sum('total');
-        $this->total_paid = $this->payments()->sum('amount');
+        $totalPayments = $this->payments()->sum('amount');
+        $totalDiscount = $this->payments()->sum('discount');
+        $this->total_paid = $totalPayments + $totalDiscount;
         $this->total_due = $this->total_purchase - $this->total_paid;
         $this->save();
     }

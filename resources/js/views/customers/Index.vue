@@ -173,6 +173,7 @@
                                 <th>Date</th>
                                 <th>Method</th>
                                 <th class="text-right">Amount</th>
+                                <th class="text-right">Discount</th>
                                 <th>Note</th>
                             </tr>
                         </thead>
@@ -181,6 +182,7 @@
                                 <td>{{ payment.date }}</td>
                                 <td>{{ payment.payment_method }}</td>
                                 <td class="text-right text-success">৳{{ formatNumber(payment.amount) }}</td>
+                                <td class="text-right text-orange">{{ payment.discount > 0 ? '৳' + formatNumber(payment.discount) : '-' }}</td>
                                 <td>{{ payment.note || '-' }}</td>
                             </tr>
                         </tbody>
@@ -220,6 +222,7 @@
                             item-value="id"
                             label="Customer"
                             required
+                            @update:model-value="onCustomerSelect"
                         >
                             <template v-slot:item="{ item, props }">
                                 <v-list-item v-bind="props">
@@ -231,7 +234,14 @@
                                 </v-list-item>
                             </template>
                         </v-select>
+                        <v-alert v-if="selectedPaymentCustomerDue > 0" type="warning" density="compact" variant="tonal" class="mb-3">
+                            Total Due: <strong>৳{{ formatNumber(selectedPaymentCustomerDue) }}</strong>
+                        </v-alert>
+                        <v-alert v-else-if="paymentForm.customer_id" type="success" density="compact" variant="tonal" class="mb-3">
+                            No due amount
+                        </v-alert>
                         <v-text-field v-model.number="paymentForm.amount" label="Amount" type="number" prefix="৳" required></v-text-field>
+                        <v-text-field v-model.number="paymentForm.discount" label="Discount" type="number" prefix="৳"></v-text-field>
                         <v-text-field v-model="paymentForm.date" label="Date" type="date" required></v-text-field>
                         <v-select
                             v-model="paymentForm.payment_method"
@@ -273,13 +283,21 @@ const ledger = ref({})
 
 const paymentMethods = ['cash', 'bank', 'bkash', 'nagad', 'check', 'other']
 
+const selectedPaymentCustomerDue = ref(0)
+
 const paymentForm = reactive({
     customer_id: null,
     amount: 0,
+    discount: 0,
     date: new Date().toISOString().split('T')[0],
     payment_method: 'cash',
     note: '',
 })
+
+const onCustomerSelect = (customerId) => {
+    const customer = customers.value.find(c => c.id === customerId)
+    selectedPaymentCustomerDue.value = customer ? Number(customer.total_due) : 0
+}
 
 const responsiveHeaders = computed(() => {
     if (smAndUp.value) {
@@ -375,10 +393,13 @@ const deleteCustomer = async () => {
 const openPaymentDialog = (customer = null) => {
     if (customer) {
         paymentForm.customer_id = customer.id
+        selectedPaymentCustomerDue.value = Number(customer.total_due)
     } else {
         paymentForm.customer_id = null
+        selectedPaymentCustomerDue.value = 0
     }
     paymentForm.amount = 0
+    paymentForm.discount = 0
     paymentForm.date = new Date().toISOString().split('T')[0]
     paymentForm.payment_method = 'cash'
     paymentForm.note = ''
@@ -386,7 +407,7 @@ const openPaymentDialog = (customer = null) => {
 }
 
 const savePayment = async () => {
-    if (!paymentForm.customer_id || !paymentForm.amount) return
+    if (!paymentForm.customer_id || (!paymentForm.amount && !paymentForm.discount)) return
 
     savingPayment.value = true
     try {

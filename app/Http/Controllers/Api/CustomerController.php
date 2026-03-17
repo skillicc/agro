@@ -78,7 +78,8 @@ class CustomerController extends Controller
     public function addPayment(Request $request, Customer $customer)
     {
         $request->validate([
-            'amount' => 'required|numeric|min:0.01',
+            'amount' => 'required|numeric|min:0',
+            'discount' => 'nullable|numeric|min:0',
             'date' => 'required|date',
             'payment_method' => 'nullable|string|max:50',
             'note' => 'nullable|string',
@@ -87,6 +88,7 @@ class CustomerController extends Controller
         $payment = CustomerPayment::create([
             'customer_id' => $customer->id,
             'amount' => $request->amount,
+            'discount' => $request->discount ?? 0,
             'date' => $request->date,
             'payment_method' => $request->payment_method ?? 'cash',
             'note' => $request->note,

@@ -14,6 +14,7 @@ class CustomerPayment extends Model
         'customer_id',
         'sale_id',
         'amount',
+        'discount',
         'date',
         'payment_method',
         'note',
@@ -22,6 +23,7 @@ class CustomerPayment extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'discount' => 'decimal:2',
         'date' => 'date',
     ];
 
