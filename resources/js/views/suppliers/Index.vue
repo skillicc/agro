@@ -162,7 +162,7 @@
                     </v-btn>
                 </v-card-title>
                 <v-card-text>
-                    <v-row>
+                    <v-row class="mb-4">
                         <v-col cols="12" sm="4" class="text-center">
                             <div class="text-h6 text-sm-h5">৳{{ formatNumber(ledger.total_purchase) }}</div>
                             <div class="text-caption">Total Purchase</div>
@@ -176,6 +176,50 @@
                             <div class="text-caption">Total Due</div>
                         </v-col>
                     </v-row>
+
+                    <v-divider class="mb-4"></v-divider>
+
+                    <!-- Purchase History -->
+                    <h4 class="text-subtitle-2 mb-2">Purchase History</h4>
+                    <v-table density="compact" class="mb-4" v-if="ledger.purchases?.length">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Invoice</th>
+                                <th class="text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="purchase in ledger.purchases" :key="purchase.id">
+                                <td>{{ purchase.date }}</td>
+                                <td>{{ purchase.invoice_no || '-' }}</td>
+                                <td class="text-right">৳{{ formatNumber(purchase.total) }}</td>
+                            </tr>
+                        </tbody>
+                    </v-table>
+                    <div v-else class="text-caption text-grey mb-4">No purchases found</div>
+
+                    <!-- Payment History -->
+                    <h4 class="text-subtitle-2 mb-2">Payment History</h4>
+                    <v-table density="compact" v-if="ledger.payments?.length">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Method</th>
+                                <th class="text-right">Amount</th>
+                                <th>Note</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="payment in ledger.payments" :key="payment.id">
+                                <td>{{ payment.date }}</td>
+                                <td>{{ payment.payment_method }}</td>
+                                <td class="text-right text-success">৳{{ formatNumber(payment.amount) }}</td>
+                                <td>{{ payment.note || '-' }}</td>
+                            </tr>
+                        </tbody>
+                    </v-table>
+                    <div v-else class="text-caption text-grey">No payments found</div>
                 </v-card-text>
                 <v-card-actions class="pa-4">
                     <v-spacer></v-spacer>

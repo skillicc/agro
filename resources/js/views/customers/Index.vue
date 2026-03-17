@@ -121,9 +121,14 @@
         <!-- Ledger Dialog -->
         <v-dialog v-model="ledgerDialog" :max-width="$vuetify.display.xs ? '100%' : '800'" :fullscreen="$vuetify.display.xs">
             <v-card>
-                <v-card-title>{{ selectedCustomer?.name }} - Ledger</v-card-title>
+                <v-card-title class="d-flex justify-space-between align-center">
+                    <span>{{ selectedCustomer?.name }} - Ledger</span>
+                    <v-btn v-if="$vuetify.display.xs" icon variant="text" @click="ledgerDialog = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-card-title>
                 <v-card-text>
-                    <v-row>
+                    <v-row class="mb-4">
                         <v-col cols="4" class="text-center">
                             <div class="text-h6">৳{{ formatNumber(ledger.total_sale) }}</div>
                             <div class="text-caption">Total Sale</div>
@@ -137,6 +142,50 @@
                             <div class="text-caption">Total Due</div>
                         </v-col>
                     </v-row>
+
+                    <v-divider class="mb-4"></v-divider>
+
+                    <!-- Sales History -->
+                    <h4 class="text-subtitle-2 mb-2">Sales History</h4>
+                    <v-table density="compact" class="mb-4" v-if="ledger.sales?.length">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Invoice</th>
+                                <th class="text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="sale in ledger.sales" :key="sale.id">
+                                <td>{{ sale.date }}</td>
+                                <td>{{ sale.invoice_no || '-' }}</td>
+                                <td class="text-right">৳{{ formatNumber(sale.total) }}</td>
+                            </tr>
+                        </tbody>
+                    </v-table>
+                    <div v-else class="text-caption text-grey mb-4">No sales found</div>
+
+                    <!-- Payment History -->
+                    <h4 class="text-subtitle-2 mb-2">Payment History</h4>
+                    <v-table density="compact" v-if="ledger.payments?.length">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Method</th>
+                                <th class="text-right">Amount</th>
+                                <th>Note</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="payment in ledger.payments" :key="payment.id">
+                                <td>{{ payment.date }}</td>
+                                <td>{{ payment.payment_method }}</td>
+                                <td class="text-right text-success">৳{{ formatNumber(payment.amount) }}</td>
+                                <td>{{ payment.note || '-' }}</td>
+                            </tr>
+                        </tbody>
+                    </v-table>
+                    <div v-else class="text-caption text-grey">No payments found</div>
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
