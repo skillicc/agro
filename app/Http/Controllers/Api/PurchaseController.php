@@ -176,6 +176,10 @@ class PurchaseController extends Controller
 
         DB::beginTransaction();
         try {
+            // Delete old items BEFORE changing warehouse_id
+            // so stock is correctly decremented from the OLD warehouse
+            $purchase->items()->delete();
+
             $purchase->update([
                 'project_id' => $request->project_id,
                 'warehouse_id' => $request->warehouse_id,
@@ -186,9 +190,6 @@ class PurchaseController extends Controller
                 'paid' => $request->paid ?? 0,
                 'note' => $request->note,
             ]);
-
-            // Delete old items and create new ones
-            $purchase->items()->delete();
 
             foreach ($request->items as $item) {
                 PurchaseItem::create([
