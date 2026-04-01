@@ -221,4 +221,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // System utilities
     Route::post('/system/clear-cache', [SystemController::class, 'clearCache']);
+    Route::get('/system/database-backup', [SystemController::class, 'downloadDatabaseBackup']);
 });

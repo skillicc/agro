@@ -12,6 +12,19 @@
                 <v-tooltip activator="parent" location="bottom">Clear Cache & Refresh</v-tooltip>
             </v-btn>
 
+            <!-- Database Backup Button (Admin only) -->
+            <v-btn
+                v-if="authStore.isAdmin"
+                icon
+                @click="downloadDatabaseBackup"
+                :loading="downloadingBackup"
+                :size="$vuetify.display.smAndDown ? 'small' : 'default'"
+                class="mr-1"
+            >
+                <v-icon>mdi-database-arrow-down</v-icon>
+                <v-tooltip activator="parent" location="bottom">Download Database Backup</v-tooltip>
+            </v-btn>
+
             <!-- Theme Toggle -->
             <v-btn icon @click="toggleTheme" :size="$vuetify.display.smAndDown ? 'small' : 'default'" class="mr-1">
                 <v-icon>{{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
@@ -218,11 +231,13 @@ import { ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
 import { useAuthStore } from '../stores/auth'
+import api from '../services/api'
 import axios from 'axios'
 
 const drawer = ref(false)
 const rail = ref(false)
 const clearingCache = ref(false)
+const downloadingBackup = ref(false)
 const router = useRouter()
 const authStore = useAuthStore()
 const display = useDisplay()
@@ -241,7 +256,7 @@ const toggleTheme = () => {
 const clearCache = async () => {
     clearingCache.value = true
     try {
-        await axios.post('/api/system/clear-cache')
+        await api.post('/system/clear-cache')
         // Hard refresh (bypass browser cache)
         window.location.reload(true)
     } catch (error) {
@@ -255,6 +270,36 @@ const clearCache = async () => {
             alert('Error clearing cache. Please SSH and run: php artisan optimize:clear')
             clearingCache.value = false
         }
+    }
+}
+
+const downloadDatabaseBackup = async () => {
+    downloadingBackup.value = true
+
+    try {
+        const response = await api.get('/system/database-backup', {
+            responseType: 'blob',
+        })
+
+        const disposition = response.headers['content-disposition'] || ''
+        const fileNameMatch = disposition.match(/filename="?([^\"]+)"?/i)
+        const fileName = fileNameMatch?.[1] || `database_backup_${Date.now()}.sql`
+
+        const blob = new Blob([response.data], { type: 'application/sql' })
+        const downloadUrl = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+
+        link.href = downloadUrl
+        link.download = fileName
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(downloadUrl)
+    } catch (error) {
+        console.error('Database backup download failed:', error)
+        alert(error.response?.data?.message || 'Database backup failed. Please try again.')
+    } finally {
+        downloadingBackup.value = false
     }
 }
 
