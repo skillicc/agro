@@ -48,6 +48,43 @@
                         <v-btn size="small" variant="tonal" @click="clearFilters">Clear</v-btn>
                     </v-col>
                 </v-row>
+                <v-row v-if="hasActiveFilters" dense class="mb-3">
+                    <v-col cols="12">
+                        <div class="text-subtitle-2 text-medium-emphasis mb-2">Filtered Summary</div>
+                    </v-col>
+                    <v-col cols="12" sm="6" md="3">
+                        <v-card variant="tonal" color="primary" class="summary-card">
+                            <v-card-text>
+                                <div class="text-caption text-medium-emphasis">Sales Count</div>
+                                <div class="text-h6 font-weight-bold">{{ filteredSummary.count }}</div>
+                            </v-card-text>
+                        </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="6" md="3">
+                        <v-card variant="tonal" color="success" class="summary-card">
+                            <v-card-text>
+                                <div class="text-caption text-medium-emphasis">Total Sales</div>
+                                <div class="text-h6 font-weight-bold">৳{{ formatNumber(filteredSummary.total) }}</div>
+                            </v-card-text>
+                        </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="6" md="3">
+                        <v-card variant="tonal" color="info" class="summary-card">
+                            <v-card-text>
+                                <div class="text-caption text-medium-emphasis">Collected</div>
+                                <div class="text-h6 font-weight-bold">৳{{ formatNumber(filteredSummary.paid) }}</div>
+                            </v-card-text>
+                        </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="6" md="3">
+                        <v-card variant="tonal" color="warning" class="summary-card">
+                            <v-card-text>
+                                <div class="text-caption text-medium-emphasis">Due</div>
+                                <div class="text-h6 font-weight-bold">৳{{ formatNumber(filteredSummary.due) }}</div>
+                            </v-card-text>
+                        </v-card>
+                    </v-col>
+                </v-row>
                 <div class="table-responsive">
                 <v-data-table
                     :headers="responsiveHeaders"
@@ -222,6 +259,25 @@ const filteredSales = computed(() => {
     })
 })
 
+const hasActiveFilters = computed(() => {
+    return Boolean(selectedCustomer.value || filterStartDate.value || filterEndDate.value)
+})
+
+const filteredSummary = computed(() => {
+    return filteredSales.value.reduce((summary, sale) => {
+        summary.count += 1
+        summary.total += Number(sale.total || 0)
+        summary.paid += Number(sale.paid || 0)
+        summary.due += Number(sale.due || 0)
+        return summary
+    }, {
+        count: 0,
+        total: 0,
+        paid: 0,
+        due: 0,
+    })
+})
+
 const clearFilters = () => {
     selectedCustomer.value = null
     filterStartDate.value = ''
@@ -277,5 +333,9 @@ onMounted(() => fetchSales())
 .table-responsive {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+}
+
+.summary-card {
+    height: 100%;
 }
 </style>
