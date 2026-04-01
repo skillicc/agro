@@ -9,36 +9,6 @@
             </v-btn>
         </div>
 
-        <v-row dense class="mb-2 mb-sm-4">
-            <v-col cols="12" sm="6" md="4">
-                <v-card variant="tonal" color="primary">
-                    <v-card-text class="py-3">
-                        <div class="text-caption text-medium-emphasis">Today</div>
-                        <div class="text-h6 font-weight-bold">৳{{ formatNumber(todaySummary.total) }}</div>
-                        <div class="text-caption">{{ todaySummary.count }} sale(s)</div>
-                    </v-card-text>
-                </v-card>
-            </v-col>
-            <v-col cols="12" sm="6" md="4">
-                <v-card variant="tonal" color="success">
-                    <v-card-text class="py-3">
-                        <div class="text-caption text-medium-emphasis">This Month</div>
-                        <div class="text-h6 font-weight-bold">৳{{ formatNumber(monthSummary.total) }}</div>
-                        <div class="text-caption">{{ monthSummary.count }} sale(s)</div>
-                    </v-card-text>
-                </v-card>
-            </v-col>
-            <v-col cols="12" sm="6" md="4">
-                <v-card variant="tonal" color="warning">
-                    <v-card-text class="py-3">
-                        <div class="text-caption text-medium-emphasis">This Year</div>
-                        <div class="text-h6 font-weight-bold">৳{{ formatNumber(yearSummary.total) }}</div>
-                        <div class="text-caption">{{ yearSummary.count }} sale(s)</div>
-                    </v-card-text>
-                </v-card>
-            </v-col>
-        </v-row>
-
         <v-card>
             <v-card-text class="pa-2 pa-sm-4">
                 <v-row dense class="mb-3" align="center">
@@ -241,67 +211,6 @@ const customerOptions = computed(() => {
     return sales.value
         .filter(s => s.customer && !seen.has(s.customer.id) && seen.add(s.customer.id))
         .map(s => ({ id: s.customer.id, name: s.customer.name }))
-})
-
-const getPeriodSummary = (matcher) => {
-    return sales.value.reduce(
-        (acc, sale) => {
-            if (!matcher(sale.date)) {
-                return acc
-            }
-
-            acc.count += 1
-            acc.total += Number(sale.total || 0)
-            return acc
-        },
-        { count: 0, total: 0 }
-    )
-}
-
-const toDateParts = (dateString) => {
-    if (!dateString) {
-        return null
-    }
-
-    const parts = dateString.split('-').map(Number)
-    if (parts.length !== 3 || parts.some(Number.isNaN)) {
-        return null
-    }
-
-    return { year: parts[0], month: parts[1], day: parts[2] }
-}
-
-const todaySummary = computed(() => {
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = now.getMonth() + 1
-    const day = now.getDate()
-
-    return getPeriodSummary((dateString) => {
-        const parts = toDateParts(dateString)
-        return parts && parts.year === year && parts.month === month && parts.day === day
-    })
-})
-
-const monthSummary = computed(() => {
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = now.getMonth() + 1
-
-    return getPeriodSummary((dateString) => {
-        const parts = toDateParts(dateString)
-        return parts && parts.year === year && parts.month === month
-    })
-})
-
-const yearSummary = computed(() => {
-    const now = new Date()
-    const year = now.getFullYear()
-
-    return getPeriodSummary((dateString) => {
-        const parts = toDateParts(dateString)
-        return parts && parts.year === year
-    })
 })
 
 const filteredSales = computed(() => {
