@@ -78,23 +78,8 @@ class SystemController extends Controller
             ], 422);
         }
 
-        if (!function_exists('exec')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Server does not allow database backup execution.',
-            ], 500);
-        }
-
-        $timestamp = now()->format('Y-m-d_H-i-s');
-        $backupDir = storage_path('app/backups');
-        $fileName = "database_backup_{$timestamp}.sql";
-        $filePath = $backupDir . DIRECTORY_SEPARATOR . $fileName;
-        $errorPath = $backupDir . DIRECTORY_SEPARATOR . "database_backup_{$timestamp}.err";
-
-        File::ensureDirectoryExists($backupDir);
-
-        $host = $db['host'] ?? '127.0.0.1';
-        $port = (string) ($db['port'] ?? '3306');
+        $host     = $db['host'] ?? '127.0.0.1';
+        $port     = $db['port'] ?? '3306';
         $database = $db['database'] ?? '';
         $username = $db['username'] ?? '';
         $password = $db['password'] ?? '';
@@ -106,46 +91,68 @@ class SystemController extends Controller
             ], 500);
         }
 
-        $commandParts = [
-            'mysqldump',
-            '--single-transaction',
-            '--quick',
-            '--lock-tables=false',
-            '--host=' . escapeshellarg($host),
-            '--port=' . escapeshellarg($port),
-            '--user=' . escapeshellarg($username),
-        ];
-
-        if ($password !== '') {
-            $commandParts[] = '--password=' . escapeshellarg($password);
-        }
-
-        $commandParts[] = escapeshellarg($database);
-
-        $command = implode(' ', $commandParts)
-            . ' > ' . escapeshellarg($filePath)
-            . ' 2> ' . escapeshellarg($errorPath);
-
-        exec($command, $output, $exitCode);
-
-        if ($exitCode !== 0 || !File::exists($filePath)) {
-            $errorMessage = File::exists($errorPath)
-                ? trim((string) File::get($errorPath))
-                : 'Unknown backup error.';
-
-            File::delete([$filePath, $errorPath]);
-
+        try {
+            $pdo = new \PDO(
+                "mysql:host={$host};port={$port};dbname={$database};charset=utf8mb4",
+                $username,
+                $password,
+                [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]
+            );
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Database backup failed.',
-                'details' => $errorMessage,
+                'message' => 'Database connection failed: ' . $e->getMessage(),
             ], 500);
         }
 
-        File::delete($errorPath);
+        $timestamp = now()->format('Y-m-d_H-i-s');
+        $fileName  = "backup_{$database}_{$timestamp}.sql";
 
-        return response()->download($filePath, $fileName, [
-            'Content-Type' => 'application/sql',
-        ])->deleteFileAfterSend(true);
+        $callback = function () use ($pdo, $database) {
+            $out = fopen('php://output', 'w');
+
+            fwrite($out, "-- Database Backup: {$database}\n");
+            fwrite($out, "-- Generated: " . now()->toDateTimeString() . "\n\n");
+            fwrite($out, "SET FOREIGN_KEY_CHECKS=0;\n");
+            fwrite($out, "SET SQL_MODE='NO_AUTO_VALUE_ON_ZERO';\n\n");
+
+            $tables = $pdo->query("SHOW TABLES")->fetchAll(\PDO::FETCH_COLUMN);
+
+            foreach ($tables as $table) {
+                fwrite($out, "DROP TABLE IF EXISTS `{$table}`;\n");
+                $create = $pdo->query("SHOW CREATE TABLE `{$table}`")->fetch(\PDO::FETCH_ASSOC);
+                $createSql = $create['Create Table'] ?? array_values($create)[1];
+                fwrite($out, $createSql . ";\n\n");
+
+                $stmt = $pdo->query("SELECT * FROM `{$table}`");
+                $batch = [];
+                while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+                    $values = array_map(function ($val) use ($pdo) {
+                        if ($val === null) return 'NULL';
+                        return $pdo->quote($val);
+                    }, array_values($row));
+                    $batch[] = '(' . implode(', ', $values) . ')';
+
+                    if (count($batch) >= 500) {
+                        fwrite($out, "INSERT INTO `{$table}` VALUES\n" . implode(",\n", $batch) . ";\n");
+                        $batch = [];
+                    }
+                }
+                if (!empty($batch)) {
+                    fwrite($out, "INSERT INTO `{$table}` VALUES\n" . implode(",\n", $batch) . ";\n");
+                }
+                fwrite($out, "\n");
+            }
+
+            fwrite($out, "SET FOREIGN_KEY_CHECKS=1;\n");
+            fclose($out);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type'        => 'application/octet-stream',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            'Cache-Control'       => 'no-store, no-cache',
+            'X-Accel-Buffering'   => 'no',
+        ]);
     }
 }
