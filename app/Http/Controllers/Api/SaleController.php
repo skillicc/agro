@@ -8,6 +8,8 @@ use App\Models\SaleItem;
 use App\Models\SaleItemBatch;
 use App\Models\StockBatch;
 use App\Models\CustomerPayment;
+use App\Models\Product;
+use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -66,6 +68,8 @@ class SaleController extends Controller
 
         DB::beginTransaction();
         try {
+            $sourceWarehouse = $this->resolveSourceWarehouse($request->project_id, $request->warehouse_id);
+
             $sale = Sale::create([
                 'project_id' => $request->project_id,
                 'warehouse_id' => $request->warehouse_id,
@@ -79,6 +83,9 @@ class SaleController extends Controller
             ]);
 
             foreach ($request->items as $item) {
+                $product = Product::findOrFail($item['product_id']);
+                $this->validateStockAvailability($item, $product, $sourceWarehouse);
+
                 $costPrice = null;
                 $totalCost = 0;
 
@@ -189,6 +196,8 @@ class SaleController extends Controller
 
         DB::beginTransaction();
         try {
+            $sourceWarehouse = $this->resolveSourceWarehouse($request->project_id, $request->warehouse_id);
+
             $sale->update([
                 'project_id' => $request->project_id,
                 'warehouse_id' => $request->warehouse_id,
@@ -203,6 +212,9 @@ class SaleController extends Controller
             $sale->items()->delete();
 
             foreach ($request->items as $item) {
+                $product = Product::findOrFail($item['product_id']);
+                $this->validateStockAvailability($item, $product, $sourceWarehouse);
+
                 $costPrice = null;
                 $totalCost = 0;
 
@@ -301,5 +313,55 @@ class SaleController extends Controller
         $sale->save();
 
         return response()->json($sale->load(['payments']));
+    }
+
+    private function resolveSourceWarehouse(?int $projectId, ?int $warehouseId): ?Warehouse
+    {
+        if ($warehouseId) {
+            return Warehouse::with('project')->find($warehouseId);
+        }
+
+        if ($projectId) {
+            return Warehouse::with('project')->where('project_id', $projectId)->first();
+        }
+
+        return null;
+    }
+
+    private function validateStockAvailability(array $item, Product $product, ?Warehouse $sourceWarehouse): void
+    {
+        if (!$sourceWarehouse) {
+            return;
+        }
+
+        $requestedQuantity = (float) $item['quantity'];
+        $availableQuantity = (float) $sourceWarehouse->getStockQuantity($item['product_id']);
+
+        if ($availableQuantity < $requestedQuantity) {
+            throw new \Exception("Insufficient stock for {$product->name}. Available: {$availableQuantity}, Requested: {$requestedQuantity}");
+        }
+
+        $requiresBatchSelection = !$product->isOwnProduction() && optional($sourceWarehouse->project)->type !== 'shop';
+        $selectedQuantity = collect($item['batch_selections'] ?? [])->sum(fn ($selection) => (float) $selection['quantity']);
+
+        if ($requiresBatchSelection && $selectedQuantity <= 0) {
+            throw new \Exception("Batch selection is required for {$product->name}");
+        }
+
+        if ($selectedQuantity > 0 && abs($requestedQuantity - $selectedQuantity) > 0.0001) {
+            throw new \Exception("Selected batch quantity must match sale quantity for {$product->name}");
+        }
+
+        foreach ($item['batch_selections'] ?? [] as $selection) {
+            $batch = StockBatch::find($selection['batch_id']);
+
+            if (!$batch) {
+                throw new \Exception("Batch not found: {$selection['batch_id']}");
+            }
+
+            if ($batch->warehouse_id !== $sourceWarehouse->id) {
+                throw new \Exception("Selected batch does not belong to the chosen source for {$product->name}");
+            }
+        }
     }
 }

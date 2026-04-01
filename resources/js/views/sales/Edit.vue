@@ -46,7 +46,7 @@
                                 </v-autocomplete>
                             </v-col>
                             <v-col cols="6" sm="4" lg="2">
-                                <v-text-field v-model.number="item.quantity" :label="`Qty (${getProductUnit(item.product_id).toUpperCase()})`" type="number" min="0.01" step="0.01" required :readonly="item.product_type !== 'own_production'" @update:model-value="onQtyChange(index)"></v-text-field>
+                                <v-text-field v-model.number="item.quantity" :label="`Qty (${getProductUnit(item.product_id).toUpperCase()})`" type="number" min="0.01" step="0.01" required :readonly="shouldUseBatchSelection(item)" @update:model-value="onQtyChange(index)"></v-text-field>
                             </v-col>
                             <v-col cols="6" sm="4" lg="2">
                                 <v-text-field v-model.number="item.unit_price" label="Unit Price" type="number" min="0" step="0.01" @update:model-value="onUnitPriceChange(index)"></v-text-field>
@@ -62,7 +62,7 @@
                         </v-row>
 
                         <!-- Batch Selection Section (only for purchased products, not own production) -->
-                        <div v-if="item.product_id && item.product_type !== 'own_production' && item.batches && item.batches.length > 0" class="mt-3">
+                        <div v-if="item.product_id && shouldUseBatchSelection(item) && item.batches && item.batches.length > 0" class="mt-3">
                             <v-divider class="mb-3"></v-divider>
                             <div class="d-flex flex-wrap align-center mb-2 ga-1">
                                 <v-icon size="small" class="mr-1">mdi-package-variant</v-icon>
@@ -120,7 +120,7 @@
                             </div>
                         </div>
 
-                        <div v-else-if="item.product_id && item.product_type !== 'own_production' && (!item.batches || item.batches.length === 0)" class="mt-3">
+                        <div v-else-if="item.product_id && shouldUseBatchSelection(item) && (!item.batches || item.batches.length === 0)" class="mt-3">
                             <v-alert type="warning" density="compact" variant="tonal">
                                 No available batches for this product
                             </v-alert>
@@ -157,7 +157,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from '../../services/api'
 
@@ -190,6 +190,70 @@ const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
 const addItem = () => form.items.push({ product_id: null, quantity: 0, unit_price: 0, total: 0, batches: [], batch_selections: [] })
 const removeItem = (index) => form.items.splice(index, 1)
 
+const getSelectedSourceWarehouse = () => {
+    if (form.warehouse_id) {
+        return warehouses.value.find(warehouse => warehouse.id === form.warehouse_id) || null
+    }
+
+    if (form.project_id) {
+        return warehouses.value.find(warehouse => warehouse.project_id === form.project_id) || null
+    }
+
+    return null
+}
+
+const shouldUseBatchSelection = (item) => {
+    if (!item?.product_type) {
+        return false
+    }
+
+    const sourceWarehouse = getSelectedSourceWarehouse()
+    return item.product_type !== 'own_production' && sourceWarehouse?.project?.type !== 'shop'
+}
+
+const loadItemBatches = async (item) => {
+    const sourceWarehouse = getSelectedSourceWarehouse()
+    const params = sourceWarehouse?.id ? { warehouse_id: sourceWarehouse.id } : {}
+
+    const response = await api.get(`/products/${item.product_id}/batches`, { params })
+    item.batches = (response.data.batches || []).map(batch => ({
+        ...batch,
+        sell_quantity: 0,
+    }))
+}
+
+const syncItemSource = async (index) => {
+    const item = form.items[index]
+    if (!item?.product_id) {
+        return
+    }
+
+    const product = products.value.find(entry => entry.id === item.product_id)
+    if (!product) {
+        return
+    }
+
+    item.product_type = product.type
+    item.batch_selections = []
+
+    if (shouldUseBatchSelection(item)) {
+        item.quantity = 0
+        item.total = 0
+
+        try {
+            await loadItemBatches(item)
+        } catch (error) {
+            console.error('Error fetching batches:', error)
+            item.batches = []
+        }
+
+        return
+    }
+
+    item.batches = []
+    onQtyChange(index)
+}
+
 const onProductSelect = async (index) => {
     const item = form.items[index]
     const product = products.value.find(p => p.id === item.product_id)
@@ -202,14 +266,9 @@ const onProductSelect = async (index) => {
         item.batch_selections = []
         item.product_type = product.type
 
-        // Only fetch batches for purchased products, not own production
-        if (product.type !== 'own_production') {
+        if (shouldUseBatchSelection(item)) {
             try {
-                const response = await api.get(`/products/${product.id}/batches`)
-                item.batches = (response.data.batches || []).map(b => ({
-                    ...b,
-                    sell_quantity: 0
-                }))
+                await loadItemBatches(item)
             } catch (error) {
                 console.error('Error fetching batches:', error)
                 item.batches = []
@@ -342,14 +401,9 @@ const fetchData = async () => {
                 batch_selections: []
             }
 
-            // Only fetch batches for purchased products, not own production
-            if (product?.type !== 'own_production') {
+            if (shouldUseBatchSelection(newItem)) {
                 try {
-                    const batchRes = await api.get(`/products/${item.product_id}/batches`)
-                    newItem.batches = (batchRes.data.batches || []).map(b => ({
-                        ...b,
-                        sell_quantity: 0
-                    }))
+                    await loadItemBatches(newItem)
                 } catch (error) {
                     console.error('Error fetching batches:', error)
                 }
@@ -364,16 +418,28 @@ const fetchData = async () => {
     loading.value = false
 }
 
+watch(
+    () => [form.project_id, form.warehouse_id],
+    async ([projectId, warehouseId], previous = []) => {
+        if (projectId === previous[0] && warehouseId === previous[1]) {
+            return
+        }
+
+        for (let index = 0; index < form.items.length; index += 1) {
+            await syncItemSource(index)
+        }
+    }
+)
+
 const saveSale = async () => {
     if (!form.project_id && !form.warehouse_id) {
         alert('Please select either Project or Warehouse')
         return
     }
 
-    // Validate that all items have batch selections
     for (const item of form.items) {
         if (item.product_id && item.quantity <= 0) {
-            alert('Please select batch quantities for all products')
+            alert(shouldUseBatchSelection(item) ? 'Please select batch quantities for all products' : 'Please enter quantities for all products')
             return
         }
     }

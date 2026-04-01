@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use DateTimeInterface;
+use App\Models\Warehouse;
 
 class SaleItem extends Model
 {
@@ -57,11 +58,13 @@ class SaleItem extends Model
         static::created(function ($item) {
             // Decrement global product stock
             $item->product->decrement('stock_quantity', $item->quantity);
+            $item->syncWarehouseStock(false);
         });
 
         static::deleted(function ($item) {
             // Increment global product stock
             $item->product->increment('stock_quantity', $item->quantity);
+            $item->syncWarehouseStock(true);
 
             // Restore batch quantities
             foreach ($item->batches as $saleItemBatch) {
@@ -80,5 +83,35 @@ class SaleItem extends Model
     protected function serializeDate(DateTimeInterface $date): string
     {
         return $date->format('Y-m-d');
+    }
+
+    private function syncWarehouseStock(bool $increment): void
+    {
+        $warehouse = $this->resolveSourceWarehouse();
+
+        if (!$warehouse) {
+            return;
+        }
+
+        $warehouse->updateStock($this->product_id, $this->quantity, $increment);
+    }
+
+    private function resolveSourceWarehouse(): ?Warehouse
+    {
+        $sale = $this->relationLoaded('sale') ? $this->sale : $this->sale()->first();
+
+        if (!$sale) {
+            return null;
+        }
+
+        if ($sale->warehouse_id) {
+            return Warehouse::find($sale->warehouse_id);
+        }
+
+        if ($sale->project_id) {
+            return Warehouse::where('project_id', $sale->project_id)->first();
+        }
+
+        return null;
     }
 }
