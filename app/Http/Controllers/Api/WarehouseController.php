@@ -9,6 +9,7 @@ use App\Models\StockTransfer;
 use App\Models\Project;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class WarehouseController extends Controller
 {
@@ -245,75 +246,145 @@ class WarehouseController extends Controller
         $fromProject = Project::findOrFail($request->from_project_id);
         $toProject = Project::findOrFail($request->to_project_id);
 
-        // Verify both are shop type projects
         if ($fromProject->type !== 'shop' || $toProject->type !== 'shop') {
             return response()->json([
                 'message' => 'Both projects must be of type "shop"'
             ], 400);
         }
 
-        // Find or create warehouse for source shop
-        $fromWarehouse = Warehouse::firstOrCreate(
-            ['project_id' => $fromProject->id],
-            [
-                'name' => $fromProject->name . ' Warehouse',
-                'code' => 'PW-' . $fromProject->id,
-                'is_active' => true,
-            ]
+        $fromWarehouse = $this->findOrCreateProjectWarehouse($fromProject);
+        $toWarehouse = $this->findOrCreateProjectWarehouse($toProject);
+
+        $error = $this->ensureWarehouseHasStock(
+            $fromWarehouse,
+            $request->items,
+            $fromProject->name,
+            true
         );
 
-        // Check if source has enough stock.
-        // If warehouse_stocks is not populated (purchases were project-based, not warehouse-based),
-        // initialize it from global product stock so the transfer works correctly.
-        foreach ($request->items as $item) {
-            $product = Product::find($item['product_id']);
-            $warehouseStock = $fromWarehouse->getStockQuantity($item['product_id']);
-
-            if ($warehouseStock <= 0 && ($product->stock_quantity ?? 0) > 0) {
-                // Purchases were made at project level — sync warehouse stock from global stock
-                $fromWarehouse->updateStock($item['product_id'], $product->stock_quantity, true);
-                $warehouseStock = $product->stock_quantity;
-            }
-
-            if ($warehouseStock < $item['quantity']) {
-                return response()->json([
-                    'message' => "Insufficient stock for {$product->name} in {$fromProject->name}. Available: {$warehouseStock}, Required: {$item['quantity']}"
-                ], 400);
-            }
+        if ($error) {
+            return $error;
         }
 
-        // Find or create warehouse for destination shop
-        $toWarehouse = Warehouse::firstOrCreate(
-            ['project_id' => $toProject->id],
-            [
-                'name' => $toProject->name . ' Warehouse',
-                'code' => 'PW-' . $toProject->id,
-                'is_active' => true,
-            ]
+        $transfer = $this->createCompletedTransfer(
+            $fromWarehouse,
+            $toWarehouse,
+            $request->items,
+            $request->date,
+            $request->note,
+            'Shop to Shop: ' . $fromProject->name . ' -> ' . $toProject->name,
+            $request->user()->id
         );
-
-        // Create transfer
-        $transfer = StockTransfer::create([
-            'from_warehouse_id' => $fromWarehouse->id,
-            'to_warehouse_id' => $toWarehouse->id,
-            'date' => $request->date,
-            'note' => ($request->note ?? '') . ' (Shop to Shop: ' . $fromProject->name . ' -> ' . $toProject->name . ')',
-            'status' => 'pending',
-            'created_by' => $request->user()->id,
-        ]);
-
-        foreach ($request->items as $item) {
-            $transfer->items()->create([
-                'product_id' => $item['product_id'],
-                'quantity' => $item['quantity'],
-            ]);
-        }
-
-        // Auto-complete the transfer
-        $transfer->complete($request->user()->id);
 
         return response()->json([
             'message' => 'Stock transferred from ' . $fromProject->name . ' to ' . $toProject->name . ' successfully',
+            'transfer' => $transfer->load(['fromWarehouse', 'toWarehouse', 'items.product']),
+        ], 201);
+    }
+
+    public function warehouseToShopTransfer(Request $request)
+    {
+        $request->validate([
+            'from_warehouse_id' => 'required|exists:warehouses,id',
+            'project_id' => 'required|exists:projects,id',
+            'date' => 'required|date',
+            'note' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+        ]);
+
+        $warehouse = Warehouse::findOrFail($request->from_warehouse_id);
+        $project = Project::findOrFail($request->project_id);
+
+        if ($this->isShopWarehouse($warehouse)) {
+            return response()->json([
+                'message' => 'Source must be a warehouse. Use shop-to-shop transfer for shop stock movement.'
+            ], 400);
+        }
+
+        if ($project->type !== 'shop') {
+            return response()->json([
+                'message' => 'Destination project must be of type "shop"'
+            ], 400);
+        }
+
+        $error = $this->ensureWarehouseHasStock($warehouse, $request->items, $warehouse->name);
+
+        if ($error) {
+            return $error;
+        }
+
+        $projectWarehouse = $this->findOrCreateProjectWarehouse($project);
+
+        $transfer = $this->createCompletedTransfer(
+            $warehouse,
+            $projectWarehouse,
+            $request->items,
+            $request->date,
+            $request->note,
+            'Warehouse to Shop: ' . $warehouse->name . ' -> ' . $project->name,
+            $request->user()->id
+        );
+
+        return response()->json([
+            'message' => 'Stock transferred from ' . $warehouse->name . ' to shop ' . $project->name . ' successfully',
+            'transfer' => $transfer->load(['fromWarehouse', 'toWarehouse', 'items.product']),
+        ], 201);
+    }
+
+    public function shopToWarehouseTransfer(Request $request)
+    {
+        $request->validate([
+            'from_project_id' => 'required|exists:projects,id',
+            'to_warehouse_id' => 'required|exists:warehouses,id',
+            'date' => 'required|date',
+            'note' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+        ]);
+
+        $fromProject = Project::findOrFail($request->from_project_id);
+        $toWarehouse = Warehouse::findOrFail($request->to_warehouse_id);
+
+        if ($fromProject->type !== 'shop') {
+            return response()->json([
+                'message' => 'Source project must be of type "shop"'
+            ], 400);
+        }
+
+        if ($this->isShopWarehouse($toWarehouse)) {
+            return response()->json([
+                'message' => 'Destination must be a warehouse. Use shop-to-shop transfer when transferring to another shop.'
+            ], 400);
+        }
+
+        $fromWarehouse = $this->findOrCreateProjectWarehouse($fromProject);
+
+        $error = $this->ensureWarehouseHasStock(
+            $fromWarehouse,
+            $request->items,
+            $fromProject->name,
+            true
+        );
+
+        if ($error) {
+            return $error;
+        }
+
+        $transfer = $this->createCompletedTransfer(
+            $fromWarehouse,
+            $toWarehouse,
+            $request->items,
+            $request->date,
+            $request->note,
+            'Shop to Warehouse: ' . $fromProject->name . ' -> ' . $toWarehouse->name,
+            $request->user()->id
+        );
+
+        return response()->json([
+            'message' => 'Stock transferred from shop ' . $fromProject->name . ' to warehouse ' . $toWarehouse->name . ' successfully',
             'transfer' => $transfer->load(['fromWarehouse', 'toWarehouse', 'items.product']),
         ], 201);
     }
@@ -334,19 +405,44 @@ class WarehouseController extends Controller
         $warehouse = Warehouse::findOrFail($request->from_warehouse_id);
         $project = Project::findOrFail($request->project_id);
 
-        // Check if warehouse has enough stock
-        foreach ($request->items as $item) {
-            $stock = $warehouse->getStockQuantity($item['product_id']);
-            if ($stock < $item['quantity']) {
-                $product = Product::find($item['product_id']);
-                return response()->json([
-                    'message' => "Insufficient stock for {$product->name}. Available: {$stock}, Required: {$item['quantity']}"
-                ], 400);
-            }
+        if ($project->type === 'shop') {
+            return response()->json([
+                'message' => 'Use warehouse-to-shop transfer for shop destinations.'
+            ], 400);
         }
 
-        // Find or create project warehouse
-        $projectWarehouse = Warehouse::firstOrCreate(
+        $error = $this->ensureWarehouseHasStock($warehouse, $request->items, $warehouse->name);
+
+        if ($error) {
+            return $error;
+        }
+
+        $projectWarehouse = $this->findOrCreateProjectWarehouse($project);
+
+        $transfer = $this->createCompletedTransfer(
+            $warehouse,
+            $projectWarehouse,
+            $request->items,
+            $request->date,
+            $request->note,
+            'Transfer to project: ' . $project->name,
+            $request->user()->id
+        );
+
+        return response()->json([
+            'message' => 'Stock transferred to project ' . $project->name . ' successfully',
+            'transfer' => $transfer->load(['fromWarehouse', 'toWarehouse', 'items.product']),
+        ], 201);
+    }
+
+    private function isShopWarehouse(Warehouse $warehouse): bool
+    {
+        return $warehouse->project && $warehouse->project->type === 'shop';
+    }
+
+    private function findOrCreateProjectWarehouse(Project $project): Warehouse
+    {
+        return Warehouse::firstOrCreate(
             ['project_id' => $project->id],
             [
                 'name' => $project->name . ' Warehouse',
@@ -354,30 +450,70 @@ class WarehouseController extends Controller
                 'is_active' => true,
             ]
         );
+    }
 
-        // Create transfer
-        $transfer = StockTransfer::create([
-            'from_warehouse_id' => $warehouse->id,
-            'to_warehouse_id' => $projectWarehouse->id,
-            'date' => $request->date,
-            'note' => $request->note . ' (Transfer to project: ' . $project->name . ')',
-            'status' => 'pending',
-            'created_by' => $request->user()->id,
-        ]);
+    private function ensureWarehouseHasStock(Warehouse $warehouse, array $items, string $sourceLabel, bool $syncFromGlobalStock = false)
+    {
+        foreach ($items as $item) {
+            $product = Product::find($item['product_id']);
+            $stock = $warehouse->getStockQuantity($item['product_id']);
 
-        foreach ($request->items as $item) {
-            $transfer->items()->create([
-                'product_id' => $item['product_id'],
-                'quantity' => $item['quantity'],
-            ]);
+            if ($syncFromGlobalStock && $stock <= 0 && ($product->stock_quantity ?? 0) > 0) {
+                $warehouse->updateStock($item['product_id'], $product->stock_quantity, true);
+                $stock = $product->stock_quantity;
+            }
+
+            if ($stock < $item['quantity']) {
+                return response()->json([
+                    'message' => "Insufficient stock for {$product->name} in {$sourceLabel}. Available: {$stock}, Required: {$item['quantity']}"
+                ], 400);
+            }
         }
 
-        // Auto-complete the transfer
-        $transfer->complete($request->user()->id);
+        return null;
+    }
 
-        return response()->json([
-            'message' => 'Stock transferred to project ' . $project->name . ' successfully',
-            'transfer' => $transfer->load(['fromWarehouse', 'toWarehouse', 'items.product']),
-        ], 201);
+    private function createCompletedTransfer(
+        Warehouse $fromWarehouse,
+        Warehouse $toWarehouse,
+        array $items,
+        string $date,
+        ?string $note,
+        string $context,
+        ?int $userId
+    ): StockTransfer {
+        return DB::transaction(function () use ($fromWarehouse, $toWarehouse, $items, $date, $note, $context, $userId) {
+            $transfer = StockTransfer::create([
+                'from_warehouse_id' => $fromWarehouse->id,
+                'to_warehouse_id' => $toWarehouse->id,
+                'date' => $date,
+                'note' => $this->buildTransferNote($note, $context),
+                'status' => 'pending',
+                'created_by' => $userId,
+            ]);
+
+            foreach ($items as $item) {
+                $transfer->items()->create([
+                    'product_id' => $item['product_id'],
+                    'quantity' => $item['quantity'],
+                ]);
+            }
+
+            $transfer->load('items.product');
+            $transfer->complete($userId);
+
+            return $transfer->fresh(['fromWarehouse', 'toWarehouse', 'items.product']);
+        });
+    }
+
+    private function buildTransferNote(?string $note, string $context): string
+    {
+        $trimmedNote = trim((string) $note);
+
+        if ($trimmedNote === '') {
+            return '(' . $context . ')';
+        }
+
+        return $trimmedNote . ' (' . $context . ')';
     }
 }

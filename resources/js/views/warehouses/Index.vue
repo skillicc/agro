@@ -2,10 +2,18 @@
     <div>
         <div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center mb-4 ga-2">
             <h1 class="text-h5 text-sm-h4">Warehouses</h1>
-            <div class="d-flex ga-2">
+            <div class="d-flex flex-wrap ga-2">
                 <v-btn color="warning" @click="projectTransferDialog = true" :size="$vuetify.display.xs ? 'small' : 'default'">
                     <v-icon left>mdi-truck-delivery</v-icon>
                     <span class="d-none d-sm-inline">To Project</span>
+                </v-btn>
+                <v-btn color="teal" @click="warehouseToShopDialog = true" :size="$vuetify.display.xs ? 'small' : 'default'">
+                    <v-icon left>mdi-warehouse-arrow-right</v-icon>
+                    <span class="d-none d-sm-inline">Warehouse to Shop</span>
+                </v-btn>
+                <v-btn color="indigo" @click="shopToWarehouseDialog = true" :size="$vuetify.display.xs ? 'small' : 'default'">
+                    <v-icon left>mdi-warehouse-arrow-up</v-icon>
+                    <span class="d-none d-sm-inline">Shop to Warehouse</span>
                 </v-btn>
                 <v-btn color="info" @click="shopTransferDialog = true" :size="$vuetify.display.xs ? 'small' : 'default'">
                     <v-icon left>mdi-store-swap</v-icon>
@@ -327,6 +335,140 @@
             </v-card>
         </v-dialog>
 
+        <!-- Warehouse to Shop Transfer Dialog -->
+        <v-dialog v-model="warehouseToShopDialog" :max-width="$vuetify.display.xs ? '100%' : 700" :fullscreen="$vuetify.display.xs">
+            <v-card>
+                <v-card-title class="d-flex justify-space-between align-center">
+                    <span>Warehouse to Shop Transfer</span>
+                    <v-btn v-if="$vuetify.display.xs" icon variant="text" @click="warehouseToShopDialog = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-card-title>
+                <v-card-text>
+                    <v-row>
+                        <v-col cols="12" sm="6">
+                            <v-select
+                                v-model="warehouseToShopForm.from_warehouse_id"
+                                :items="nonShopWarehouses"
+                                item-title="name"
+                                item-value="id"
+                                label="From Warehouse"
+                                required
+                                density="comfortable"
+                            ></v-select>
+                        </v-col>
+                        <v-col cols="12" sm="6">
+                            <v-select
+                                v-model="warehouseToShopForm.project_id"
+                                :items="shopProjects"
+                                item-title="name"
+                                item-value="id"
+                                label="To Shop"
+                                required
+                                density="comfortable"
+                            ></v-select>
+                        </v-col>
+                    </v-row>
+                    <v-text-field v-model="warehouseToShopForm.date" label="Date" type="date" required density="comfortable"></v-text-field>
+
+                    <h4 class="mt-4 mb-2">Transfer Items</h4>
+                    <v-card v-for="(item, index) in warehouseToShopForm.items" :key="index" variant="outlined" class="mb-2 pa-2">
+                        <v-row dense>
+                            <v-col cols="7">
+                                <v-select v-model="item.product_id" :items="products" item-title="name" item-value="id" label="Product" density="compact" hide-details></v-select>
+                            </v-col>
+                            <v-col cols="3">
+                                <v-text-field v-model="item.quantity" label="Qty" type="number" density="compact" hide-details></v-text-field>
+                            </v-col>
+                            <v-col cols="2" class="d-flex align-center">
+                                <v-btn icon size="small" color="error" @click="removeWarehouseToShopTransferItem(index)" :disabled="warehouseToShopForm.items.length === 1">
+                                    <v-icon>mdi-delete</v-icon>
+                                </v-btn>
+                            </v-col>
+                        </v-row>
+                    </v-card>
+                    <v-btn size="small" @click="addWarehouseToShopTransferItem" class="mt-2">
+                        <v-icon left>mdi-plus</v-icon>
+                        Add Item
+                    </v-btn>
+
+                    <v-textarea v-model="warehouseToShopForm.note" label="Note" rows="2" density="comfortable" class="mt-4"></v-textarea>
+                </v-card-text>
+                <v-card-actions class="pa-4">
+                    <v-spacer></v-spacer>
+                    <v-btn @click="warehouseToShopDialog = false">Cancel</v-btn>
+                    <v-btn color="teal" @click="transferWarehouseToShop" :loading="transferringWarehouseToShop">Transfer</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Shop to Warehouse Transfer Dialog -->
+        <v-dialog v-model="shopToWarehouseDialog" :max-width="$vuetify.display.xs ? '100%' : 700" :fullscreen="$vuetify.display.xs">
+            <v-card>
+                <v-card-title class="d-flex justify-space-between align-center">
+                    <span>Shop to Warehouse Transfer</span>
+                    <v-btn v-if="$vuetify.display.xs" icon variant="text" @click="shopToWarehouseDialog = false">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                </v-card-title>
+                <v-card-text>
+                    <v-row>
+                        <v-col cols="12" sm="6">
+                            <v-select
+                                v-model="shopToWarehouseForm.from_project_id"
+                                :items="shopProjects"
+                                item-title="name"
+                                item-value="id"
+                                label="From Shop"
+                                required
+                                density="comfortable"
+                            ></v-select>
+                        </v-col>
+                        <v-col cols="12" sm="6">
+                            <v-select
+                                v-model="shopToWarehouseForm.to_warehouse_id"
+                                :items="nonShopWarehouses"
+                                item-title="name"
+                                item-value="id"
+                                label="To Warehouse"
+                                required
+                                density="comfortable"
+                            ></v-select>
+                        </v-col>
+                    </v-row>
+                    <v-text-field v-model="shopToWarehouseForm.date" label="Date" type="date" required density="comfortable"></v-text-field>
+
+                    <h4 class="mt-4 mb-2">Transfer Items</h4>
+                    <v-card v-for="(item, index) in shopToWarehouseForm.items" :key="index" variant="outlined" class="mb-2 pa-2">
+                        <v-row dense>
+                            <v-col cols="7">
+                                <v-select v-model="item.product_id" :items="products" item-title="name" item-value="id" label="Product" density="compact" hide-details></v-select>
+                            </v-col>
+                            <v-col cols="3">
+                                <v-text-field v-model="item.quantity" label="Qty" type="number" density="compact" hide-details></v-text-field>
+                            </v-col>
+                            <v-col cols="2" class="d-flex align-center">
+                                <v-btn icon size="small" color="error" @click="removeShopToWarehouseTransferItem(index)" :disabled="shopToWarehouseForm.items.length === 1">
+                                    <v-icon>mdi-delete</v-icon>
+                                </v-btn>
+                            </v-col>
+                        </v-row>
+                    </v-card>
+                    <v-btn size="small" @click="addShopToWarehouseTransferItem" class="mt-2">
+                        <v-icon left>mdi-plus</v-icon>
+                        Add Item
+                    </v-btn>
+
+                    <v-textarea v-model="shopToWarehouseForm.note" label="Note" rows="2" density="comfortable" class="mt-4"></v-textarea>
+                </v-card-text>
+                <v-card-actions class="pa-4">
+                    <v-spacer></v-spacer>
+                    <v-btn @click="shopToWarehouseDialog = false">Cancel</v-btn>
+                    <v-btn color="indigo" @click="transferShopToWarehouse" :loading="transferringShopToWarehouse">Transfer</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <!-- Transfer to Project Dialog -->
         <v-dialog v-model="projectTransferDialog" :max-width="$vuetify.display.xs ? '100%' : 700" :fullscreen="$vuetify.display.xs">
             <v-card>
@@ -352,7 +494,7 @@
                         <v-col cols="12" sm="6">
                             <v-select
                                 v-model="projectTransferForm.project_id"
-                                :items="projects"
+                                :items="nonShopProjects"
                                 item-title="name"
                                 item-value="id"
                                 label="To Project"
@@ -362,8 +504,8 @@
                                 <template v-slot:item="{ item, props }">
                                     <v-list-item v-bind="props">
                                         <template v-slot:append>
-                                            <v-chip size="x-small" :color="item.raw.project_type === 'administration' ? 'primary' : 'warning'">
-                                                {{ item.raw.project_type === 'administration' ? 'Admin' : 'Central' }}
+                                            <v-chip size="x-small" color="primary">
+                                                {{ item.raw.type }}
                                             </v-chip>
                                         </template>
                                     </v-list-item>
@@ -443,6 +585,8 @@ const addStockDialog = ref(false)
 const transferDialog = ref(false)
 const projectTransferDialog = ref(false)
 const shopTransferDialog = ref(false)
+const warehouseToShopDialog = ref(false)
+const shopToWarehouseDialog = ref(false)
 const deleteDialog = ref(false)
 const expenseDialog = ref(false)
 const editMode = ref(false)
@@ -454,6 +598,19 @@ const deleting = ref(false)
 const creatingTransfer = ref(false)
 const transferringToProject = ref(false)
 const transferringShop = ref(false)
+const transferringWarehouseToShop = ref(false)
+const transferringShopToWarehouse = ref(false)
+
+const getDefaultDate = () => new Date().toISOString().split('T')[0]
+const createTransferItem = () => ({ product_id: null, quantity: 1 })
+const resetTransferForm = (formState, overrides = {}) => {
+    Object.assign(formState, {
+        date: getDefaultDate(),
+        note: '',
+        items: [createTransferItem()],
+        ...overrides,
+    })
+}
 
 // Summary data
 const totalStockItems = ref(0)
@@ -486,29 +643,47 @@ const stockForm = reactive({
 const transferForm = reactive({
     from_warehouse_id: null,
     to_warehouse_id: null,
-    date: new Date().toISOString().split('T')[0],
+    date: getDefaultDate(),
     note: '',
-    items: [{ product_id: null, quantity: 1 }],
+    items: [createTransferItem()],
 })
 
 const projectTransferForm = reactive({
     from_warehouse_id: null,
     project_id: null,
-    date: new Date().toISOString().split('T')[0],
+    date: getDefaultDate(),
     note: '',
-    items: [{ product_id: null, quantity: 1 }],
+    items: [createTransferItem()],
 })
 
 const shopTransferForm = reactive({
     from_project_id: null,
     to_project_id: null,
-    date: new Date().toISOString().split('T')[0],
+    date: getDefaultDate(),
     note: '',
-    items: [{ product_id: null, quantity: 1 }],
+    items: [createTransferItem()],
+})
+
+const warehouseToShopForm = reactive({
+    from_warehouse_id: null,
+    project_id: null,
+    date: getDefaultDate(),
+    note: '',
+    items: [createTransferItem()],
+})
+
+const shopToWarehouseForm = reactive({
+    from_project_id: null,
+    to_warehouse_id: null,
+    date: getDefaultDate(),
+    note: '',
+    items: [createTransferItem()],
 })
 
 // Computed: Shop projects only
 const shopProjects = computed(() => projects.value.filter(p => p.type === 'shop'))
+const nonShopProjects = computed(() => projects.value.filter(p => p.type !== 'shop'))
+const nonShopWarehouses = computed(() => warehouses.value.filter(w => !w.project || w.project.type !== 'shop'))
 
 const fetchWarehouses = async () => {
     loading.value = true
@@ -625,7 +800,7 @@ const saveStock = async () => {
 }
 
 const addTransferItem = () => {
-    transferForm.items.push({ product_id: null, quantity: 1 })
+    transferForm.items.push(createTransferItem())
 }
 
 const removeTransferItem = (index) => {
@@ -638,16 +813,13 @@ const createTransfer = async () => {
         await api.post('/stock-transfers', transferForm)
         transferDialog.value = false
         fetchSummary()
-        // Reset form
-        Object.assign(transferForm, {
+        resetTransferForm(transferForm, {
             from_warehouse_id: null,
             to_warehouse_id: null,
-            date: new Date().toISOString().split('T')[0],
-            note: '',
-            items: [{ product_id: null, quantity: 1 }],
         })
     } catch (error) {
         console.error('Error:', error)
+        alert(error.response?.data?.message || 'Transfer failed')
     }
     creatingTransfer.value = false
 }
@@ -658,7 +830,7 @@ const confirmDelete = (warehouse) => {
 }
 
 const addProjectTransferItem = () => {
-    projectTransferForm.items.push({ product_id: null, quantity: 1 })
+    projectTransferForm.items.push(createTransferItem())
 }
 
 const removeProjectTransferItem = (index) => {
@@ -666,7 +838,23 @@ const removeProjectTransferItem = (index) => {
 }
 
 const addShopTransferItem = () => {
-    shopTransferForm.items.push({ product_id: null, quantity: 1 })
+    shopTransferForm.items.push(createTransferItem())
+}
+
+const addWarehouseToShopTransferItem = () => {
+    warehouseToShopForm.items.push(createTransferItem())
+}
+
+const removeWarehouseToShopTransferItem = (index) => {
+    warehouseToShopForm.items.splice(index, 1)
+}
+
+const addShopToWarehouseTransferItem = () => {
+    shopToWarehouseForm.items.push(createTransferItem())
+}
+
+const removeShopToWarehouseTransferItem = (index) => {
+    shopToWarehouseForm.items.splice(index, 1)
 }
 
 const removeShopTransferItem = (index) => {
@@ -680,19 +868,51 @@ const transferShopToShop = async () => {
         shopTransferDialog.value = false
         fetchWarehouses()
         fetchSummary()
-        // Reset form
-        Object.assign(shopTransferForm, {
+        resetTransferForm(shopTransferForm, {
             from_project_id: null,
             to_project_id: null,
-            date: new Date().toISOString().split('T')[0],
-            note: '',
-            items: [{ product_id: null, quantity: 1 }],
         })
     } catch (error) {
         console.error('Error:', error)
         alert(error.response?.data?.message || 'Transfer failed')
     }
     transferringShop.value = false
+}
+
+const transferWarehouseToShop = async () => {
+    transferringWarehouseToShop.value = true
+    try {
+        await api.post('/stock-transfers/warehouse-to-shop', warehouseToShopForm)
+        warehouseToShopDialog.value = false
+        fetchWarehouses()
+        fetchSummary()
+        resetTransferForm(warehouseToShopForm, {
+            from_warehouse_id: null,
+            project_id: null,
+        })
+    } catch (error) {
+        console.error('Error:', error)
+        alert(error.response?.data?.message || 'Transfer failed')
+    }
+    transferringWarehouseToShop.value = false
+}
+
+const transferShopToWarehouse = async () => {
+    transferringShopToWarehouse.value = true
+    try {
+        await api.post('/stock-transfers/shop-to-warehouse', shopToWarehouseForm)
+        shopToWarehouseDialog.value = false
+        fetchWarehouses()
+        fetchSummary()
+        resetTransferForm(shopToWarehouseForm, {
+            from_project_id: null,
+            to_warehouse_id: null,
+        })
+    } catch (error) {
+        console.error('Error:', error)
+        alert(error.response?.data?.message || 'Transfer failed')
+    }
+    transferringShopToWarehouse.value = false
 }
 
 const transferToProject = async () => {
@@ -702,13 +922,9 @@ const transferToProject = async () => {
         projectTransferDialog.value = false
         fetchWarehouses()
         fetchSummary()
-        // Reset form
-        Object.assign(projectTransferForm, {
+        resetTransferForm(projectTransferForm, {
             from_warehouse_id: null,
             project_id: null,
-            date: new Date().toISOString().split('T')[0],
-            note: '',
-            items: [{ product_id: null, quantity: 1 }],
         })
     } catch (error) {
         console.error('Error:', error)
