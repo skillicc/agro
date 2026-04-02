@@ -229,6 +229,88 @@ class SaleStockFlowTest extends TestCase
         $this->assertSame(0.0, (float) $customer->fresh()->sales()->findOrFail($saleId)->due);
     }
 
+    public function test_customer_overpayment_carries_forward_to_later_sale_due(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $project = Project::create([
+            'name' => 'Carry Forward Project',
+            'type' => 'field',
+            'location' => 'Dhaka',
+            'is_active' => true,
+        ]);
+
+        $warehouse = Warehouse::create([
+            'name' => 'Carry Forward Warehouse',
+            'code' => 'CRY-001',
+            'project_id' => $project->id,
+            'is_active' => true,
+        ]);
+
+        $product = Product::create([
+            'name' => 'Carry Forward Item',
+            'type' => 'own_production',
+            'unit' => 'pcs',
+            'selling_price' => 100,
+            'buying_price' => 60,
+            'stock_quantity' => 30,
+            'is_active' => true,
+        ]);
+
+        $warehouse->updateStock($product->id, 10, true);
+
+        $customer = Customer::create([
+            'name' => 'Carry Forward Customer',
+            'is_active' => true,
+        ]);
+
+        $firstSaleRequest = Request::create('/api/sales', 'POST', [
+            'project_id' => $project->id,
+            'customer_id' => $customer->id,
+            'date' => '2026-03-10',
+            'discount' => 0,
+            'paid' => 0,
+            'items' => [[
+                'product_id' => $product->id,
+                'quantity' => 1,
+                'unit_price' => 100,
+                'batch_selections' => [],
+            ]],
+        ]);
+        $firstSaleRequest->setUserResolver(fn () => $admin);
+        $firstSale = app(SaleController::class)->store($firstSaleRequest)->getData(true);
+
+        $secondSaleRequest = Request::create('/api/sales', 'POST', [
+            'project_id' => $project->id,
+            'customer_id' => $customer->id,
+            'date' => '2026-03-11',
+            'discount' => 0,
+            'paid' => 0,
+            'items' => [[
+                'product_id' => $product->id,
+                'quantity' => 2,
+                'unit_price' => 100,
+                'batch_selections' => [],
+            ]],
+        ]);
+        $secondSaleRequest->setUserResolver(fn () => $admin);
+        $secondSale = app(SaleController::class)->store($secondSaleRequest)->getData(true);
+
+        $overpaymentRequest = Request::create('/api/sales/' . $firstSale['id'] . '/payment', 'POST', [
+            'amount' => 300,
+            'date' => now()->toDateString(),
+            'payment_method' => 'cash',
+        ]);
+        $overpaymentRequest->setUserResolver(fn () => $admin);
+        app(SaleController::class)->addPayment($overpaymentRequest, \App\Models\Sale::findOrFail($firstSale['id']));
+
+        $customer->fresh()->updateBalance();
+
+        $this->assertSame(0.0, (float) $customer->fresh()->total_due);
+        $this->assertSame(0.0, (float) $customer->fresh()->sales()->findOrFail($firstSale['id'])->due);
+        $this->assertSame(0.0, (float) $customer->fresh()->sales()->findOrFail($secondSale['id'])->due);
+    }
+
     public function test_central_warehouse_sale_requires_batch_selection_for_trading_products(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);

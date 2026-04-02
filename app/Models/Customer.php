@@ -83,7 +83,7 @@ class Customer extends Model
             return;
         }
 
-        $unassignedCredit = (float) $allPayments
+        $carryForwardCredit = (float) $allPayments
             ->whereNull('sale_id')
             ->sum(fn ($payment) => (float) $payment->amount + (float) ($payment->discount ?? 0));
 
@@ -92,18 +92,11 @@ class Customer extends Model
                 fn ($payment) => (float) $payment->amount + (float) ($payment->discount ?? 0)
             );
 
-            $paidAmount = min((float) $sale->total, $explicitCredit);
-            $remainingDue = max(0, (float) $sale->total - $paidAmount);
-
-            if ($remainingDue > 0 && $unassignedCredit > 0) {
-                $allocatedCredit = min($remainingDue, $unassignedCredit);
-                $paidAmount += $allocatedCredit;
-                $remainingDue -= $allocatedCredit;
-                $unassignedCredit -= $allocatedCredit;
-            }
-
-            $paidAmount = round($paidAmount, 2);
-            $remainingDue = round($remainingDue, 2);
+            $saleTotal = round((float) $sale->total, 2);
+            $availableCredit = round($carryForwardCredit + $explicitCredit, 2);
+            $paidAmount = round(min($saleTotal, $availableCredit), 2);
+            $remainingDue = round(max(0, $saleTotal - $paidAmount), 2);
+            $carryForwardCredit = round(max(0, $availableCredit - $saleTotal), 2);
 
             if ((float) $sale->paid !== $paidAmount || (float) $sale->due !== $remainingDue) {
                 $sale->forceFill([
