@@ -642,14 +642,17 @@
                     <!-- Date Filters -->
                     <v-row class="mb-4">
                         <v-col cols="12" sm="6" lg="4">
-                            <v-text-field
+                            <v-select
                                 v-model="filterMonth"
-                                label="Filter by Month (YYYY-MM)"
-                                placeholder="2025-01"
+                                :items="periodFilterOptions"
+                                item-title="title"
+                                item-value="value"
+                                label="Filter by Month or Year"
+                                placeholder="Select month or year"
                                 clearable
                                 density="compact"
                                 hide-details
-                            ></v-text-field>
+                            ></v-select>
                         </v-col>
                         <v-col cols="12" sm="6" lg="4">
                             <v-select
@@ -1006,6 +1009,49 @@ const allTotalAdvanceGiven = computed(() => allAdvances.value.reduce((sum, a) =>
 // Employee filter options
 const employeeFilterOptions = computed(() => employees.value.map(e => ({ id: e.id, name: e.name })))
 
+// Month/year filter options for summary dialog
+const periodFilterOptions = computed(() => {
+    const monthValues = new Set()
+    const yearValues = new Set()
+
+    const addMonthValue = (value) => {
+        if (!value) return
+        const normalized = String(value)
+        if (/^\d{4}-\d{2}$/.test(normalized)) {
+            monthValues.add(normalized)
+            yearValues.add(normalized.slice(0, 4))
+        }
+    }
+
+    const addDateValue = (value) => {
+        if (!value) return
+        const normalized = String(value)
+        if (/^\d{4}-\d{2}/.test(normalized)) {
+            monthValues.add(normalized.slice(0, 7))
+            yearValues.add(normalized.slice(0, 4))
+        }
+    }
+
+    allSalariesOriginal.value.forEach((salary) => {
+        addMonthValue(salary.month)
+        addDateValue(salary.payment_date)
+    })
+
+    allAdvancesOriginal.value.forEach((advance) => {
+        addDateValue(advance.date)
+    })
+
+    const yearOptions = [...yearValues]
+        .sort((a, b) => b.localeCompare(a))
+        .map((value) => ({ value, title: `Year: ${value}` }))
+
+    const monthOptions = [...monthValues]
+        .sort((a, b) => b.localeCompare(a))
+        .map((value) => ({ value, title: `Month: ${formatMonthShort(value)} (${value})` }))
+
+    return [...yearOptions, ...monthOptions]
+})
+
 // Active employees list for matrix
 const activeEmployeesList = computed(() => employees.value.filter(e => e.is_active))
 
@@ -1069,10 +1115,13 @@ const applyFilters = () => {
     let filteredSalaries = [...allSalariesOriginal.value]
     let filteredAdvances = [...allAdvancesOriginal.value]
 
-    // Filter by month
+    // Filter by selected month or year
     if (filterMonth.value) {
-        filteredSalaries = filteredSalaries.filter(s => s.month === filterMonth.value || s.payment_date?.startsWith(filterMonth.value))
-        filteredAdvances = filteredAdvances.filter(a => a.date?.startsWith(filterMonth.value))
+        const selectedPeriod = String(filterMonth.value)
+        const matchesPeriod = (value) => String(value || '').startsWith(selectedPeriod)
+
+        filteredSalaries = filteredSalaries.filter(s => matchesPeriod(s.month) || matchesPeriod(s.payment_date))
+        filteredAdvances = filteredAdvances.filter(a => matchesPeriod(a.date))
     }
 
     // Filter by employee
