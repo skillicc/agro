@@ -12,6 +12,9 @@
             <template v-slot:item.category="{ item }">
                 {{ item.category?.name }}
             </template>
+            <template v-slot:item.land="{ item }">
+                {{ item.land?.name || '-' }}
+            </template>
             <template v-slot:item.amount="{ item }">
                 ৳{{ Number(item.amount).toLocaleString() }}
             </template>
@@ -31,6 +34,16 @@
                 <v-card-title>{{ editMode ? 'Edit Expense' : 'Add Expense' }}</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="saveExpense">
+                        <v-select
+                            v-if="!props.warehouseId"
+                            v-model="form.land_id"
+                            :items="projectLands"
+                            item-title="name"
+                            item-value="id"
+                            label="Land / Plot"
+                            clearable
+                            :disabled="!projectLands.length"
+                        ></v-select>
                         <div class="d-flex ga-2 align-center">
                             <v-select
                                 v-model="form.expense_category_id"
@@ -131,6 +144,7 @@ const props = defineProps({
 
 const expenses = ref([])
 const categories = ref([])
+const projectLands = ref([])
 const loading = ref(false)
 const dialog = ref(false)
 const deleteDialog = ref(false)
@@ -145,6 +159,7 @@ const savingCategory = ref(false)
 const headers = [
     { title: 'Date', key: 'date' },
     { title: 'Bill No.', key: 'bill_no' },
+    { title: 'Land', key: 'land' },
     { title: 'Category', key: 'category' },
     { title: 'Amount', key: 'amount' },
     { title: 'Description', key: 'description' },
@@ -152,6 +167,7 @@ const headers = [
 ]
 
 const form = reactive({
+    land_id: null,
     expense_category_id: null,
     bill_no: '',
     amount: '',
@@ -182,11 +198,26 @@ const fetchCategories = async () => {
     }
 }
 
+const fetchProjectLands = async () => {
+    if (!props.projectId || props.warehouseId) {
+        projectLands.value = []
+        return
+    }
+
+    try {
+        const response = await api.get(`/lands?project_id=${props.projectId}`)
+        projectLands.value = response.data
+    } catch (error) {
+        console.error('Error loading lands:', error)
+    }
+}
+
 const openDialog = (expense = null) => {
     editMode.value = !!expense
     selectedExpense.value = expense
     if (expense) {
         Object.assign(form, {
+            land_id: expense.land_id || null,
             expense_category_id: expense.expense_category_id,
             bill_no: expense.bill_no || '',
             amount: expense.amount,
@@ -195,6 +226,7 @@ const openDialog = (expense = null) => {
         })
     } else {
         Object.assign(form, {
+            land_id: null,
             expense_category_id: null,
             bill_no: '',
             amount: '',
@@ -268,5 +300,6 @@ const saveCategory = async () => {
 onMounted(() => {
     fetchExpenses()
     fetchCategories()
+    fetchProjectLands()
 })
 </script>

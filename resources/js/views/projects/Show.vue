@@ -52,6 +52,7 @@
         <v-card class="mt-4">
             <v-tabs v-model="tab" color="primary">
                 <v-tab value="expenses">Expenses</v-tab>
+                <v-tab value="lands" v-if="showLandLedger">Land Ledger</v-tab>
                 <v-tab value="purchases">Purchases</v-tab>
                 <v-tab value="sales">Sales</v-tab>
                 <v-tab value="assets">Assets</v-tab>
@@ -65,6 +66,9 @@
                 <v-window v-model="tab">
                     <v-window-item value="expenses">
                         <ExpensesList :projectId="project.id" />
+                    </v-window-item>
+                    <v-window-item value="lands" v-if="showLandLedger">
+                        <ProjectLandLedger :projectId="project.id" />
                     </v-window-item>
                     <v-window-item value="purchases">
                         <PurchasesList :projectId="project.id" />
@@ -99,6 +103,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '../../services/api'
 import ExpensesList from '../../components/ExpensesList.vue'
+import ProjectLandLedger from '../../components/ProjectLandLedger.vue'
 import PurchasesList from '../../components/PurchasesList.vue'
 import SalesList from '../../components/SalesList.vue'
 import AssetsList from '../../components/AssetsList.vue'
@@ -112,6 +117,10 @@ const route = useRoute()
 const project = ref(null)
 const summary = ref({})
 const tab = ref('expenses')
+
+const showLandLedger = computed(() => {
+    return ['field', 'nursery'].includes(project.value?.type) || (project.value?.lands_count || 0) > 0
+})
 
 // Check if this is the Administration project
 const isAdministration = computed(() => {

@@ -37,6 +37,10 @@
                     </v-card-subtitle>
                     <v-card-text>
                         <p class="text-truncate">{{ project.description }}</p>
+                        <div class="text-caption mt-2 text-medium-emphasis">
+                            <v-icon size="16" class="mr-1">mdi-map-marker-radius</v-icon>
+                            Lands: {{ project.lands?.length ? project.lands.map(land => land.name).join(', ') : 'Not assigned' }}
+                        </div>
                         <v-row dense class="mt-2">
                             <v-col cols="4" class="text-center">
                                 <div class="text-h6">{{ project.expenses_count || 0 }}</div>
@@ -102,6 +106,29 @@
                             v-model="form.location"
                             label="Location"
                         ></v-text-field>
+                        <div class="d-flex ga-2 align-center">
+                            <v-select
+                                v-model="form.land_ids"
+                                :items="lands"
+                                item-title="name"
+                                item-value="id"
+                                label="Select Lands / Plots"
+                                multiple
+                                chips
+                                clearable
+                                class="flex-grow-1"
+                            ></v-select>
+                            <v-btn
+                                icon
+                                size="small"
+                                color="primary"
+                                variant="tonal"
+                                @click="openLandDialog"
+                                title="Add New Land"
+                            >
+                                <v-icon>mdi-plus</v-icon>
+                            </v-btn>
+                        </div>
                         <v-textarea
                             v-model="form.description"
                             label="Description"
@@ -113,6 +140,31 @@
                     <v-spacer></v-spacer>
                     <v-btn @click="dialog = false">Cancel</v-btn>
                     <v-btn color="primary" @click="saveProject" :loading="saving">Save</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Add Land Dialog -->
+        <v-dialog v-model="landDialog" max-width="420" :fullscreen="$vuetify.display.xs">
+            <v-card>
+                <v-card-title>Add New Land</v-card-title>
+                <v-card-text>
+                    <v-text-field v-model="newLand.name" label="Land Name" required></v-text-field>
+                    <v-text-field v-model="newLand.location" label="Location"></v-text-field>
+                    <v-row>
+                        <v-col cols="6">
+                            <v-text-field v-model.number="newLand.size" label="Size" type="number"></v-text-field>
+                        </v-col>
+                        <v-col cols="6">
+                            <v-select v-model="newLand.unit" :items="['acre', 'decimal', 'bigha', 'shotok']" label="Unit"></v-select>
+                        </v-col>
+                    </v-row>
+                    <v-textarea v-model="newLand.notes" label="Notes" rows="2"></v-textarea>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="landDialog = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="saveLand" :loading="savingLand">Save</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -153,12 +205,15 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import api from '../../services/api'
 
 const projects = ref([])
+const lands = ref([])
 const dialog = ref(false)
 const deleteDialog = ref(false)
+const landDialog = ref(false)
 const editMode = ref(false)
 const selectedProject = ref(null)
 const saving = ref(false)
 const deleting = ref(false)
+const savingLand = ref(false)
 const toggling = ref(null)
 const showInactive = ref(false)
 const adminPassword = ref('')
@@ -177,6 +232,15 @@ const form = reactive({
     type: 'field',
     location: '',
     description: '',
+    land_ids: [],
+})
+
+const newLand = reactive({
+    name: '',
+    location: '',
+    size: null,
+    unit: 'acre',
+    notes: '',
 })
 
 const filteredProjects = computed(() => {
@@ -228,6 +292,15 @@ const fetchProjects = async () => {
     }
 }
 
+const fetchLands = async () => {
+    try {
+        const response = await api.get('/lands?include_inactive=1')
+        lands.value = response.data
+    } catch (error) {
+        console.error('Error fetching lands:', error)
+    }
+}
+
 const openDialog = (project = null) => {
     editMode.value = !!project
     selectedProject.value = project
@@ -236,11 +309,13 @@ const openDialog = (project = null) => {
         form.type = project.type
         form.location = project.location
         form.description = project.description
+        form.land_ids = project.lands?.map(land => land.id) || []
     } else {
         form.name = ''
         form.type = 'field'
         form.location = ''
         form.description = ''
+        form.land_ids = []
     }
     dialog.value = true
 }
@@ -259,6 +334,30 @@ const saveProject = async () => {
         console.error('Error saving project:', error)
     }
     saving.value = false
+}
+
+const openLandDialog = () => {
+    newLand.name = ''
+    newLand.location = ''
+    newLand.size = null
+    newLand.unit = 'acre'
+    newLand.notes = ''
+    landDialog.value = true
+}
+
+const saveLand = async () => {
+    if (!newLand.name.trim()) return
+
+    savingLand.value = true
+    try {
+        const response = await api.post('/lands', newLand)
+        landDialog.value = false
+        await fetchLands()
+        form.land_ids = [...new Set([...(form.land_ids || []), response.data.id])]
+    } catch (error) {
+        console.error('Error saving land:', error)
+    }
+    savingLand.value = false
 }
 
 const confirmDelete = (project) => {
@@ -313,6 +412,7 @@ const toggleStatus = async (project) => {
 
 onMounted(() => {
     fetchProjects()
+    fetchLands()
 })
 </script>
 

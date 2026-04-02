@@ -12,6 +12,7 @@ class Expense extends Model
 
     protected $fillable = [
         'project_id',
+        'land_id',
         'warehouse_id',
         'expense_category_id',
         'bill_no',
@@ -34,6 +35,11 @@ class Expense extends Model
     public function warehouse()
     {
         return $this->belongsTo(Warehouse::class);
+    }
+
+    public function land()
+    {
+        return $this->belongsTo(Land::class);
     }
 
     public function category()

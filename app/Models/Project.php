@@ -13,13 +13,26 @@ class Project extends Model
     protected $fillable = [
         'name',
         'type',
+        'project_type',
         'description',
         'location',
+        'start_date',
+        'expected_harvest_date',
+        'actual_harvest_date',
+        'duration_months',
+        'project_status',
         'is_active',
+        'is_closed',
+        'closure_date',
     ];
 
     protected $casts = [
+        'start_date' => 'date',
+        'expected_harvest_date' => 'date',
+        'actual_harvest_date' => 'date',
+        'closure_date' => 'date',
         'is_active' => 'boolean',
+        'is_closed' => 'boolean',
     ];
 
     public function users()
@@ -30,6 +43,16 @@ class Project extends Model
     public function assets()
     {
         return $this->hasMany(Asset::class);
+    }
+
+    public function lands()
+    {
+        return $this->belongsToMany(Land::class)->withTimestamps();
+    }
+
+    public function landCultivations()
+    {
+        return $this->hasMany(LandCultivation::class);
     }
 
     public function expenses()

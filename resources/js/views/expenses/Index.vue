@@ -13,10 +13,22 @@
             <v-card-text>
                 <v-row>
                     <v-col cols="12" sm="6" lg="3">
-                        <v-select v-model="filters.project_id" :items="projects" item-title="name" item-value="id" label="Project" clearable @update:model-value="fetchExpenses"></v-select>
+                        <v-select v-model="filters.project_id" :items="projects" item-title="name" item-value="id" label="Project" clearable @update:model-value="handleProjectFilterChange"></v-select>
                     </v-col>
                     <v-col cols="12" sm="6" lg="3">
                         <v-select v-model="filters.warehouse_id" :items="warehouses" item-title="name" item-value="id" label="Warehouse" clearable @update:model-value="fetchExpenses"></v-select>
+                    </v-col>
+                    <v-col cols="12" sm="6" lg="3">
+                        <v-select
+                            v-model="filters.land_id"
+                            :items="filterLands"
+                            item-title="name"
+                            item-value="id"
+                            label="Land / Plot"
+                            clearable
+                            :disabled="!filters.project_id"
+                            @update:model-value="fetchExpenses"
+                        ></v-select>
                     </v-col>
                     <v-col cols="12" sm="6" lg="3">
                         <v-text-field v-model="filters.start_date" label="Start Date" type="date" @update:model-value="fetchExpenses"></v-text-field>
@@ -39,6 +51,9 @@
                         <span v-else-if="item.warehouse" class="text-warning">{{ item.warehouse.name }}</span>
                         <span v-else>-</span>
                     </template>
+                    <template v-slot:item.land="{ item }">
+                        {{ item.land?.name || '-' }}
+                    </template>
                     <template v-slot:item.amount="{ item }">
                         ৳{{ formatNumber(item.amount) }}
                     </template>
@@ -60,7 +75,7 @@
                 <v-card-title>{{ editMode ? 'Edit Expense' : 'Add Expense' }}</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="saveExpense">
-                        <v-radio-group v-model="form.expense_type" inline class="mb-2" @update:model-value="loadCategories">
+                        <v-radio-group v-model="form.expense_type" inline class="mb-2" @update:model-value="handleExpenseTypeChange">
                             <v-radio label="Project" value="project"></v-radio>
                             <v-radio label="Warehouse" value="warehouse"></v-radio>
                         </v-radio-group>
@@ -72,7 +87,17 @@
                             item-value="id"
                             label="Project"
                             required
-                            @update:model-value="loadCategories"
+                            @update:model-value="handleProjectSelectionChange"
+                        ></v-select>
+                        <v-select
+                            v-if="form.expense_type === 'project'"
+                            v-model="form.land_id"
+                            :items="formLands"
+                            item-title="name"
+                            item-value="id"
+                            label="Land / Plot"
+                            clearable
+                            :disabled="!form.project_id"
                         ></v-select>
                         <v-select
                             v-else
@@ -163,6 +188,8 @@ const expenses = ref([])
 const projects = ref([])
 const warehouses = ref([])
 const categories = ref([])
+const filterLands = ref([])
+const formLands = ref([])
 const loading = ref(false)
 const dialog = ref(false)
 const deleteDialog = ref(false)
@@ -174,14 +201,15 @@ const categoryDialog = ref(false)
 const newCategoryName = ref('')
 const savingCategory = ref(false)
 
-const filters = reactive({ project_id: null, warehouse_id: null, start_date: '', end_date: '' })
-const form = reactive({ expense_type: 'project', project_id: null, warehouse_id: null, expense_category_id: null, bill_no: '', amount: 0, date: new Date().toISOString().split('T')[0], description: '' })
+const filters = reactive({ project_id: null, warehouse_id: null, land_id: null, start_date: '', end_date: '' })
+const form = reactive({ expense_type: 'project', project_id: null, land_id: null, warehouse_id: null, expense_category_id: null, bill_no: '', amount: 0, date: new Date().toISOString().split('T')[0], description: '' })
 
 const headers = [
     { title: 'SL', key: 'sl', width: '60px' },
     { title: 'Date', key: 'date' },
     { title: 'Bill No.', key: 'bill_no' },
     { title: 'Source', key: 'source' },
+    { title: 'Land', key: 'land' },
     { title: 'Category', key: 'category.name' },
     { title: 'Amount', key: 'amount' },
     { title: 'Created By', key: 'creator.name' },
@@ -196,6 +224,7 @@ const fetchExpenses = async () => {
         const params = new URLSearchParams()
         if (filters.project_id) params.append('project_id', filters.project_id)
         if (filters.warehouse_id) params.append('warehouse_id', filters.warehouse_id)
+        if (filters.land_id) params.append('land_id', filters.land_id)
         if (filters.start_date) params.append('start_date', filters.start_date)
         if (filters.end_date) params.append('end_date', filters.end_date)
         const response = await api.get(`/expenses?${params}`)
@@ -240,16 +269,64 @@ const loadCategories = async () => {
     }
 }
 
+const loadFilterLands = async () => {
+    if (!filters.project_id) {
+        filters.land_id = null
+        filterLands.value = []
+        return
+    }
+
+    try {
+        const response = await api.get(`/lands?project_id=${filters.project_id}`)
+        filterLands.value = response.data
+    } catch (error) {
+        console.error('Error loading filter lands:', error)
+    }
+}
+
+const loadFormLands = async () => {
+    if (form.expense_type !== 'project' || !form.project_id) {
+        form.land_id = null
+        formLands.value = []
+        return
+    }
+
+    try {
+        const response = await api.get(`/lands?project_id=${form.project_id}`)
+        formLands.value = response.data
+    } catch (error) {
+        console.error('Error loading form lands:', error)
+    }
+}
+
+const handleProjectFilterChange = async () => {
+    await loadFilterLands()
+    fetchExpenses()
+}
+
+const handleProjectSelectionChange = async () => {
+    await Promise.all([loadCategories(), loadFormLands()])
+}
+
+const handleExpenseTypeChange = async () => {
+    if (form.expense_type !== 'project') {
+        form.project_id = null
+        form.land_id = null
+        formLands.value = []
+    }
+    await loadCategories()
+}
+
 const openDialog = (expense = null) => {
     editMode.value = !!expense
     selectedExpense.value = expense
     if (expense) {
         const expenseType = expense.warehouse_id ? 'warehouse' : 'project'
-        Object.assign(form, { ...expense, expense_type: expenseType })
+        Object.assign(form, { ...expense, expense_type: expenseType, land_id: expense.land_id || null })
     } else {
-        Object.assign(form, { expense_type: 'project', project_id: null, warehouse_id: null, expense_category_id: null, bill_no: '', amount: 0, date: new Date().toISOString().split('T')[0], description: '' })
+        Object.assign(form, { expense_type: 'project', project_id: null, land_id: null, warehouse_id: null, expense_category_id: null, bill_no: '', amount: 0, date: new Date().toISOString().split('T')[0], description: '' })
     }
-    loadCategories()
+    Promise.all([loadCategories(), loadFormLands()])
     dialog.value = true
 }
 
@@ -262,6 +339,7 @@ const saveExpense = async () => {
             data.warehouse_id = null
         } else {
             data.project_id = null
+            data.land_id = null
         }
         delete data.expense_type
 

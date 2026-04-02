@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Project;
 use App\Models\Harvest;
+use App\Models\LandCultivation;
+use App\Models\Project;
 use App\Models\ProjectClosure;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Hash;
 
 class ProjectController extends Controller
@@ -15,19 +17,19 @@ class ProjectController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
+        $builder = $user->isAdmin() ? Project::query() : $user->projects();
 
-        if ($user->isAdmin()) {
-            $projects = Project::withCount(['expenses', 'purchases', 'sales'])->get();
-        } else {
-            $projects = $user->projects()->withCount(['expenses', 'purchases', 'sales'])->get();
-        }
+        $projects = $builder
+            ->with(['lands:id,name'])
+            ->withCount(['expenses', 'purchases', 'sales', 'lands'])
+            ->get();
 
         return response()->json($projects);
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|in:field,nursery,shop,administration,central',
             'description' => 'nullable|string',
@@ -35,11 +37,14 @@ class ProjectController extends Controller
             'start_date' => 'nullable|date',
             'expected_harvest_date' => 'nullable|date',
             'duration_months' => 'nullable|integer|min:1|max:12',
+            'land_ids' => 'nullable|array',
+            'land_ids.*' => 'exists:lands,id',
         ]);
 
-        $project = Project::create($request->all());
+        $project = Project::create(Arr::except($data, ['land_ids']));
+        $this->syncProjectLands($project, $data['land_ids'] ?? []);
 
-        return response()->json($project, 201);
+        return response()->json($project->load('lands'), 201);
     }
 
     public function show(Request $request, Project $project)
@@ -50,15 +55,15 @@ class ProjectController extends Controller
             return response()->json(['message' => 'Access denied'], 403);
         }
 
-        $project->loadCount(['expenses', 'purchases', 'sales', 'damages', 'productions']);
-        $project->load('users');
+        $project->loadCount(['expenses', 'purchases', 'sales', 'damages', 'productions', 'lands']);
+        $project->load(['users', 'lands.currentCultivation']);
 
         return response()->json($project);
     }
 
     public function update(Request $request, Project $project)
     {
-        $request->validate([
+        $data = $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|in:field,nursery,shop,administration,central',
             'description' => 'nullable|string',
@@ -68,11 +73,16 @@ class ProjectController extends Controller
             'actual_harvest_date' => 'nullable|date',
             'duration_months' => 'nullable|integer|min:1|max:12',
             'project_status' => 'nullable|in:planning,active,harvesting,completed,closed',
+            'land_ids' => 'nullable|array',
+            'land_ids.*' => 'exists:lands,id',
         ]);
 
-        $project->update($request->all());
+        $project->update(Arr::except($data, ['land_ids']));
+        if (array_key_exists('land_ids', $data)) {
+            $this->syncProjectLands($project, $data['land_ids'] ?? []);
+        }
 
-        return response()->json($project);
+        return response()->json($project->load('lands'));
     }
 
     public function destroy(Request $request, Project $project)
@@ -81,7 +91,6 @@ class ProjectController extends Controller
             'admin_password' => 'required|string',
         ]);
 
-        // Get an admin user to verify password
         $admin = User::where('role', 'admin')->first();
 
         if (!$admin || !Hash::check($request->admin_password, $admin->password)) {
@@ -112,6 +121,8 @@ class ProjectController extends Controller
             'purchase_count' => $project->purchases()->count(),
             'sale_count' => $project->sales()->count(),
             'employee_count' => $project->employees()->where('is_active', true)->count(),
+            'land_count' => $project->lands()->count(),
+            'land_expenses' => $project->expenses()->whereNotNull('land_id')->sum('amount'),
         ];
 
         return response()->json($summary);
@@ -146,7 +157,142 @@ class ProjectController extends Controller
         ]);
     }
 
-    // Add harvest record
+    public function landLedger(Request $request, Project $project)
+    {
+        $user = $request->user();
+
+        if (!$user->hasProjectAccess($project)) {
+            return response()->json(['message' => 'Access denied'], 403);
+        }
+
+        $lands = $project->lands()
+            ->orderBy('name')
+            ->get()
+            ->map(function ($land) use ($project) {
+                $cultivations = $land->cultivations()
+                    ->where('project_id', $project->id)
+                    ->orderByDesc('opening_date')
+                    ->get();
+
+                $expenses = $land->expenses()
+                    ->with(['category', 'creator'])
+                    ->where('project_id', $project->id)
+                    ->orderByDesc('date')
+                    ->get();
+
+                return [
+                    'id' => $land->id,
+                    'name' => $land->name,
+                    'code' => $land->code,
+                    'location' => $land->location,
+                    'size' => $land->size,
+                    'unit' => $land->unit,
+                    'notes' => $land->notes,
+                    'current_cultivation' => $cultivations->firstWhere('status', 'active'),
+                    'cultivations' => $cultivations->values(),
+                    'recent_expenses' => $expenses->take(10)->values(),
+                    'expense_count' => $expenses->count(),
+                    'total_expenses' => (float) $expenses->sum('amount'),
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'lands' => $lands,
+            'totals' => [
+                'land_count' => $lands->count(),
+                'active_cultivations' => $lands->filter(fn ($land) => !empty($land['current_cultivation']))->count(),
+                'total_expenses' => $lands->sum('total_expenses'),
+                'unassigned_expenses' => (float) $project->expenses()->whereNull('land_id')->sum('amount'),
+            ],
+        ]);
+    }
+
+    public function storeLandCultivation(Request $request, Project $project)
+    {
+        $user = $request->user();
+
+        if (!$user->hasProjectAccess($project)) {
+            return response()->json(['message' => 'Access denied'], 403);
+        }
+
+        $data = $request->validate([
+            'land_id' => 'required|exists:lands,id',
+            'crop_name' => 'required|string|max:255',
+            'opening_date' => 'required|date',
+            'expected_closing_date' => 'nullable|date|after_or_equal:opening_date',
+            'closing_date' => 'nullable|date|after_or_equal:opening_date',
+            'status' => 'nullable|in:active,closed',
+            'notes' => 'nullable|string',
+        ]);
+
+        if (!$project->lands()->where('lands.id', $data['land_id'])->exists()) {
+            $project->lands()->syncWithoutDetaching([$data['land_id']]);
+        }
+
+        $hasActiveCycle = LandCultivation::where('land_id', $data['land_id'])
+            ->where('status', 'active')
+            ->exists();
+
+        if ($hasActiveCycle) {
+            return response()->json([
+                'message' => 'This land already has an active crop cycle. Please close it first.'
+            ], 422);
+        }
+
+        $cycle = LandCultivation::create([
+            ...$data,
+            'project_id' => $project->id,
+            'status' => !empty($data['closing_date']) ? 'closed' : ($data['status'] ?? 'active'),
+        ]);
+
+        return response()->json($cycle->load(['land', 'project']), 201);
+    }
+
+    public function updateLandCultivation(Request $request, LandCultivation $landCultivation)
+    {
+        $user = $request->user();
+
+        if (!$user->hasProjectAccess($landCultivation->project)) {
+            return response()->json(['message' => 'Access denied'], 403);
+        }
+
+        $data = $request->validate([
+            'crop_name' => 'sometimes|string|max:255',
+            'opening_date' => 'sometimes|date',
+            'expected_closing_date' => 'nullable|date',
+            'closing_date' => 'nullable|date',
+            'status' => 'nullable|in:active,closed',
+            'notes' => 'nullable|string',
+        ]);
+
+        $wantsActive = ($data['status'] ?? $landCultivation->status) === 'active';
+        if ($wantsActive) {
+            $hasOtherActiveCycle = LandCultivation::where('land_id', $landCultivation->land_id)
+                ->where('status', 'active')
+                ->whereKeyNot($landCultivation->id)
+                ->exists();
+
+            if ($hasOtherActiveCycle) {
+                return response()->json([
+                    'message' => 'Another active crop cycle already exists for this land.'
+                ], 422);
+            }
+        }
+
+        if (!empty($data['closing_date']) && !isset($data['status'])) {
+            $data['status'] = 'closed';
+        }
+
+        if (($data['status'] ?? null) === 'closed' && empty($data['closing_date'])) {
+            $data['closing_date'] = now()->toDateString();
+        }
+
+        $landCultivation->update($data);
+
+        return response()->json($landCultivation->load(['land', 'project']));
+    }
+
     public function addHarvest(Request $request, Project $project)
     {
         $request->validate([
@@ -174,7 +320,6 @@ class ProjectController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
-        // Update project status to harvesting if not already
         if ($project->project_status === 'active') {
             $project->update(['project_status' => 'harvesting']);
         }
@@ -182,14 +327,12 @@ class ProjectController extends Controller
         return response()->json($harvest->load(['project', 'product', 'creator']), 201);
     }
 
-    // Get project harvests
     public function harvests(Project $project)
     {
         $harvests = $project->harvests()->with(['product', 'creator'])->orderBy('harvest_date', 'desc')->get();
         return response()->json($harvests);
     }
 
-    // Close project and calculate final profit/loss
     public function closeProject(Request $request, Project $project)
     {
         $request->validate([
@@ -200,12 +343,10 @@ class ProjectController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
-        // Check if already closed
         if ($project->is_closed) {
             return response()->json(['message' => 'Project is already closed'], 400);
         }
 
-        // Calculate totals
         $totalSales = $project->sales()->sum('total');
         $totalHarvestValue = $project->harvests()->sum('total_value');
         $otherIncome = $request->other_income ?? 0;
@@ -221,7 +362,6 @@ class ProjectController extends Controller
         $netProfit = $totalIncome - $totalCost;
         $profitPercentage = $totalCost > 0 ? ($netProfit / $totalCost) * 100 : 0;
 
-        // Create closure record
         $closure = ProjectClosure::create([
             'project_id' => $project->id,
             'closure_date' => $request->closure_date,
@@ -243,7 +383,6 @@ class ProjectController extends Controller
             'closed_by' => $request->user()->id,
         ]);
 
-        // Update project status
         $project->update([
             'is_closed' => true,
             'closure_date' => $request->closure_date,
@@ -253,7 +392,6 @@ class ProjectController extends Controller
         return response()->json($closure->load(['project', 'closedBy']), 201);
     }
 
-    // Get project closure details
     public function closureDetails(Project $project)
     {
         if (!$project->is_closed) {
@@ -262,5 +400,10 @@ class ProjectController extends Controller
 
         $closure = $project->closure()->with(['closedBy'])->first();
         return response()->json($closure);
+    }
+
+    private function syncProjectLands(Project $project, array $landIds = []): void
+    {
+        $project->lands()->sync($landIds);
     }
 }

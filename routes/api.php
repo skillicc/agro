@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\InvestLoanLiabilityController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\SystemController;
 use App\Http\Controllers\Api\StockBatchController;
+use App\Http\Controllers\Api\LandController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -52,6 +53,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projects/{project}/harvests', [ProjectController::class, 'harvests']);
     Route::post('/projects/{project}/close', [ProjectController::class, 'closeProject']);
     Route::get('/projects/{project}/closure', [ProjectController::class, 'closureDetails']);
+    Route::get('/projects/{project}/land-ledger', [ProjectController::class, 'landLedger']);
+    Route::post('/projects/{project}/land-cultivations', [ProjectController::class, 'storeLandCultivation']);
+    Route::put('/land-cultivations/{landCultivation}', [ProjectController::class, 'updateLandCultivation']);
+
+    // Lands
+    Route::apiResource('lands', LandController::class)->except(['show']);
 
     // Suppliers
     Route::apiResource('suppliers', SupplierController::class);
