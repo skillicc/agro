@@ -12,6 +12,7 @@ class Sale extends Model
 
     protected $fillable = [
         'project_id',
+        'land_id',
         'warehouse_id',
         'customer_id',
         'challan_no',
@@ -58,6 +59,11 @@ class Sale extends Model
     public function customer()
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function land()
+    {
+        return $this->belongsTo(Land::class);
     }
 
     public function items()

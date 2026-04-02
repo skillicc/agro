@@ -15,6 +15,19 @@
                             <v-select v-model="form.project_id" :items="projects" item-title="name" item-value="id" label="Project *" clearable hint="Project or Warehouse required" persistent-hint></v-select>
                         </v-col>
                         <v-col cols="12" sm="6" lg="3">
+                            <v-select
+                                v-model="form.land_id"
+                                :items="projectLands"
+                                item-title="name"
+                                item-value="id"
+                                label="Land / Plot"
+                                clearable
+                                :disabled="!form.project_id"
+                                hint="Optional: track which land the sale came from"
+                                persistent-hint
+                            ></v-select>
+                        </v-col>
+                        <v-col cols="12" sm="6" lg="3">
                             <v-select v-model="form.warehouse_id" :items="warehouses" item-title="name" item-value="id" label="Warehouse *" clearable hint="Project or Warehouse required" persistent-hint></v-select>
                         </v-col>
                         <v-col cols="6" sm="4" lg="2">
@@ -164,6 +177,7 @@ import api from '../../services/api'
 const router = useRouter()
 const route = useRoute()
 const projects = ref([])
+const projectLands = ref([])
 const warehouses = ref([])
 const customers = ref([])
 const products = ref([])
@@ -172,6 +186,7 @@ const loading = ref(false)
 
 const form = reactive({
     project_id: null,
+    land_id: null,
     warehouse_id: null,
     customer_id: null,
     challan_no: '',
@@ -358,6 +373,26 @@ const getProductUnit = (productId) => {
     return product ? product.unit : ''
 }
 
+const loadProjectLands = async () => {
+    if (!form.project_id) {
+        projectLands.value = []
+        form.land_id = null
+        return
+    }
+
+    try {
+        const response = await api.get(`/lands?project_id=${form.project_id}`)
+        projectLands.value = response.data
+
+        if (form.land_id && !projectLands.value.some(land => land.id === form.land_id)) {
+            form.land_id = null
+        }
+    } catch (error) {
+        console.error('Error loading lands:', error)
+        projectLands.value = []
+    }
+}
+
 const fetchData = async () => {
     loading.value = true
     try {
@@ -376,6 +411,7 @@ const fetchData = async () => {
         // Populate form with existing data
         const sale = saleRes.data
         form.project_id = sale.project_id
+        form.land_id = sale.land_id
         form.warehouse_id = sale.warehouse_id
         form.customer_id = sale.customer_id
         form.challan_no = sale.challan_no
@@ -383,6 +419,8 @@ const fetchData = async () => {
         form.discount = parseFloat(sale.discount) || 0
         form.paid = parseFloat(sale.paid) || 0
         form.note = sale.note || ''
+
+        await loadProjectLands()
 
         // Load items with batches
         form.items = []
@@ -425,6 +463,8 @@ watch(
             return
         }
 
+        await loadProjectLands()
+
         for (let index = 0; index < form.items.length; index += 1) {
             await syncItemSource(index)
         }
@@ -449,6 +489,7 @@ const saveSale = async () => {
         // Prepare data - ensure null values are properly handled
         const data = {
             project_id: form.project_id || null,
+            land_id: form.land_id || null,
             warehouse_id: form.warehouse_id || null,
             customer_id: form.customer_id || null,
             challan_no: form.challan_no,

@@ -44,6 +44,18 @@
                             density="compact"
                         ></v-select>
                     </v-col>
+                    <v-col cols="12" sm="6" md="3">
+                        <v-select
+                            v-model="selectedLand"
+                            :items="landOptions"
+                            item-title="name"
+                            item-value="id"
+                            label="Filter by Land"
+                            clearable
+                            hide-details
+                            density="compact"
+                        ></v-select>
+                    </v-col>
                     <v-col cols="auto">
                         <v-btn size="small" variant="tonal" @click="clearFilters">Clear</v-btn>
                     </v-col>
@@ -142,6 +154,9 @@
                             <strong>Project:</strong> {{ selectedSale.project?.name }}
                         </v-col>
                         <v-col cols="6">
+                            <strong>Land:</strong> {{ selectedSale.land?.name || '-' }}
+                        </v-col>
+                        <v-col cols="6">
                             <strong>Created By:</strong> {{ selectedSale.creator?.name }}
                         </v-col>
                     </v-row>
@@ -213,6 +228,7 @@ const display = useDisplay()
 const sales = ref([])
 const loading = ref(false)
 const selectedCustomer = ref(null)
+const selectedLand = ref(null)
 const filterStartDate = ref('')
 const filterEndDate = ref('')
 const viewDialog = ref(false)
@@ -226,6 +242,7 @@ const headers = [
     { title: 'Challan No.', key: 'challan_no' },
     { title: 'Date', key: 'date' },
     { title: 'Project', key: 'project.name' },
+    { title: 'Land', key: 'land.name' },
     { title: 'Customer', key: 'customer.name' },
     { title: 'Total', key: 'total' },
     { title: 'Due', key: 'due' },
@@ -250,9 +267,17 @@ const customerOptions = computed(() => {
         .map(s => ({ id: s.customer.id, name: s.customer.name }))
 })
 
+const landOptions = computed(() => {
+    const seen = new Set()
+    return sales.value
+        .filter(s => s.land && !seen.has(s.land.id) && seen.add(s.land.id))
+        .map(s => ({ id: s.land.id, name: s.land.name }))
+})
+
 const filteredSales = computed(() => {
     return sales.value.filter(s => {
         if (selectedCustomer.value && s.customer?.id !== selectedCustomer.value) return false
+        if (selectedLand.value && s.land?.id !== selectedLand.value) return false
         if (filterStartDate.value && s.date < filterStartDate.value) return false
         if (filterEndDate.value && s.date > filterEndDate.value) return false
         return true
@@ -260,7 +285,7 @@ const filteredSales = computed(() => {
 })
 
 const hasActiveFilters = computed(() => {
-    return Boolean(selectedCustomer.value || filterStartDate.value || filterEndDate.value)
+    return Boolean(selectedCustomer.value || selectedLand.value || filterStartDate.value || filterEndDate.value)
 })
 
 const filteredSummary = computed(() => {
@@ -280,6 +305,7 @@ const filteredSummary = computed(() => {
 
 const clearFilters = () => {
     selectedCustomer.value = null
+    selectedLand.value = null
     filterStartDate.value = ''
     filterEndDate.value = ''
 }

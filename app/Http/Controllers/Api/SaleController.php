@@ -8,19 +8,25 @@ use App\Models\SaleItem;
 use App\Models\SaleItemBatch;
 use App\Models\StockBatch;
 use App\Models\CustomerPayment;
+use App\Models\Land;
 use App\Models\Product;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class SaleController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Sale::with(['project', 'customer', 'creator']);
+        $query = Sale::with(['project', 'warehouse', 'land', 'customer', 'creator']);
 
         if ($request->project_id) {
             $query->where('project_id', $request->project_id);
+        }
+
+        if ($request->land_id) {
+            $query->where('land_id', $request->land_id);
         }
 
         if ($request->customer_id) {
@@ -40,6 +46,7 @@ class SaleController extends Controller
     {
         $request->validate([
             'project_id' => 'nullable|exists:projects,id',
+            'land_id' => 'nullable|exists:lands,id',
             'warehouse_id' => 'nullable|exists:warehouses,id',
             'customer_id' => 'nullable|exists:customers,id',
             'date' => 'required|date',
@@ -70,8 +77,13 @@ class SaleController extends Controller
         try {
             $sourceWarehouse = $this->resolveSourceWarehouse($request->project_id, $request->warehouse_id);
 
+            if ($request->land_id) {
+                $this->ensureLandBelongsToProject($request->land_id, $request->project_id);
+            }
+
             $sale = Sale::create([
                 'project_id' => $request->project_id,
+                'land_id' => $request->land_id,
                 'warehouse_id' => $request->warehouse_id,
                 'customer_id' => $request->customer_id,
                 'challan_no' => $request->challan_no ?? ('SAL-' . date('Ymd') . '-' . str_pad(Sale::whereDate('created_at', today())->count() + 1, 4, '0', STR_PAD_LEFT)),
@@ -152,7 +164,10 @@ class SaleController extends Controller
 
             DB::commit();
 
-            return response()->json($sale->load(['project', 'customer', 'items.product', 'items.batches.stockBatch', 'creator']), 201);
+            return response()->json($sale->load(['project', 'warehouse', 'land', 'customer', 'items.product', 'items.batches.stockBatch', 'creator']), 201);
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            throw $e;
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Error creating sale: ' . $e->getMessage()], 500);
@@ -161,13 +176,14 @@ class SaleController extends Controller
 
     public function show(Sale $sale)
     {
-        return response()->json($sale->load(['project', 'customer', 'items.product', 'items.batches.stockBatch', 'payments', 'creator']));
+        return response()->json($sale->load(['project', 'warehouse', 'land', 'customer', 'items.product', 'items.batches.stockBatch', 'payments', 'creator']));
     }
 
     public function update(Request $request, Sale $sale)
     {
         $request->validate([
             'project_id' => 'nullable|exists:projects,id',
+            'land_id' => 'nullable|exists:lands,id',
             'warehouse_id' => 'nullable|exists:warehouses,id',
             'customer_id' => 'nullable|exists:customers,id',
             'date' => 'required|date',
@@ -198,8 +214,13 @@ class SaleController extends Controller
         try {
             $sourceWarehouse = $this->resolveSourceWarehouse($request->project_id, $request->warehouse_id);
 
+            if ($request->land_id) {
+                $this->ensureLandBelongsToProject($request->land_id, $request->project_id);
+            }
+
             $sale->update([
                 'project_id' => $request->project_id,
+                'land_id' => $request->land_id,
                 'warehouse_id' => $request->warehouse_id,
                 'customer_id' => $request->customer_id,
                 'date' => $request->date,
@@ -268,7 +289,10 @@ class SaleController extends Controller
             $sale->calculateTotals();
             DB::commit();
 
-            return response()->json($sale->load(['project', 'warehouse', 'customer', 'items.product', 'items.batches.stockBatch', 'creator']));
+            return response()->json($sale->load(['project', 'warehouse', 'land', 'customer', 'items.product', 'items.batches.stockBatch', 'creator']));
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            throw $e;
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Error updating sale: ' . $e->getMessage()], 500);
@@ -313,6 +337,27 @@ class SaleController extends Controller
         $sale->save();
 
         return response()->json($sale->load(['payments']));
+    }
+
+    private function ensureLandBelongsToProject(int|string $landId, int|string|null $projectId): void
+    {
+        if (!$projectId) {
+            throw ValidationException::withMessages([
+                'land_id' => 'A project must be selected before assigning a land.',
+            ]);
+        }
+
+        $belongsToProject = Land::whereKey($landId)
+            ->whereHas('projects', function ($query) use ($projectId) {
+                $query->where('projects.id', $projectId);
+            })
+            ->exists();
+
+        if (!$belongsToProject) {
+            throw ValidationException::withMessages([
+                'land_id' => 'The selected land is not assigned to this project.',
+            ]);
+        }
     }
 
     private function resolveSourceWarehouse(?int $projectId, ?int $warehouseId): ?Warehouse

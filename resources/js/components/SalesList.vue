@@ -9,6 +9,9 @@
         </div>
 
         <v-data-table :headers="headers" :items="sales" :loading="loading" density="compact">
+            <template v-slot:item.land="{ item }">
+                {{ item.land?.name || '-' }}
+            </template>
             <template v-slot:item.customer="{ item }">
                 {{ item.customer?.name }}
             </template>
@@ -47,6 +50,10 @@
                             <tr>
                                 <td class="font-weight-bold">Customer:</td>
                                 <td>{{ selectedSale?.customer?.name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold">Land:</td>
+                                <td>{{ selectedSale?.land?.name || '-' }}</td>
                             </tr>
                             <tr>
                                 <td class="font-weight-bold">Challan No.:</td>
@@ -121,6 +128,7 @@ const deleting = ref(false)
 const headers = [
     { title: 'Date', key: 'date' },
     { title: 'Challan No.', key: 'challan_no' },
+    { title: 'Land', key: 'land' },
     { title: 'Customer', key: 'customer' },
     { title: 'Total', key: 'total' },
     { title: 'Paid', key: 'paid' },

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\Api\SaleController;
 use App\Models\Customer;
+use App\Models\Land;
 use App\Models\Product;
 use App\Models\Project;
 use App\Models\User;
@@ -74,6 +75,84 @@ class SaleStockFlowTest extends TestCase
         $this->assertDatabaseHas('sales', ['project_id' => $shopProject->id]);
         $this->assertSame(5.0, (float) $shopWarehouse->fresh()->getStockQuantity($product->id));
         $this->assertSame(17.0, (float) $product->fresh()->stock_quantity);
+    }
+
+    public function test_sale_can_be_created_with_land_and_filtered_land_wise(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $fieldProject = Project::create([
+            'name' => 'Field Tomato Project',
+            'type' => 'field',
+            'location' => 'Gazipur',
+            'is_active' => true,
+        ]);
+
+        $land = Land::create([
+            'name' => 'North Land',
+            'location' => 'Gazipur Block A',
+            'size' => 1.25,
+            'unit' => 'acre',
+            'is_active' => true,
+        ]);
+
+        $fieldProject->lands()->sync([$land->id]);
+
+        $projectWarehouse = Warehouse::create([
+            'name' => 'Field Tomato Project Warehouse',
+            'code' => 'FLD-001',
+            'project_id' => $fieldProject->id,
+            'is_active' => true,
+        ]);
+
+        $product = Product::create([
+            'name' => 'Own Tomato',
+            'type' => 'own_production',
+            'unit' => 'kg',
+            'selling_price' => 60,
+            'buying_price' => 35,
+            'stock_quantity' => 40,
+            'is_active' => true,
+        ]);
+
+        $projectWarehouse->updateStock($product->id, 12, true);
+
+        $customer = Customer::create([
+            'name' => 'Land Customer',
+            'is_active' => true,
+        ]);
+
+        $request = Request::create('/api/sales', 'POST', [
+            'project_id' => $fieldProject->id,
+            'land_id' => $land->id,
+            'customer_id' => $customer->id,
+            'date' => now()->toDateString(),
+            'discount' => 0,
+            'paid' => 0,
+            'items' => [
+                [
+                    'product_id' => $product->id,
+                    'quantity' => 2,
+                    'unit_price' => 60,
+                    'batch_selections' => [],
+                ],
+            ],
+        ]);
+        $request->setUserResolver(fn () => $admin);
+
+        $response = app(SaleController::class)->store($request);
+
+        $this->assertSame(201, $response->getStatusCode());
+        $this->assertSame($land->id, $response->getData(true)['land']['id'] ?? null);
+        $this->assertDatabaseHas('sales', ['project_id' => $fieldProject->id, 'land_id' => $land->id]);
+
+        $filterRequest = Request::create('/api/sales', 'GET', ['land_id' => $land->id]);
+        $filterRequest->setUserResolver(fn () => $admin);
+
+        $filteredResponse = app(SaleController::class)->index($filterRequest);
+
+        $this->assertCount(1, $filteredResponse->getData(true));
+        $this->assertSame($land->id, $filteredResponse->getData(true)[0]['land']['id'] ?? null);
     }
 
     public function test_central_warehouse_sale_requires_batch_selection_for_trading_products(): void

@@ -45,6 +45,11 @@ class Land extends Model
         return $this->hasMany(Expense::class);
     }
 
+    public function sales()
+    {
+        return $this->hasMany(Sale::class);
+    }
+
     protected function serializeDate(DateTimeInterface $date): string
     {
         return $date->format('Y-m-d');
