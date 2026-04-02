@@ -45,12 +45,73 @@ class Customer extends Model
 
     public function updateBalance()
     {
+        $this->syncSaleBalances();
+
         $this->total_sale = $this->sales()->sum('total');
         $totalPayments = $this->payments()->sum('amount');
         $totalDiscount = $this->payments()->sum('discount');
         $this->total_paid = $totalPayments + $totalDiscount;
         $this->total_due = max(0, $this->total_sale - $this->total_paid);
-        $this->save();
+        $this->saveQuietly();
+    }
+
+    public function syncSaleBalances(): void
+    {
+        $sales = $this->sales()
+            ->with('payments')
+            ->orderBy('date')
+            ->orderBy('id')
+            ->get();
+
+        if ($sales->isEmpty()) {
+            return;
+        }
+
+        $allPayments = $this->payments()->get();
+
+        if ($allPayments->isEmpty()) {
+            foreach ($sales as $sale) {
+                $calculatedDue = round(max(0, (float) $sale->total - (float) $sale->paid), 2);
+
+                if ((float) $sale->due !== $calculatedDue) {
+                    $sale->forceFill([
+                        'due' => $calculatedDue,
+                    ])->saveQuietly();
+                }
+            }
+
+            return;
+        }
+
+        $unassignedCredit = (float) $allPayments
+            ->whereNull('sale_id')
+            ->sum(fn ($payment) => (float) $payment->amount + (float) ($payment->discount ?? 0));
+
+        foreach ($sales as $sale) {
+            $explicitCredit = (float) $sale->payments->sum(
+                fn ($payment) => (float) $payment->amount + (float) ($payment->discount ?? 0)
+            );
+
+            $paidAmount = min((float) $sale->total, $explicitCredit);
+            $remainingDue = max(0, (float) $sale->total - $paidAmount);
+
+            if ($remainingDue > 0 && $unassignedCredit > 0) {
+                $allocatedCredit = min($remainingDue, $unassignedCredit);
+                $paidAmount += $allocatedCredit;
+                $remainingDue -= $allocatedCredit;
+                $unassignedCredit -= $allocatedCredit;
+            }
+
+            $paidAmount = round($paidAmount, 2);
+            $remainingDue = round($remainingDue, 2);
+
+            if ((float) $sale->paid !== $paidAmount || (float) $sale->due !== $remainingDue) {
+                $sale->forceFill([
+                    'paid' => $paidAmount,
+                    'due' => $remainingDue,
+                ])->saveQuietly();
+            }
+        }
     }
 
     public function updateTotals()

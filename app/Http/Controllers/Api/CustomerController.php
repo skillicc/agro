@@ -62,6 +62,9 @@ class CustomerController extends Controller
 
     public function ledger(Customer $customer)
     {
+        $customer->updateBalance();
+        $customer->refresh();
+
         $sales = $customer->sales()->with('items.product')->orderBy('date', 'desc')->get();
         $payments = $customer->payments()->orderBy('date', 'desc')->get();
 

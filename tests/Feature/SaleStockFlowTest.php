@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\Api\SaleController;
+use App\Http\Controllers\Api\CustomerController;
 use App\Models\Customer;
 use App\Models\Land;
 use App\Models\Product;
@@ -153,6 +154,79 @@ class SaleStockFlowTest extends TestCase
 
         $this->assertCount(1, $filteredResponse->getData(true));
         $this->assertSame($land->id, $filteredResponse->getData(true)[0]['land']['id'] ?? null);
+    }
+
+    public function test_customer_level_payment_syncs_sale_due_balance(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $project = Project::create([
+            'name' => 'Receivable Check Project',
+            'type' => 'field',
+            'location' => 'Dhaka',
+            'is_active' => true,
+        ]);
+
+        $warehouse = Warehouse::create([
+            'name' => 'Receivable Check Warehouse',
+            'code' => 'RCV-001',
+            'project_id' => $project->id,
+            'is_active' => true,
+        ]);
+
+        $product = Product::create([
+            'name' => 'Payment Sync Item',
+            'type' => 'own_production',
+            'unit' => 'pcs',
+            'selling_price' => 100,
+            'buying_price' => 60,
+            'stock_quantity' => 20,
+            'is_active' => true,
+        ]);
+
+        $warehouse->updateStock($product->id, 5, true);
+
+        $customer = Customer::create([
+            'name' => 'Jabed',
+            'is_active' => true,
+        ]);
+
+        $saleRequest = Request::create('/api/sales', 'POST', [
+            'project_id' => $project->id,
+            'customer_id' => $customer->id,
+            'date' => now()->toDateString(),
+            'discount' => 0,
+            'paid' => 0,
+            'items' => [
+                [
+                    'product_id' => $product->id,
+                    'quantity' => 3,
+                    'unit_price' => 100,
+                    'batch_selections' => [],
+                ],
+            ],
+        ]);
+        $saleRequest->setUserResolver(fn () => $admin);
+
+        $saleResponse = app(SaleController::class)->store($saleRequest);
+
+        $this->assertSame(201, $saleResponse->getStatusCode());
+
+        $saleId = $saleResponse->getData(true)['id'];
+
+        $paymentRequest = Request::create('/api/customers/' . $customer->id . '/payment', 'POST', [
+            'amount' => 300,
+            'date' => now()->toDateString(),
+            'payment_method' => 'cash',
+        ]);
+        $paymentRequest->setUserResolver(fn () => $admin);
+
+        $paymentResponse = app(CustomerController::class)->addPayment($paymentRequest, $customer);
+
+        $this->assertSame(201, $paymentResponse->getStatusCode());
+        $this->assertSame(0.0, (float) $customer->fresh()->total_due);
+        $this->assertSame(300.0, (float) $customer->fresh()->sales()->findOrFail($saleId)->paid);
+        $this->assertSame(0.0, (float) $customer->fresh()->sales()->findOrFail($saleId)->due);
     }
 
     public function test_central_warehouse_sale_requires_batch_selection_for_trading_products(): void

@@ -322,7 +322,7 @@ class SaleController extends Controller
             'note' => 'nullable|string',
         ]);
 
-        $payment = CustomerPayment::create([
+        CustomerPayment::create([
             'customer_id' => $sale->customer_id,
             'sale_id' => $sale->id,
             'amount' => $request->amount,
@@ -332,11 +332,9 @@ class SaleController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
-        $sale->paid += $request->amount;
-        $sale->due -= $request->amount;
-        $sale->save();
+        $sale->refresh();
 
-        return response()->json($sale->load(['payments']));
+        return response()->json($sale->load(['payments', 'customer']));
     }
 
     private function ensureLandBelongsToProject(int|string $landId, int|string|null $projectId): void
