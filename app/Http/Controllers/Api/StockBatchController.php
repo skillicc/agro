@@ -56,7 +56,9 @@ class StockBatchController extends Controller
      */
     public function productBatches(Product $product, Request $request)
     {
-        $query = $product->stockBatches()->available();
+        $query = $product->stockBatches()
+            ->available()
+            ->excludeLegacyMigrationAdjustments();
 
         if ($request->warehouse_id) {
             $query->where('warehouse_id', $request->warehouse_id);
@@ -65,7 +67,9 @@ class StockBatchController extends Controller
         $batches = $query->fifo()->get();
 
         // Also return grouped by price view
-        $byPriceQuery = $product->stockBatches()->available();
+        $byPriceQuery = $product->stockBatches()
+            ->available()
+            ->excludeLegacyMigrationAdjustments();
         if ($request->warehouse_id) {
             $byPriceQuery->where('warehouse_id', $request->warehouse_id);
         }
@@ -168,6 +172,7 @@ class StockBatchController extends Controller
     public function stockByPrice(Request $request)
     {
         $query = StockBatch::available()
+            ->excludeLegacyMigrationAdjustments()
             ->with('product:id,name,unit')
             ->select(
                 'product_id',

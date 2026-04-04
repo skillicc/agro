@@ -74,6 +74,30 @@ class StockBatch extends Model
                      ->where('remaining_quantity', '>', 0);
     }
 
+    public function scopeExcludeLegacyMigrationAdjustments($query)
+    {
+        return $query
+            ->where('batch_number', 'not like', 'BTH-LEGACY-%')
+            ->where(function ($innerQuery) {
+                $innerQuery->whereNull('note')
+                    ->orWhere('note', '!=', 'Legacy stock migration - extra stock not from purchases');
+            });
+    }
+
+    public function scopeLegacyMigrationAdjustments($query)
+    {
+        return $query->where(function ($innerQuery) {
+            $innerQuery->where('batch_number', 'like', 'BTH-LEGACY-%')
+                ->orWhere('note', 'Legacy stock migration - extra stock not from purchases');
+        });
+    }
+
+    public function isLegacyMigrationAdjustment(): bool
+    {
+        return str_starts_with((string) $this->batch_number, 'BTH-LEGACY-')
+            || $this->note === 'Legacy stock migration - extra stock not from purchases';
+    }
+
     // Check if batch is depleted
     public function isDepleted(): bool
     {

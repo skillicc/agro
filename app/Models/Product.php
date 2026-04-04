@@ -81,6 +81,36 @@ class Product extends Model
         return $this->hasMany(StockBatch::class);
     }
 
+    public function getStockQuantityAttribute($value): float
+    {
+        $baseStock = (float) ($value ?? 0);
+        $legacyAdjustment = $this->getLegacyMigrationAdjustmentQuantity();
+
+        return round(max(0, $baseStock - $legacyAdjustment), 2);
+    }
+
+    public function getLegacyAdjustmentQuantityAttribute(): float
+    {
+        return $this->getLegacyMigrationAdjustmentQuantity();
+    }
+
+    protected function getLegacyMigrationAdjustmentQuantity(): float
+    {
+        if (array_key_exists('legacy_adjustment_quantity', $this->attributes)) {
+            return (float) ($this->attributes['legacy_adjustment_quantity'] ?? 0);
+        }
+
+        if ($this->relationLoaded('stockBatches')) {
+            return (float) $this->stockBatches
+                ->filter(fn ($batch) => $batch->isLegacyMigrationAdjustment())
+                ->sum('remaining_quantity');
+        }
+
+        return (float) $this->stockBatches()
+            ->legacyMigrationAdjustments()
+            ->sum('remaining_quantity');
+    }
+
     /**
      * Prepare a date for array / JSON serialization.
      */

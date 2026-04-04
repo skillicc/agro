@@ -11,7 +11,7 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::with(['category', 'categories'])->get();
+        $products = $this->productsQuery()->get();
         return response()->json($products);
     }
 
@@ -47,7 +47,7 @@ class ProductController extends Controller
 
     public function show(Product $product)
     {
-        return response()->json($product->load(['category', 'categories']));
+        return response()->json($this->productsQuery()->findOrFail($product->id));
     }
 
     public function update(Request $request, Product $product)
@@ -86,7 +86,11 @@ class ProductController extends Controller
 
     public function lowStock()
     {
-        $products = Product::whereRaw('stock_quantity <= alert_quantity')->with('category')->get();
+        $products = $this->productsQuery()
+            ->get()
+            ->filter(fn ($product) => $product->stock_quantity <= ($product->alert_quantity ?? 0))
+            ->values();
+
         return response()->json($products);
     }
 
@@ -123,5 +127,15 @@ class ProductController extends Controller
     {
         $category->delete();
         return response()->json(['message' => 'Category deleted successfully']);
+    }
+
+    private function productsQuery()
+    {
+        return Product::with(['category', 'categories'])
+            ->withSum([
+                'stockBatches as legacy_adjustment_quantity' => function ($query) {
+                    $query->legacyMigrationAdjustments();
+                },
+            ], 'remaining_quantity');
     }
 }
