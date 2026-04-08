@@ -168,21 +168,23 @@
                             <tr v-if="historyLoading">
                                 <td colspan="4" class="text-medium-emphasis">Loading history...</td>
                             </tr>
-                            <tr v-else-if="!historyItems.length">
-                                <td colspan="4" class="text-medium-emphasis">No history found for this expense.</td>
-                            </tr>
-                            <tr v-for="entry in historyItems" :key="entry.id">
-                                <td>
-                                    <v-chip size="x-small" :color="historyActionColor(entry.action)">{{ entry.action }}</v-chip>
-                                </td>
-                                <td>{{ entry.user?.name || '-' }}</td>
-                                <td>{{ formatDateTime(entry.created_at) }}</td>
-                                <td>
-                                    <div v-for="line in historyChangeLines(entry)" :key="line" class="text-caption">
-                                        {{ line }}
-                                    </div>
-                                </td>
-                            </tr>
+                            <template v-else>
+                                <tr v-if="!historyItems.length">
+                                    <td colspan="4" class="text-medium-emphasis">No detailed edit history found for this expense yet.</td>
+                                </tr>
+                                <tr v-for="entry in historyItems" v-else :key="entry.id">
+                                    <td>
+                                        <v-chip size="x-small" :color="historyActionColor(entry.action)">{{ entry.action }}</v-chip>
+                                    </td>
+                                    <td>{{ entry.user?.name || '-' }}</td>
+                                    <td>{{ formatDateTime(entry.created_at) }}</td>
+                                    <td>
+                                        <div v-for="line in historyChangeLines(entry)" :key="line" class="text-caption">
+                                            {{ line }}
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
                         </tbody>
                     </v-table>
                 </v-card-text>
@@ -424,7 +426,11 @@ const openHistory = async (expense) => {
         ])
 
         historyExpense.value = expenseResponse.data
-        historyItems.value = historyResponse.data
+        historyItems.value = Array.isArray(historyResponse.data)
+            ? historyResponse.data
+            : Array.isArray(historyResponse.data?.data)
+                ? historyResponse.data.data
+                : []
         historyDialog.value = true
     } catch (error) {
         console.error('Error:', error)
