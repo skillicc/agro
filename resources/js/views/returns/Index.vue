@@ -158,15 +158,25 @@
                             @update:model-value="fetchPurchaseRates"
                         ></v-select>
 
-                        <v-select
+                        <v-autocomplete
                             v-model="form.product_id"
                             :items="products"
                             item-title="name"
                             item-value="id"
                             label="Product"
+                            placeholder="Search product"
                             required
+                            clearable
                             @update:model-value="handleProductChange"
-                        ></v-select>
+                        >
+                            <template v-slot:item="{ props, item }">
+                                <v-list-item v-bind="props">
+                                    <template v-slot:subtitle>
+                                        {{ item.raw.unit || '-' }} | Stock: {{ formatNumber(item.raw.stock_quantity) }}
+                                    </template>
+                                </v-list-item>
+                            </template>
+                        </v-autocomplete>
                         <v-select
                             v-model="selectedUnitPrice"
                             :items="rateOptions"
