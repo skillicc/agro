@@ -74,7 +74,7 @@
                         <PurchasesList :projectId="project.id" />
                     </v-window-item>
                     <v-window-item value="sales">
-                        <SalesList :projectId="project.id" />
+                        <SalesList :projectId="project.id" :lands="project.lands || []" />
                     </v-window-item>
                     <v-window-item value="assets">
                         <AssetsList :projectId="project.id" />

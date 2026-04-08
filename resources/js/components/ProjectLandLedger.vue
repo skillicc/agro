@@ -5,17 +5,32 @@
                 <h3 class="text-h6">Land-wise Ledger</h3>
                 <div class="text-caption text-medium-emphasis">Track crop opening/closing dates and expense totals per land.</div>
             </div>
-            <v-btn color="primary" size="small" @click="openCycleDialog()" :disabled="!ledger.lands.length">
-                <v-icon left>mdi-sprout</v-icon>
-                Start Crop Cycle
-            </v-btn>
+            <div class="d-flex flex-wrap align-center ga-2">
+                <v-select
+                    v-model="selectedLandId"
+                    :items="landFilterOptions"
+                    item-title="name"
+                    item-value="id"
+                    label="Filter by Land"
+                    clearable
+                    density="compact"
+                    hide-details
+                    variant="outlined"
+                    style="min-width: 220px;"
+                    :disabled="!ledger.lands.length"
+                ></v-select>
+                <v-btn color="primary" size="small" @click="openCycleDialog()" :disabled="!ledger.lands.length">
+                    <v-icon left>mdi-sprout</v-icon>
+                    Start Crop Cycle
+                </v-btn>
+            </div>
         </div>
 
         <v-row class="mb-2">
             <v-col cols="6" md="3">
                 <v-card variant="tonal" color="primary">
                     <v-card-text class="text-center">
-                        <div class="text-h6">{{ ledger.totals.land_count || 0 }}</div>
+                        <div class="text-h6">{{ displayTotals.land_count || 0 }}</div>
                         <div class="text-caption">Assigned Lands</div>
                     </v-card-text>
                 </v-card>
@@ -23,7 +38,7 @@
             <v-col cols="6" md="3">
                 <v-card variant="tonal" color="success">
                     <v-card-text class="text-center">
-                        <div class="text-h6">{{ ledger.totals.active_cultivations || 0 }}</div>
+                        <div class="text-h6">{{ displayTotals.active_cultivations || 0 }}</div>
                         <div class="text-caption">Active Crops</div>
                     </v-card-text>
                 </v-card>
@@ -31,7 +46,7 @@
             <v-col cols="6" md="3">
                 <v-card variant="tonal" color="warning">
                     <v-card-text class="text-center">
-                        <div class="text-h6">৳{{ formatNumber(ledger.totals.total_expenses) }}</div>
+                        <div class="text-h6">৳{{ formatNumber(displayTotals.total_expenses) }}</div>
                         <div class="text-caption">Land Expenses</div>
                     </v-card-text>
                 </v-card>
@@ -39,7 +54,7 @@
             <v-col cols="6" md="3">
                 <v-card variant="tonal" color="info">
                     <v-card-text class="text-center">
-                        <div class="text-h6">৳{{ formatNumber(ledger.totals.unassigned_expenses) }}</div>
+                        <div class="text-h6">৳{{ formatNumber(displayTotals.unassigned_expenses) }}</div>
                         <div class="text-caption">Unassigned Expenses</div>
                     </v-card-text>
                 </v-card>
@@ -51,7 +66,7 @@
         </v-alert>
 
         <v-row v-else>
-            <v-col v-for="land in ledger.lands" :key="land.id" cols="12" lg="6">
+            <v-col v-for="land in filteredLands" :key="land.id" cols="12" lg="6">
                 <v-card class="h-100">
                     <v-card-title class="d-flex flex-wrap align-center ga-2">
                         <span>{{ land.name }}</span>
@@ -181,7 +196,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import api from '../services/api'
 
 const props = defineProps({
@@ -195,6 +210,7 @@ const ledger = ref({
 const cycleDialog = ref(false)
 const savingCycle = ref(false)
 const closingId = ref(null)
+const selectedLandId = ref(null)
 const cycleForm = reactive({
     land_id: null,
     crop_name: '',
@@ -206,6 +222,31 @@ const cycleForm = reactive({
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
 const formatDate = (value) => value || '-'
 
+const landFilterOptions = computed(() => ledger.value.lands || [])
+
+const filteredLands = computed(() => {
+    const lands = ledger.value.lands || []
+
+    if (!selectedLandId.value) {
+        return lands
+    }
+
+    return lands.filter((land) => String(land.id) === String(selectedLandId.value))
+})
+
+const displayTotals = computed(() => {
+    if (!selectedLandId.value) {
+        return ledger.value.totals || {}
+    }
+
+    return {
+        land_count: filteredLands.value.length,
+        active_cultivations: filteredLands.value.filter((land) => !!land.current_cultivation).length,
+        total_expenses: filteredLands.value.reduce((sum, land) => sum + Number(land.total_expenses || 0), 0),
+        unassigned_expenses: Number(ledger.value.totals?.unassigned_expenses || 0),
+    }
+})
+
 const fetchLedger = async () => {
     try {
         const response = await api.get(`/projects/${props.projectId}/land-ledger`)
@@ -216,7 +257,7 @@ const fetchLedger = async () => {
 }
 
 const openCycleDialog = (land = null) => {
-    cycleForm.land_id = land?.id || ledger.value.lands[0]?.id || null
+    cycleForm.land_id = land?.id || selectedLandId.value || filteredLands.value[0]?.id || ledger.value.lands[0]?.id || null
     cycleForm.crop_name = ''
     cycleForm.opening_date = new Date().toISOString().split('T')[0]
     cycleForm.expected_closing_date = ''

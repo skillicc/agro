@@ -1,11 +1,27 @@
 <template>
     <div>
-        <div class="d-flex justify-space-between align-center mb-4">
+        <div class="d-flex flex-wrap justify-space-between align-center mb-4 ga-2">
             <h3 class="text-h6">Sales</h3>
-            <v-btn color="primary" size="small" :to="{ name: 'sale-create', query: { project_id: projectId } }">
-                <v-icon left>mdi-plus</v-icon>
-                Add Sale
-            </v-btn>
+            <div class="d-flex flex-wrap align-center ga-2">
+                <v-select
+                    v-model="selectedLandId"
+                    :items="landOptions"
+                    item-title="name"
+                    item-value="id"
+                    label="Filter by Land"
+                    clearable
+                    density="compact"
+                    hide-details
+                    variant="outlined"
+                    style="min-width: 220px;"
+                    :disabled="!landOptions.length"
+                    @update:model-value="fetchSales"
+                ></v-select>
+                <v-btn color="primary" size="small" :to="{ name: 'sale-create', query: { project_id: projectId, land_id: selectedLandId || undefined } }">
+                    <v-icon left>mdi-plus</v-icon>
+                    Add Sale
+                </v-btn>
+            </div>
         </div>
 
         <v-data-table :headers="headers" :items="sales" :loading="loading" density="compact">
@@ -111,11 +127,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import api from '../services/api'
 
 const props = defineProps({
-    projectId: { type: [Number, String], required: true }
+    projectId: { type: [Number, String], required: true },
+    lands: { type: Array, default: () => [] }
 })
 
 const sales = ref([])
@@ -124,6 +141,7 @@ const viewDialog = ref(false)
 const deleteDialog = ref(false)
 const selectedSale = ref(null)
 const deleting = ref(false)
+const selectedLandId = ref(null)
 
 const headers = [
     { title: 'Date', key: 'date' },
@@ -136,10 +154,29 @@ const headers = [
     { title: 'Actions', key: 'actions', sortable: false },
 ]
 
+const landOptions = computed(() => {
+    if (props.lands?.length) {
+        return props.lands
+    }
+
+    return sales.value
+        .filter((sale) => sale.land)
+        .map((sale) => sale.land)
+        .filter((land, index, array) => array.findIndex((item) => item?.id === land?.id) === index)
+})
+
 const fetchSales = async () => {
     loading.value = true
     try {
-        const response = await api.get(`/sales?project_id=${props.projectId}`)
+        const params = {
+            project_id: props.projectId,
+        }
+
+        if (selectedLandId.value) {
+            params.land_id = selectedLandId.value
+        }
+
+        const response = await api.get('/sales', { params })
         sales.value = response.data
     } catch (error) {
         console.error('Error:', error)
