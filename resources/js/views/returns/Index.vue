@@ -144,6 +144,7 @@
                             item-value="id"
                             label="Project"
                             required
+                            @update:model-value="fetchPurchaseRates"
                         ></v-select>
 
                         <v-select
@@ -154,6 +155,7 @@
                             item-value="id"
                             label="Warehouse"
                             required
+                            @update:model-value="fetchPurchaseRates"
                         ></v-select>
 
                         <v-select
@@ -163,9 +165,24 @@
                             item-value="id"
                             label="Product"
                             required
+                            @update:model-value="handleProductChange"
                         ></v-select>
-                        <v-text-field v-model.number="form.quantity" label="Quantity" type="number" min="0.01" step="0.01" required></v-text-field>
-                        <v-text-field v-model.number="form.value" label="Total Value" type="number" min="0" prefix="৳" required></v-text-field>
+                        <v-select
+                            v-model="selectedUnitPrice"
+                            :items="rateOptions"
+                            item-title="label"
+                            item-value="value"
+                            label="Purchase Rate"
+                            :loading="loadingRates"
+                            :disabled="!form.product_id || rateOptions.length === 0"
+                            clearable
+                            no-data-text="No purchase rate found"
+                            hint="Last purchase rate auto-fills total value. You can choose another rate or edit Total Value manually."
+                            persistent-hint
+                            @update:model-value="applySelectedRate"
+                        ></v-select>
+                        <v-text-field v-model.number="form.quantity" label="Quantity" type="number" min="0.01" step="0.01" required @update:model-value="handleQuantityChange"></v-text-field>
+                        <v-text-field v-model.number="form.value" label="Total Value" type="number" min="0" prefix="৳" required hint="Auto-calculated from purchase rate, but you can change it manually." persistent-hint @update:model-value="markValueAsManual"></v-text-field>
                         <v-text-field v-model="form.date" label="Date" type="date" required></v-text-field>
                         <v-textarea v-model="form.reason" label="Reason / Note" rows="2"></v-textarea>
                     </v-form>
@@ -207,6 +224,10 @@ const editMode = ref(false)
 const selectedReturn = ref(null)
 const saving = ref(false)
 const deleting = ref(false)
+const rateOptions = ref([])
+const loadingRates = ref(false)
+const selectedUnitPrice = ref(null)
+const manualValueOverride = ref(false)
 
 const filters = reactive({
     project_id: null,
@@ -240,6 +261,110 @@ const headers = [
 ]
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
+
+const getSelectedSourceWarehouseId = () => {
+    if (form.source_type === 'warehouse') {
+        return form.warehouse_id || null
+    }
+
+    if (form.project_id) {
+        return warehouses.value.find((warehouse) => Number(warehouse.project_id) === Number(form.project_id))?.id || null
+    }
+
+    return null
+}
+
+const calculateSuggestedValue = (quantity = form.quantity, unitPrice = selectedUnitPrice.value) => {
+    return Number((Number(quantity || 0) * Number(unitPrice || 0)).toFixed(2))
+}
+
+const applySelectedRate = (unitPrice = selectedUnitPrice.value) => {
+    if (unitPrice === null || unitPrice === '' || Number.isNaN(Number(unitPrice))) {
+        selectedUnitPrice.value = null
+        return
+    }
+
+    selectedUnitPrice.value = Number(unitPrice)
+    manualValueOverride.value = false
+    form.value = calculateSuggestedValue(form.quantity, selectedUnitPrice.value)
+}
+
+const markValueAsManual = () => {
+    if (selectedUnitPrice.value === null) {
+        return
+    }
+
+    const expectedValue = calculateSuggestedValue(form.quantity, selectedUnitPrice.value)
+    manualValueOverride.value = Math.abs(Number(form.value || 0) - expectedValue) > 0.009
+}
+
+const handleQuantityChange = () => {
+    if (!manualValueOverride.value && selectedUnitPrice.value !== null) {
+        form.value = calculateSuggestedValue(form.quantity, selectedUnitPrice.value)
+    }
+}
+
+const fetchPurchaseRates = async () => {
+    if (!form.product_id) {
+        rateOptions.value = []
+        selectedUnitPrice.value = null
+        manualValueOverride.value = false
+        return
+    }
+
+    loadingRates.value = true
+
+    try {
+        const params = {}
+        const warehouseId = getSelectedSourceWarehouseId()
+
+        if (warehouseId) {
+            params.warehouse_id = warehouseId
+        }
+
+        const response = await api.get(`/products/${form.product_id}/batches`, { params })
+        const batches = Array.isArray(response.data?.batches) ? response.data.batches : []
+        const byPrice = Array.isArray(response.data?.by_price) ? response.data.by_price : []
+        const unit = products.value.find((product) => product.id === form.product_id)?.unit || ''
+
+        rateOptions.value = byPrice.map((entry) => ({
+            label: `৳${formatNumber(entry.unit_price)}${unit ? ` / ${unit}` : ''} (Qty: ${formatNumber(entry.quantity)})`,
+            value: Number(entry.unit_price),
+        }))
+
+        if (!rateOptions.value.length) {
+            selectedUnitPrice.value = null
+            return
+        }
+
+        const currentUnitPrice = form.quantity > 0
+            ? Number((Number(form.value || 0) / Number(form.quantity || 1)).toFixed(2))
+            : null
+
+        const matchedRate = currentUnitPrice !== null
+            ? rateOptions.value.find((option) => Math.abs(option.value - currentUnitPrice) < 0.01)?.value ?? null
+            : null
+
+        const latestRate = Number(batches[batches.length - 1]?.unit_price ?? rateOptions.value[0].value)
+        selectedUnitPrice.value = matchedRate ?? latestRate
+        manualValueOverride.value = currentUnitPrice !== null && matchedRate === null
+
+        if (!manualValueOverride.value) {
+            form.value = calculateSuggestedValue(form.quantity, selectedUnitPrice.value)
+        }
+    } catch (error) {
+        console.error('Error fetching purchase rates:', error)
+        rateOptions.value = []
+        selectedUnitPrice.value = null
+    } finally {
+        loadingRates.value = false
+    }
+}
+
+const handleProductChange = async () => {
+    manualValueOverride.value = false
+    await fetchPurchaseRates()
+}
 
 const normalizeCollection = (payload) => {
     if (Array.isArray(payload)) {
@@ -324,17 +449,22 @@ const clearFilters = () => {
     fetchReturns()
 }
 
-const handleSourceTypeChange = () => {
+const handleSourceTypeChange = async () => {
     if (form.source_type === 'project') {
         form.warehouse_id = null
     } else {
         form.project_id = null
     }
+
+    await fetchPurchaseRates()
 }
 
 const openDialog = (item = null) => {
     editMode.value = !!item
     selectedReturn.value = item
+    rateOptions.value = []
+    selectedUnitPrice.value = null
+    manualValueOverride.value = false
 
     if (item) {
         Object.assign(form, {
@@ -361,6 +491,7 @@ const openDialog = (item = null) => {
     }
 
     dialog.value = true
+    fetchPurchaseRates()
 }
 
 const saveReturn = async () => {
