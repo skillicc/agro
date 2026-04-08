@@ -95,6 +95,59 @@ class ProjectLandManagementTest extends TestCase
         $this->assertSame(1500.0, (float) $ledger['lands'][0]['total_expenses']);
     }
 
+    public function test_expense_history_tracks_who_created_and_updated_it(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'is_active' => true,
+            'name' => 'History Admin',
+        ]);
+
+        $project = Project::create([
+            'name' => 'Ledger Project',
+            'type' => 'field',
+            'location' => 'Gazipur',
+            'is_active' => true,
+        ]);
+
+        $category = ExpenseCategory::where('project_type', 'field')->firstOrFail();
+        $expenseController = app(ExpenseController::class);
+
+        $storeRequest = $this->makeAuthenticatedRequest([
+            'project_id' => $project->id,
+            'expense_category_id' => $category->id,
+            'amount' => 900,
+            'date' => '2026-04-04',
+            'description' => 'Initial fertilizer',
+            'bill_no' => 'EXP-100',
+        ], $admin);
+
+        $storeResponse = $expenseController->store($storeRequest);
+        $this->assertSame(201, $storeResponse->getStatusCode());
+
+        $expenseId = $storeResponse->getData(true)['id'];
+
+        $updateRequest = $this->makeAuthenticatedRequest([
+            'project_id' => $project->id,
+            'expense_category_id' => $category->id,
+            'amount' => 1200,
+            'date' => '2026-04-05',
+            'description' => 'Updated fertilizer and labor',
+            'bill_no' => 'EXP-100A',
+        ], $admin, 'PUT');
+
+        $updateResponse = $expenseController->update($updateRequest, Project::findOrFail($project->id)->expenses()->firstOrFail());
+        $this->assertSame(200, $updateResponse->getStatusCode());
+
+        $historyResponse = $expenseController->history(Project::findOrFail($project->id)->expenses()->firstOrFail());
+        $historyData = $historyResponse->getData(true);
+
+        $this->assertSame($admin->id, $updateResponse->getData(true)['updated_by']);
+        $this->assertCount(2, $historyData);
+        $this->assertSame('updated', $historyData[0]['action']);
+        $this->assertSame('created', $historyData[1]['action']);
+    }
+
     public function test_land_requires_previous_crop_cycle_to_close_before_next_one_starts(): void
     {
         $admin = User::factory()->create([

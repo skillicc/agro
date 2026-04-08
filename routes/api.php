@@ -83,6 +83,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/categories/{category}', [ProductController::class, 'destroyCategory']);
 
     // Expenses
+    Route::get('expenses/{expense}/history', [ExpenseController::class, 'history']);
     Route::apiResource('expenses', ExpenseController::class);
     Route::get('/expense-categories', [ExpenseController::class, 'categories']);
     Route::post('/expense-categories', [ExpenseController::class, 'storeCategory']);

@@ -20,6 +20,7 @@ class Expense extends Model
         'date',
         'description',
         'created_by',
+        'updated_by',
     ];
 
     protected $casts = [
@@ -50,6 +51,16 @@ class Expense extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function editor()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function history()
+    {
+        return $this->hasMany(ExpenseHistory::class)->orderByDesc('id');
     }
 
     /**

@@ -55,6 +55,9 @@
                 ৳{{ Number(item.amount).toLocaleString() }}
             </template>
             <template v-slot:item.actions="{ item }">
+                <v-btn icon size="x-small" color="info" @click="openHistory(item)" title="View history">
+                    <v-icon>mdi-history</v-icon>
+                </v-btn>
                 <v-btn icon size="x-small" @click="openDialog(item)">
                     <v-icon>mdi-pencil</v-icon>
                 </v-btn>
@@ -133,6 +136,63 @@
             </v-card>
         </v-dialog>
 
+        <v-dialog v-model="historyDialog" :max-width="$vuetify.display.xs ? '100%' : '800'" :fullscreen="$vuetify.display.xs">
+            <v-card>
+                <v-card-title>Expense History</v-card-title>
+                <v-card-text>
+                    <v-row dense class="mb-3">
+                        <v-col cols="12" md="6">
+                            <strong>Added By:</strong> {{ historyExpense?.creator?.name || '-' }}
+                        </v-col>
+                        <v-col cols="12" md="6">
+                            <strong>Last Edited By:</strong> {{ historyExpense?.editor?.name || historyExpense?.creator?.name || '-' }}
+                        </v-col>
+                        <v-col cols="12" md="6">
+                            <strong>Created At:</strong> {{ formatDateTime(historyExpense?.created_at) }}
+                        </v-col>
+                        <v-col cols="12" md="6">
+                            <strong>Updated At:</strong> {{ formatDateTime(historyExpense?.updated_at) }}
+                        </v-col>
+                    </v-row>
+
+                    <v-table density="compact">
+                        <thead>
+                            <tr>
+                                <th>Action</th>
+                                <th>By</th>
+                                <th>Time</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-if="historyLoading">
+                                <td colspan="4" class="text-medium-emphasis">Loading history...</td>
+                            </tr>
+                            <tr v-else-if="!historyItems.length">
+                                <td colspan="4" class="text-medium-emphasis">No history found for this expense.</td>
+                            </tr>
+                            <tr v-for="entry in historyItems" :key="entry.id">
+                                <td>
+                                    <v-chip size="x-small" :color="historyActionColor(entry.action)">{{ entry.action }}</v-chip>
+                                </td>
+                                <td>{{ entry.user?.name || '-' }}</td>
+                                <td>{{ formatDateTime(entry.created_at) }}</td>
+                                <td>
+                                    <div v-for="line in historyChangeLines(entry)" :key="line" class="text-caption">
+                                        {{ line }}
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </v-table>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="historyDialog = false">Close</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <!-- Delete Confirm -->
         <v-dialog v-model="deleteDialog" max-width="400">
             <v-card>
@@ -184,8 +244,12 @@ const projectLands = ref([])
 const loading = ref(false)
 const dialog = ref(false)
 const deleteDialog = ref(false)
+const historyDialog = ref(false)
+const historyLoading = ref(false)
 const editMode = ref(false)
 const selectedExpense = ref(null)
+const historyExpense = ref(null)
+const historyItems = ref([])
 const saving = ref(false)
 const deleting = ref(false)
 const selectedLandId = ref(null)
@@ -253,6 +317,40 @@ const fetchCategories = async () => {
     }
 }
 
+const formatDateTime = (value) => {
+    if (!value) return '-'
+    return new Date(value).toLocaleString('en-BD')
+}
+
+const historyActionColor = (action) => ({
+    created: 'success',
+    updated: 'info',
+    deleted: 'error',
+}[action] || 'grey')
+
+const historyChangeLines = (entry) => {
+    const changes = Object.values(entry?.changes || {})
+
+    if (!changes.length) {
+        return [entry?.action || 'No changes']
+    }
+
+    return changes.map((change) => {
+        const oldValue = change.old ?? '-'
+        const newValue = change.new ?? '-'
+
+        if (entry.action === 'created') {
+            return `${change.label}: ${newValue}`
+        }
+
+        if (entry.action === 'deleted') {
+            return `${change.label}: ${oldValue}`
+        }
+
+        return `${change.label}: ${oldValue} → ${newValue}`
+    })
+}
+
 const fetchProjectLands = async () => {
     if (!props.projectId || props.warehouseId) {
         projectLands.value = []
@@ -312,6 +410,27 @@ const saveExpense = async () => {
         console.error('Error:', error)
     }
     saving.value = false
+}
+
+const openHistory = async (expense) => {
+    historyLoading.value = true
+    historyExpense.value = null
+    historyItems.value = []
+
+    try {
+        const [expenseResponse, historyResponse] = await Promise.all([
+            api.get(`/expenses/${expense.id}`),
+            api.get(`/expenses/${expense.id}/history`),
+        ])
+
+        historyExpense.value = expenseResponse.data
+        historyItems.value = historyResponse.data
+        historyDialog.value = true
+    } catch (error) {
+        console.error('Error:', error)
+    }
+
+    historyLoading.value = false
 }
 
 const confirmDelete = (expense) => {
