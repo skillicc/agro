@@ -25,6 +25,25 @@
             </div>
         </div>
 
+        <v-row dense class="mb-3">
+            <v-col cols="12" sm="6" md="3">
+                <v-card variant="tonal" color="primary">
+                    <v-card-text>
+                        <div class="text-caption text-medium-emphasis">Expense Count</div>
+                        <div class="text-h6 font-weight-bold">{{ expenseSummary.count }}</div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="12" sm="6" md="3">
+                <v-card variant="tonal" color="warning">
+                    <v-card-text>
+                        <div class="text-caption text-medium-emphasis">Total Amount</div>
+                        <div class="text-h6 font-weight-bold">৳{{ formatNumber(expenseSummary.amount) }}</div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+        </v-row>
+
         <v-data-table :headers="headers" :items="expenses" :loading="loading" density="compact">
             <template v-slot:item.category="{ item }">
                 {{ item.category?.name }}
@@ -151,7 +170,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { computed, ref, reactive, onMounted } from 'vue'
 import api from '../services/api'
 
 const props = defineProps({
@@ -191,6 +210,19 @@ const form = reactive({
     amount: '',
     date: new Date().toISOString().split('T')[0],
     description: ''
+})
+
+const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
+
+const expenseSummary = computed(() => {
+    return expenses.value.reduce((summary, expense) => {
+        summary.count += 1
+        summary.amount += Number(expense.amount || 0)
+        return summary
+    }, {
+        count: 0,
+        amount: 0,
+    })
 })
 
 const fetchExpenses = async () => {
