@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\PurchaseController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\AssetController;
 use App\Http\Controllers\Api\DamageController;
+use App\Http\Controllers\Api\ProductReturnController;
 use App\Http\Controllers\Api\ProductionController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\ReportController;
@@ -101,6 +102,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Damages
     Route::apiResource('damages', DamageController::class);
+
+    // Product Returns
+    Route::apiResource('product-returns', ProductReturnController::class);
 
     // Productions
     Route::apiResource('productions', ProductionController::class);

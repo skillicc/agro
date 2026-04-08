@@ -137,6 +137,11 @@
                         title="Expenses"
                         :to="{ name: 'expenses' }"
                     ></v-list-item>
+                    <v-list-item
+                        prepend-icon="mdi-keyboard-return"
+                        title="Returns"
+                        :to="{ name: 'returns' }"
+                    ></v-list-item>
                 </v-list-group>
 
                 <!-- Show individual items when rail is active -->
@@ -155,6 +160,11 @@
                         prepend-icon="mdi-cash-minus"
                         title="Expenses"
                         :to="{ name: 'expenses' }"
+                    ></v-list-item>
+                    <v-list-item
+                        prepend-icon="mdi-keyboard-return"
+                        title="Returns"
+                        :to="{ name: 'returns' }"
                     ></v-list-item>
                 </template>
 

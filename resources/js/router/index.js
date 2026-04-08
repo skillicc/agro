@@ -14,6 +14,7 @@ const Suppliers = () => import('../views/suppliers/Index.vue')
 const Customers = () => import('../views/customers/Index.vue')
 const Products = () => import('../views/products/Index.vue')
 const Expenses = () => import('../views/expenses/Index.vue')
+const ProductReturns = () => import('../views/returns/Index.vue')
 const Purchases = () => import('../views/purchases/Index.vue')
 const PurchaseCreate = () => import('../views/purchases/Create.vue')
 const PurchaseEdit = () => import('../views/purchases/Edit.vue')
@@ -85,6 +86,11 @@ const routes = [
                 path: 'expenses',
                 name: 'expenses',
                 component: Expenses,
+            },
+            {
+                path: 'returns',
+                name: 'returns',
+                component: ProductReturns,
             },
             {
                 path: 'purchases',
