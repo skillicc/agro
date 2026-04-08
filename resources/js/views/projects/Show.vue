@@ -52,7 +52,7 @@
         <v-card class="mt-4">
             <v-tabs v-model="tab" color="primary">
                 <v-tab value="expenses">Expenses</v-tab>
-                <v-tab value="lands" v-if="showLandLedger">Land Ledger</v-tab>
+                <v-tab value="lands" v-if="showLandLedger">Land Ledger / Profit</v-tab>
                 <v-tab value="purchases">Purchases</v-tab>
                 <v-tab value="sales">Sales</v-tab>
                 <v-tab value="assets">Assets</v-tab>

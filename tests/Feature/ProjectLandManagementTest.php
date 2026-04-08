@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\LandController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Models\ExpenseCategory;
 use App\Models\Project;
+use App\Models\Sale;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -83,6 +84,20 @@ class ProjectLandManagementTest extends TestCase
         $this->assertSame(201, $expenseResponse->getStatusCode());
         $this->assertSame($landAData['id'], $expenseResponse->getData(true)['land']['id']);
 
+        Sale::create([
+            'project_id' => $projectData['id'],
+            'land_id' => $landAData['id'],
+            'challan_no' => 'SAL-100',
+            'date' => '2026-04-03',
+            'subtotal' => 4200,
+            'discount' => 0,
+            'total' => 4200,
+            'paid' => 3000,
+            'due' => 1200,
+            'status' => 'completed',
+            'created_by' => $admin->id,
+        ]);
+
         $ledgerRequest = Request::create("/api/projects/{$projectData['id']}/land-ledger", 'GET');
         $ledgerRequest->setUserResolver(fn () => $admin);
         $ledgerResponse = $projectController->landLedger($ledgerRequest, Project::findOrFail($projectData['id']));
@@ -90,9 +105,13 @@ class ProjectLandManagementTest extends TestCase
         $ledger = $ledgerResponse->getData(true);
 
         $this->assertSame(1500.0, (float) $ledger['totals']['total_expenses']);
+        $this->assertSame(4200.0, (float) ($ledger['totals']['total_sales'] ?? 0));
+        $this->assertSame(2700.0, (float) ($ledger['totals']['total_profit'] ?? 0));
         $this->assertCount(2, $ledger['lands']);
         $this->assertSame('North Plot', $ledger['lands'][0]['name']);
         $this->assertSame(1500.0, (float) $ledger['lands'][0]['total_expenses']);
+        $this->assertSame(4200.0, (float) ($ledger['lands'][0]['total_sales'] ?? 0));
+        $this->assertSame(2700.0, (float) ($ledger['lands'][0]['profit'] ?? 0));
     }
 
     public function test_expense_history_tracks_who_created_and_updated_it(): void

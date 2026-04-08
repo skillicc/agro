@@ -180,6 +180,17 @@ class ProjectController extends Controller
                     ->orderByDesc('date')
                     ->get();
 
+                $sales = $land->sales()
+                    ->with(['customer'])
+                    ->where('project_id', $project->id)
+                    ->orderByDesc('date')
+                    ->get();
+
+                $totalExpenses = (float) $expenses->sum('amount');
+                $totalSales = (float) $sales->sum(fn ($sale) => $sale->total ?? $sale->subtotal ?? 0);
+                $totalPaid = (float) $sales->sum('paid');
+                $totalDue = (float) $sales->sum('due');
+
                 return [
                     'id' => $land->id,
                     'name' => $land->name,
@@ -191,8 +202,14 @@ class ProjectController extends Controller
                     'current_cultivation' => $cultivations->firstWhere('status', 'active'),
                     'cultivations' => $cultivations->values(),
                     'recent_expenses' => $expenses->take(10)->values(),
+                    'recent_sales' => $sales->take(10)->values(),
                     'expense_count' => $expenses->count(),
-                    'total_expenses' => (float) $expenses->sum('amount'),
+                    'sales_count' => $sales->count(),
+                    'total_expenses' => $totalExpenses,
+                    'total_sales' => $totalSales,
+                    'total_paid' => $totalPaid,
+                    'total_due' => $totalDue,
+                    'profit' => $totalSales - $totalExpenses,
                 ];
             })
             ->values();
@@ -202,8 +219,13 @@ class ProjectController extends Controller
             'totals' => [
                 'land_count' => $lands->count(),
                 'active_cultivations' => $lands->filter(fn ($land) => !empty($land['current_cultivation']))->count(),
-                'total_expenses' => $lands->sum('total_expenses'),
+                'total_expenses' => (float) $lands->sum('total_expenses'),
+                'total_sales' => (float) $lands->sum('total_sales'),
+                'total_paid' => (float) $lands->sum('total_paid'),
+                'total_due' => (float) $lands->sum('total_due'),
+                'total_profit' => (float) $lands->sum('profit'),
                 'unassigned_expenses' => (float) $project->expenses()->whereNull('land_id')->sum('amount'),
+                'unassigned_sales' => (float) $project->sales()->whereNull('land_id')->sum('total'),
             ],
         ]);
     }

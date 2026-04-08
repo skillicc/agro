@@ -2,8 +2,8 @@
     <div>
         <div class="d-flex flex-wrap justify-space-between align-center mb-4 ga-2">
             <div>
-                <h3 class="text-h6">Land-wise Ledger</h3>
-                <div class="text-caption text-medium-emphasis">Track crop opening/closing dates and expense totals per land.</div>
+                <h3 class="text-h6">Land-wise Ledger & Profit</h3>
+                <div class="text-caption text-medium-emphasis">Track crop cycles, expenses, sales, and profit per land.</div>
             </div>
             <div class="d-flex flex-wrap align-center ga-2">
                 <v-select
@@ -27,7 +27,7 @@
         </div>
 
         <v-row class="mb-2">
-            <v-col cols="6" md="3">
+            <v-col cols="6" md="4" lg="2">
                 <v-card variant="tonal" color="primary">
                     <v-card-text class="text-center">
                         <div class="text-h6">{{ displayTotals.land_count || 0 }}</div>
@@ -35,7 +35,7 @@
                     </v-card-text>
                 </v-card>
             </v-col>
-            <v-col cols="6" md="3">
+            <v-col cols="6" md="4" lg="2">
                 <v-card variant="tonal" color="success">
                     <v-card-text class="text-center">
                         <div class="text-h6">{{ displayTotals.active_cultivations || 0 }}</div>
@@ -43,7 +43,7 @@
                     </v-card-text>
                 </v-card>
             </v-col>
-            <v-col cols="6" md="3">
+            <v-col cols="6" md="4" lg="2">
                 <v-card variant="tonal" color="warning">
                     <v-card-text class="text-center">
                         <div class="text-h6">৳{{ formatNumber(displayTotals.total_expenses) }}</div>
@@ -51,8 +51,24 @@
                     </v-card-text>
                 </v-card>
             </v-col>
-            <v-col cols="6" md="3">
+            <v-col cols="6" md="4" lg="2">
                 <v-card variant="tonal" color="info">
+                    <v-card-text class="text-center">
+                        <div class="text-h6">৳{{ formatNumber(displayTotals.total_sales) }}</div>
+                        <div class="text-caption">Land Sales</div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="6" md="4" lg="2">
+                <v-card variant="tonal" :color="profitColor(displayTotals.total_profit)">
+                    <v-card-text class="text-center">
+                        <div class="text-h6">৳{{ formatNumber(displayTotals.total_profit) }}</div>
+                        <div class="text-caption">Land Profit</div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="6" md="4" lg="2">
+                <v-card variant="tonal" color="deep-orange">
                     <v-card-text class="text-center">
                         <div class="text-h6">৳{{ formatNumber(displayTotals.unassigned_expenses) }}</div>
                         <div class="text-caption">Unassigned Expenses</div>
@@ -93,8 +109,16 @@
 
                         <div class="d-flex flex-wrap ga-4 mb-3 text-body-2">
                             <div><strong>Expenses:</strong> ৳{{ formatNumber(land.total_expenses) }}</div>
-                            <div><strong>Entries:</strong> {{ land.expense_count || 0 }}</div>
+                            <div><strong>Sales:</strong> ৳{{ formatNumber(land.total_sales) }}</div>
+                            <div><strong>Collected:</strong> ৳{{ formatNumber(land.total_paid) }}</div>
+                            <div><strong>Due:</strong> ৳{{ formatNumber(land.total_due) }}</div>
+                            <div><strong>Expense Entries:</strong> {{ land.expense_count || 0 }}</div>
+                            <div><strong>Sale Entries:</strong> {{ land.sales_count || 0 }}</div>
                         </div>
+
+                        <v-alert :type="Number(land.profit || 0) >= 0 ? 'success' : 'error'" variant="tonal" density="compact" class="mb-3">
+                            Profit: <strong>৳{{ formatNumber(land.profit) }}</strong>
+                        </v-alert>
 
                         <div class="d-flex flex-wrap ga-2 mb-3">
                             <v-btn size="small" color="primary" variant="tonal" @click="openCycleDialog(land)">
@@ -142,7 +166,7 @@
                         </v-table>
 
                         <div class="mb-2 text-subtitle-2">Recent Expenses</div>
-                        <v-table density="compact">
+                        <v-table density="compact" class="mb-3">
                             <thead>
                                 <tr>
                                     <th>Date</th>
@@ -158,6 +182,27 @@
                                     <td>{{ formatDate(expense.date) }}</td>
                                     <td>{{ expense.category?.name || '-' }}</td>
                                     <td>৳{{ formatNumber(expense.amount) }}</td>
+                                </tr>
+                            </tbody>
+                        </v-table>
+
+                        <div class="mb-2 text-subtitle-2">Recent Sales</div>
+                        <v-table density="compact">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Customer</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="!land.recent_sales?.length">
+                                    <td colspan="3" class="text-medium-emphasis">No land sale added yet.</td>
+                                </tr>
+                                <tr v-for="sale in land.recent_sales" :key="sale.id">
+                                    <td>{{ formatDate(sale.date) }}</td>
+                                    <td>{{ sale.customer?.name || '-' }}</td>
+                                    <td>৳{{ formatNumber(sale.total ?? sale.subtotal) }}</td>
                                 </tr>
                             </tbody>
                         </v-table>
@@ -205,7 +250,17 @@ const props = defineProps({
 
 const ledger = ref({
     lands: [],
-    totals: { land_count: 0, active_cultivations: 0, total_expenses: 0, unassigned_expenses: 0 },
+    totals: {
+        land_count: 0,
+        active_cultivations: 0,
+        total_expenses: 0,
+        total_sales: 0,
+        total_paid: 0,
+        total_due: 0,
+        total_profit: 0,
+        unassigned_expenses: 0,
+        unassigned_sales: 0,
+    },
 })
 const cycleDialog = ref(false)
 const savingCycle = ref(false)
@@ -221,6 +276,7 @@ const cycleForm = reactive({
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
 const formatDate = (value) => value || '-'
+const profitColor = (value) => Number(value || 0) >= 0 ? 'success' : 'error'
 
 const landFilterOptions = computed(() => ledger.value.lands || [])
 
@@ -243,7 +299,12 @@ const displayTotals = computed(() => {
         land_count: filteredLands.value.length,
         active_cultivations: filteredLands.value.filter((land) => !!land.current_cultivation).length,
         total_expenses: filteredLands.value.reduce((sum, land) => sum + Number(land.total_expenses || 0), 0),
+        total_sales: filteredLands.value.reduce((sum, land) => sum + Number(land.total_sales || 0), 0),
+        total_paid: filteredLands.value.reduce((sum, land) => sum + Number(land.total_paid || 0), 0),
+        total_due: filteredLands.value.reduce((sum, land) => sum + Number(land.total_due || 0), 0),
+        total_profit: filteredLands.value.reduce((sum, land) => sum + Number(land.profit || 0), 0),
         unassigned_expenses: Number(ledger.value.totals?.unassigned_expenses || 0),
+        unassigned_sales: Number(ledger.value.totals?.unassigned_sales || 0),
     }
 })
 
