@@ -1,11 +1,28 @@
 <template>
     <div>
-        <div class="d-flex justify-space-between align-center mb-4">
+        <div class="d-flex flex-wrap justify-space-between align-center mb-4 ga-2">
             <h3 class="text-h6">Expenses</h3>
-            <v-btn color="primary" size="small" @click="openDialog()">
-                <v-icon left>mdi-plus</v-icon>
-                Add Expense
-            </v-btn>
+            <div class="d-flex flex-wrap align-center ga-2">
+                <v-select
+                    v-if="!props.warehouseId"
+                    v-model="selectedLandId"
+                    :items="projectLands"
+                    item-title="name"
+                    item-value="id"
+                    label="Filter by Land"
+                    clearable
+                    density="compact"
+                    hide-details
+                    variant="outlined"
+                    style="min-width: 220px;"
+                    :disabled="!projectLands.length"
+                    @update:model-value="fetchExpenses"
+                ></v-select>
+                <v-btn color="primary" size="small" @click="openDialog()">
+                    <v-icon left>mdi-plus</v-icon>
+                    Add Expense
+                </v-btn>
+            </div>
         </div>
 
         <v-data-table :headers="headers" :items="expenses" :loading="loading" density="compact">
@@ -152,6 +169,7 @@ const editMode = ref(false)
 const selectedExpense = ref(null)
 const saving = ref(false)
 const deleting = ref(false)
+const selectedLandId = ref(null)
 const categoryDialog = ref(false)
 const newCategoryName = ref('')
 const savingCategory = ref(false)
@@ -181,6 +199,11 @@ const fetchExpenses = async () => {
         const params = props.warehouseId
             ? { warehouse_id: props.warehouseId }
             : { project_id: props.projectId }
+
+        if (selectedLandId.value) {
+            params.land_id = selectedLandId.value
+        }
+
         const response = await api.get('/expenses', { params })
         expenses.value = response.data
     } catch (error) {
@@ -226,7 +249,7 @@ const openDialog = (expense = null) => {
         })
     } else {
         Object.assign(form, {
-            land_id: null,
+            land_id: selectedLandId.value || null,
             expense_category_id: null,
             bill_no: '',
             amount: '',
