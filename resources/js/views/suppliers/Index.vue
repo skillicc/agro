@@ -163,15 +163,19 @@
                 </v-card-title>
                 <v-card-text>
                     <v-row class="mb-4">
-                        <v-col cols="12" sm="4" class="text-center">
+                        <v-col cols="6" sm="3" class="text-center">
                             <div class="text-h6 text-sm-h5">৳{{ formatNumber(ledger.total_purchase) }}</div>
-                            <div class="text-caption">Total Purchase</div>
+                            <div class="text-caption">Net Purchase</div>
                         </v-col>
-                        <v-col cols="6" sm="4" class="text-center">
+                        <v-col cols="6" sm="3" class="text-center">
+                            <div class="text-h6 text-sm-h5 text-orange">৳{{ formatNumber(ledger.total_returned) }}</div>
+                            <div class="text-caption">Total Returned</div>
+                        </v-col>
+                        <v-col cols="6" sm="3" class="text-center">
                             <div class="text-h6 text-sm-h5 text-success">৳{{ formatNumber(ledger.total_paid) }}</div>
                             <div class="text-caption">Total Paid</div>
                         </v-col>
-                        <v-col cols="6" sm="4" class="text-center">
+                        <v-col cols="6" sm="3" class="text-center">
                             <div class="text-h6 text-sm-h5 text-error">৳{{ formatNumber(ledger.total_due) }}</div>
                             <div class="text-caption">Total Due</div>
                         </v-col>
@@ -198,6 +202,28 @@
                         </tbody>
                     </v-table>
                     <div v-else class="text-caption text-grey mb-4">No purchases found</div>
+
+                    <!-- Return History -->
+                    <h4 class="text-subtitle-2 mb-2">Return History</h4>
+                    <v-table density="compact" class="mb-4" v-if="ledger.returns?.length">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Product</th>
+                                <th>Reason</th>
+                                <th class="text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in ledger.returns" :key="`return-${item.id}`">
+                                <td>{{ item.date }}</td>
+                                <td>{{ item.product_name || '-' }}</td>
+                                <td>{{ item.reason || '-' }}</td>
+                                <td class="text-right text-orange">-৳{{ formatNumber(item.amount) }}</td>
+                            </tr>
+                        </tbody>
+                    </v-table>
+                    <div v-else class="text-caption text-grey mb-4">No returns found</div>
 
                     <!-- Payment History -->
                     <h4 class="text-subtitle-2 mb-2">Payment History</h4>

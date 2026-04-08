@@ -5,7 +5,11 @@ namespace Tests\Feature;
 use App\Http\Controllers\Api\ProductReturnController;
 use App\Models\Product;
 use App\Models\Project;
+use App\Models\Purchase;
+use App\Models\PurchaseItem;
 use App\Models\StockBatch;
+use App\Models\Supplier;
+use App\Models\SupplierPayment;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -79,6 +83,92 @@ class ProductReturnStockFlowTest extends TestCase
             'product_id' => $product->id,
             'quantity' => 5,
         ]);
+    }
+
+    public function test_supplier_ledger_totals_reduce_when_product_is_returned(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $supplier = Supplier::create([
+            'name' => 'Return Supplier',
+            'phone' => '01700000000',
+        ]);
+
+        $project = Project::create([
+            'name' => 'Supplier Return Project',
+            'type' => 'field',
+            'location' => 'Gazipur',
+            'is_active' => true,
+        ]);
+
+        $warehouse = Warehouse::create([
+            'name' => 'Supplier Return Warehouse',
+            'code' => 'RET-003',
+            'project_id' => $project->id,
+            'is_active' => true,
+        ]);
+
+        $product = Product::create([
+            'name' => 'Supplier Linked Product',
+            'type' => 'trading',
+            'unit' => 'pcs',
+            'buying_price' => 100,
+            'selling_price' => 130,
+            'stock_quantity' => 0,
+            'is_active' => true,
+        ]);
+
+        $purchase = Purchase::create([
+            'project_id' => $project->id,
+            'warehouse_id' => $warehouse->id,
+            'supplier_id' => $supplier->id,
+            'invoice_no' => 'PUR-RET-003',
+            'date' => now()->toDateString(),
+            'subtotal' => 1000,
+            'discount' => 0,
+            'total' => 1000,
+            'paid' => 200,
+            'due' => 800,
+            'status' => 'completed',
+            'created_by' => $admin->id,
+        ]);
+
+        PurchaseItem::create([
+            'purchase_id' => $purchase->id,
+            'product_id' => $product->id,
+            'quantity' => 10,
+            'unit_price' => 100,
+            'total' => 1000,
+        ]);
+
+        SupplierPayment::create([
+            'supplier_id' => $supplier->id,
+            'amount' => 200,
+            'discount' => 0,
+            'date' => now()->toDateString(),
+            'payment_method' => 'cash',
+            'created_by' => $admin->id,
+        ]);
+
+        $request = Request::create('/api/product-returns', 'POST', [
+            'project_id' => $project->id,
+            'product_id' => $product->id,
+            'quantity' => 4,
+            'value' => 400,
+            'date' => now()->toDateString(),
+            'reason' => 'Returned to supplier',
+        ]);
+        $request->setUserResolver(fn () => $admin);
+
+        $storeResponse = app(ProductReturnController::class)->store($request);
+        $this->assertSame(201, $storeResponse->getStatusCode());
+
+        $ledgerResponse = app(\App\Http\Controllers\Api\SupplierController::class)->ledger($supplier->fresh());
+        $ledger = $ledgerResponse->getData(true);
+
+        $this->assertEquals(400.0, (float) ($ledger['total_returned'] ?? 0));
+        $this->assertEquals(600.0, (float) $ledger['total_purchase']);
+        $this->assertEquals(400.0, (float) $ledger['total_due']);
     }
 
     public function test_deleting_product_return_restores_stock_levels(): void
