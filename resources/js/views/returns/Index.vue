@@ -337,8 +337,12 @@ const fetchPurchaseRates = async () => {
             return
         }
 
-        const currentUnitPrice = form.quantity > 0
-            ? Number((Number(form.value || 0) / Number(form.quantity || 1)).toFixed(2))
+        const currentQuantity = Number(form.quantity || 0)
+        const currentValue = Number(form.value || 0)
+        const hasMeaningfulValue = currentQuantity > 0 && currentValue > 0
+
+        const currentUnitPrice = hasMeaningfulValue
+            ? Number((currentValue / currentQuantity).toFixed(2))
             : null
 
         const matchedRate = currentUnitPrice !== null
@@ -347,9 +351,9 @@ const fetchPurchaseRates = async () => {
 
         const latestRate = Number(batches[batches.length - 1]?.unit_price ?? rateOptions.value[0].value)
         selectedUnitPrice.value = matchedRate ?? latestRate
-        manualValueOverride.value = currentUnitPrice !== null && matchedRate === null
+        manualValueOverride.value = hasMeaningfulValue && matchedRate === null
 
-        if (!manualValueOverride.value) {
+        if (!manualValueOverride.value || currentValue === 0) {
             form.value = calculateSuggestedValue(form.quantity, selectedUnitPrice.value)
         }
     } catch (error) {
