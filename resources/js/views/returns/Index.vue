@@ -96,7 +96,7 @@
 
         <v-card>
             <v-card-text>
-                <v-data-table :headers="headers" :items="productReturns" :loading="loading" :density="$vuetify.display.smAndDown ? 'compact' : 'default'">
+                <v-data-table :headers="headers" :items="safeProductReturns" :loading="loading" :density="$vuetify.display.smAndDown ? 'compact' : 'default'">
                     <template v-slot:item.sl="{ index }">
                         {{ index + 1 }}
                     </template>
@@ -241,8 +241,22 @@ const headers = [
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
 
+const normalizeCollection = (payload) => {
+    if (Array.isArray(payload)) {
+        return payload
+    }
+
+    if (Array.isArray(payload?.data)) {
+        return payload.data
+    }
+
+    return []
+}
+
+const safeProductReturns = computed(() => normalizeCollection(productReturns.value))
+
 const returnSummary = computed(() => {
-    return productReturns.value.reduce((summary, item) => {
+    return safeProductReturns.value.reduce((summary, item) => {
         summary.count += 1
         summary.quantity += Number(item.quantity || 0)
         summary.value += Number(item.value || 0)
@@ -265,7 +279,7 @@ const fetchReturns = async () => {
         if (filters.end_date) params.append('end_date', filters.end_date)
 
         const response = await api.get(`/product-returns?${params.toString()}`)
-        productReturns.value = response.data
+        productReturns.value = normalizeCollection(response.data)
     } catch (error) {
         console.error('Error:', error)
     }
@@ -275,7 +289,7 @@ const fetchReturns = async () => {
 const fetchProjects = async () => {
     try {
         const response = await api.get('/projects')
-        projects.value = response.data
+        projects.value = normalizeCollection(response.data)
     } catch (error) {
         console.error('Error:', error)
     }
@@ -284,7 +298,7 @@ const fetchProjects = async () => {
 const fetchWarehouses = async () => {
     try {
         const response = await api.get('/warehouses')
-        warehouses.value = response.data
+        warehouses.value = normalizeCollection(response.data)
     } catch (error) {
         console.error('Error:', error)
     }
@@ -293,7 +307,7 @@ const fetchWarehouses = async () => {
 const fetchProducts = async () => {
     try {
         const response = await api.get('/products')
-        products.value = response.data
+        products.value = normalizeCollection(response.data)
     } catch (error) {
         console.error('Error:', error)
     }
