@@ -24,6 +24,41 @@
             </div>
         </div>
 
+        <v-row dense class="mb-3">
+            <v-col cols="12" sm="6" md="3">
+                <v-card variant="tonal" color="primary">
+                    <v-card-text>
+                        <div class="text-caption text-medium-emphasis">Sales Count</div>
+                        <div class="text-h6 font-weight-bold">{{ salesSummary.count }}</div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="12" sm="6" md="3">
+                <v-card variant="tonal" color="success">
+                    <v-card-text>
+                        <div class="text-caption text-medium-emphasis">Total Amount</div>
+                        <div class="text-h6 font-weight-bold">৳{{ formatNumber(salesSummary.total) }}</div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="12" sm="6" md="3">
+                <v-card variant="tonal" color="info">
+                    <v-card-text>
+                        <div class="text-caption text-medium-emphasis">Paid</div>
+                        <div class="text-h6 font-weight-bold">৳{{ formatNumber(salesSummary.paid) }}</div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="12" sm="6" md="3">
+                <v-card variant="tonal" color="warning">
+                    <v-card-text>
+                        <div class="text-caption text-medium-emphasis">Due</div>
+                        <div class="text-h6 font-weight-bold">৳{{ formatNumber(salesSummary.due) }}</div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+        </v-row>
+
         <v-data-table :headers="headers" :items="sales" :loading="loading" density="compact">
             <template v-slot:item.land="{ item }">
                 {{ item.land?.name || '-' }}
@@ -32,7 +67,7 @@
                 {{ item.customer?.name }}
             </template>
             <template v-slot:item.total="{ item }">
-                ৳{{ Number(item.total).toLocaleString() }}
+                ৳{{ formatNumber(item.total ?? item.subtotal) }}
             </template>
             <template v-slot:item.paid="{ item }">
                 ৳{{ Number(item.paid).toLocaleString() }}
@@ -99,7 +134,7 @@
                         <tfoot>
                             <tr>
                                 <td colspan="3" class="text-right font-weight-bold">Total:</td>
-                                <td class="font-weight-bold">৳{{ Number(selectedSale?.total).toLocaleString() }}</td>
+                                <td class="font-weight-bold">৳{{ formatNumber(selectedSale?.total ?? selectedSale?.subtotal) }}</td>
                             </tr>
                         </tfoot>
                     </v-table>
@@ -153,6 +188,23 @@ const headers = [
     { title: 'Due', key: 'due' },
     { title: 'Actions', key: 'actions', sortable: false },
 ]
+
+const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
+
+const salesSummary = computed(() => {
+    return sales.value.reduce((summary, sale) => {
+        summary.count += 1
+        summary.total += Number(sale.total ?? sale.subtotal ?? 0)
+        summary.paid += Number(sale.paid || 0)
+        summary.due += Number(sale.due || 0)
+        return summary
+    }, {
+        count: 0,
+        total: 0,
+        paid: 0,
+        due: 0,
+    })
+})
 
 const landOptions = computed(() => {
     if (props.lands?.length) {
