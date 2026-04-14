@@ -26,6 +26,9 @@
             class="elevation-1"
             :items-per-page="20"
         >
+            <template v-slot:item.sl="{ index }">
+                {{ index + 1 }}
+            </template>
             <template v-slot:item.is_active="{ item }">
                 <v-chip :color="item.is_active ? 'success' : 'error'" size="small">
                     {{ item.is_active ? 'Active' : 'Inactive' }}
@@ -96,6 +99,7 @@ const defaultForm = () => ({ name: '', code: '', location: '', size: null, unit:
 const form = ref(defaultForm())
 
 const headers = [
+    { title: 'SL', key: 'sl', sortable: false, width: '60px' },
     { title: 'Name', key: 'name' },
     { title: 'Code', key: 'code' },
     { title: 'Location', key: 'location' },
