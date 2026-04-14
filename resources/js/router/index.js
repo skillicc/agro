@@ -10,6 +10,7 @@ import Login from '../views/auth/Login.vue'
 const Dashboard = () => import('../views/Dashboard.vue')
 const Projects = () => import('../views/projects/Index.vue')
 const ProjectShow = () => import('../views/projects/Show.vue')
+const Lands = () => import('../views/lands/Index.vue')
 const Suppliers = () => import('../views/suppliers/Index.vue')
 const Customers = () => import('../views/customers/Index.vue')
 const Products = () => import('../views/products/Index.vue')
@@ -66,6 +67,11 @@ const routes = [
                 path: 'projects/:id',
                 name: 'project-show',
                 component: ProjectShow,
+            },
+            {
+                path: 'lands',
+                name: 'lands',
+                component: Lands,
             },
             {
                 path: 'suppliers',

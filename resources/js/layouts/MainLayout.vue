@@ -113,6 +113,12 @@
                     :to="{ name: 'projects' }"
                 ></v-list-item>
 
+                <v-list-item
+                    prepend-icon="mdi-map-marker-radius"
+                    title="Lands"
+                    :to="{ name: 'lands' }"
+                ></v-list-item>
+
                 <v-list-group value="Transactions" v-if="!rail">
                     <template v-slot:activator="{ props }">
                         <v-list-item
