@@ -69,6 +69,8 @@ class PurchaseController extends Controller
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.unit_mrp' => 'nullable|numeric|min:0',
             'items.*.total_mrp' => 'nullable|numeric|min:0',
+            'items.*.labor_cost' => 'nullable|numeric|min:0',
+            'items.*.transport_cost' => 'nullable|numeric|min:0',
         ]);
 
         // Validate that at least one of project_id or warehouse_id is provided
@@ -110,6 +112,8 @@ class PurchaseController extends Controller
                     'unit_mrp' => $item['unit_mrp'] ?? 0,
                     'total' => $item['quantity'] * $item['unit_price'],
                     'total_mrp' => $item['total_mrp'] ?? 0,
+                    'labor_cost' => $item['labor_cost'] ?? 0,
+                    'transport_cost' => $item['transport_cost'] ?? 0,
                 ]);
             }
 
@@ -161,6 +165,8 @@ class PurchaseController extends Controller
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.unit_mrp' => 'nullable|numeric|min:0',
             'items.*.total_mrp' => 'nullable|numeric|min:0',
+            'items.*.labor_cost' => 'nullable|numeric|min:0',
+            'items.*.transport_cost' => 'nullable|numeric|min:0',
         ]);
 
         // Validate that at least one of project_id or warehouse_id is provided
@@ -204,6 +210,8 @@ class PurchaseController extends Controller
                     'unit_mrp' => $item['unit_mrp'] ?? 0,
                     'total' => $item['quantity'] * $item['unit_price'],
                     'total_mrp' => $item['total_mrp'] ?? 0,
+                    'labor_cost' => $item['labor_cost'] ?? 0,
+                    'transport_cost' => $item['transport_cost'] ?? 0,
                 ]);
             }
 

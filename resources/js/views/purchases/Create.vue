@@ -98,6 +98,8 @@
                                     <th class="text-right" style="min-width: 80px">Unit MRP</th>
                                     <th class="text-right" style="min-width: 90px">Total TP</th>
                                     <th class="text-right" style="min-width: 90px">Total MRP</th>
+                                    <th class="text-right" style="min-width: 90px">Labor Cost</th>
+                                    <th class="text-right" style="min-width: 90px">Transport</th>
                                     <th style="width: 50px"></th>
                                 </tr>
                             </thead>
@@ -150,6 +152,12 @@
                                     </td>
                                     <td>
                                         <v-text-field :model-value="formatNumber(item.total_mrp)" density="compact" hide-details variant="outlined" readonly class="text-success font-weight-medium" bg-color="green-lighten-5"></v-text-field>
+                                    </td>
+                                    <td>
+                                        <v-text-field v-model.number="item.labor_cost" type="number" density="compact" hide-details variant="outlined"></v-text-field>
+                                    </td>
+                                    <td>
+                                        <v-text-field v-model.number="item.transport_cost" type="number" density="compact" hide-details variant="outlined"></v-text-field>
                                     </td>
                                     <td>
                                         <v-btn icon color="error" size="x-small" variant="text" @click="removeItem(index)" :disabled="form.items.length === 1">
@@ -306,6 +314,30 @@
                                         ></v-text-field>
                                     </v-col>
                                 </v-row>
+
+                                <!-- Labor & Transport Cost Row -->
+                                <v-row dense class="mt-2">
+                                    <v-col cols="6">
+                                        <v-text-field
+                                            v-model.number="item.labor_cost"
+                                            label="Labor Cost"
+                                            type="number"
+                                            density="comfortable"
+                                            hide-details
+                                            prefix="৳"
+                                        ></v-text-field>
+                                    </v-col>
+                                    <v-col cols="6">
+                                        <v-text-field
+                                            v-model.number="item.transport_cost"
+                                            label="Transport Cost"
+                                            type="number"
+                                            density="comfortable"
+                                            hide-details
+                                            prefix="৳"
+                                        ></v-text-field>
+                                    </v-col>
+                                </v-row>
                             </v-card-text>
                         </v-card>
                     </div>
@@ -436,11 +468,13 @@ const form = reactive({
         quantity: 1,
         unit_price: 0,
         unit_mrp: 0,
-        total_mrp: 0
+        total_mrp: 0,
+        labor_cost: 0,
+        transport_cost: 0
     }],
 })
 
-const subtotalTP = computed(() => form.items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0))
+const subtotalTP = computed(() => form.items.reduce((sum, item) => sum + (item.quantity * item.unit_price) + (item.labor_cost || 0) + (item.transport_cost || 0), 0))
 const subtotalMRP = computed(() => form.items.reduce((sum, item) => sum + (item.total_mrp || 0), 0))
 const totalTP = computed(() => subtotalTP.value - form.discount)
 const totalMRP = computed(() => subtotalMRP.value)
@@ -456,7 +490,9 @@ const addItem = () => form.items.push({
     quantity: 1,
     unit_price: 0,
     unit_mrp: 0,
-    total_mrp: 0
+    total_mrp: 0,
+    labor_cost: 0,
+    transport_cost: 0
 })
 const removeItem = (index) => form.items.splice(index, 1)
 

@@ -22,6 +22,8 @@ class PurchaseItem extends Model
         'unit_mrp',
         'total',
         'total_mrp',
+        'labor_cost',
+        'transport_cost',
     ];
 
     protected $casts = [
