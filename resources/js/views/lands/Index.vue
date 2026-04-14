@@ -32,9 +32,9 @@
                 </v-chip>
             </template>
             <template v-slot:item.current_project="{ item }">
-                <span v-if="item.currentCultivation?.project">
-                    <v-chip size="small" color="primary" :to="{ name: 'project-show', params: { id: item.currentCultivation.project.id } }">
-                        {{ item.currentCultivation.project.name }}
+                <span v-if="item.projects?.length">
+                    <v-chip size="small" color="primary" :to="{ name: 'project-show', params: { id: item.projects[0].id } }">
+                        {{ item.projects[0].name }}
                     </v-chip>
                 </span>
                 <span v-else class="text-medium-emphasis">—</span>

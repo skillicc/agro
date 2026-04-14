@@ -22,7 +22,9 @@ class LandController extends Controller
             });
         }
 
-        $lands = $query->with(['currentCultivation.project'])->get();
+        $lands = $query->with(['projects' => function ($q) {
+            $q->latest('land_project.created_at');
+        }])->get();
 
         return response()->json($lands);
     }
