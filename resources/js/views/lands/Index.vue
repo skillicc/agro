@@ -82,7 +82,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import api from '../../services/api'
 
 const lands = ref([])
 const loading = ref(false)
@@ -112,7 +112,7 @@ const filteredLands = computed(() =>
 async function fetchLands() {
     loading.value = true
     try {
-        const { data } = await axios.get('/api/lands', { params: { include_inactive: true } })
+        const { data } = await api.get('/lands', { params: { include_inactive: true } })
         lands.value = Array.isArray(data) ? data : (data?.data ?? [])
     } finally {
         loading.value = false
@@ -131,11 +131,11 @@ async function save() {
     saving.value = true
     try {
         if (editingLand.value) {
-            const { data } = await axios.put(`/api/lands/${editingLand.value.id}`, form.value)
+            const { data } = await api.put(`/lands/${editingLand.value.id}`, form.value)
             const idx = lands.value.findIndex(l => l.id === editingLand.value.id)
             if (idx !== -1) lands.value[idx] = { ...lands.value[idx], ...data }
         } else {
-            const { data } = await axios.post('/api/lands', form.value)
+            const { data } = await api.post('/lands', form.value)
             lands.value.push(data)
         }
         dialog.value = false
