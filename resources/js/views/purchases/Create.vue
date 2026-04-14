@@ -98,8 +98,8 @@
                                     <th class="text-right" style="min-width: 80px">Unit MRP</th>
                                     <th class="text-right" style="min-width: 90px">Total TP</th>
                                     <th class="text-right" style="min-width: 90px">Total MRP</th>
-                                    <th class="text-right" style="min-width: 90px">Labor Cost</th>
-                                    <th class="text-right" style="min-width: 90px">Transport</th>
+                                    <th class="text-right" style="min-width: 100px">Extra Cost</th>
+                                    <th class="text-right" style="min-width: 90px">Eff. Unit TP</th>
                                     <th style="width: 50px"></th>
                                 </tr>
                             </thead>
@@ -154,10 +154,10 @@
                                         <v-text-field :model-value="formatNumber(item.total_mrp)" density="compact" hide-details variant="outlined" readonly class="text-success font-weight-medium" bg-color="green-lighten-5"></v-text-field>
                                     </td>
                                     <td>
-                                        <v-text-field v-model.number="item.labor_cost" type="number" density="compact" hide-details variant="outlined"></v-text-field>
+                                        <v-text-field v-model.number="item.extra_cost" type="number" density="compact" hide-details variant="outlined" placeholder="0"></v-text-field>
                                     </td>
                                     <td>
-                                        <v-text-field v-model.number="item.transport_cost" type="number" density="compact" hide-details variant="outlined"></v-text-field>
+                                        <v-text-field :model-value="formatNumber(item.unit_price + (item.extra_cost || 0) / (item.quantity || 1))" density="compact" hide-details variant="outlined" readonly bg-color="orange-lighten-5" class="text-orange-darken-3 font-weight-medium"></v-text-field>
                                     </td>
                                     <td>
                                         <v-btn icon color="error" size="x-small" variant="text" @click="removeItem(index)" :disabled="form.items.length === 1">
@@ -315,12 +315,12 @@
                                     </v-col>
                                 </v-row>
 
-                                <!-- Labor & Transport Cost Row -->
+                                <!-- Extra Cost Row -->
                                 <v-row dense class="mt-2">
                                     <v-col cols="6">
                                         <v-text-field
-                                            v-model.number="item.labor_cost"
-                                            label="Labor Cost"
+                                            v-model.number="item.extra_cost"
+                                            label="Extra Cost (Labor+Transport)"
                                             type="number"
                                             density="comfortable"
                                             hide-details
@@ -329,12 +329,13 @@
                                     </v-col>
                                     <v-col cols="6">
                                         <v-text-field
-                                            v-model.number="item.transport_cost"
-                                            label="Transport Cost"
-                                            type="number"
+                                            :model-value="formatNumber(item.unit_price + (item.extra_cost || 0) / (item.quantity || 1))"
+                                            label="Eff. Unit TP"
                                             density="comfortable"
                                             hide-details
-                                            prefix="৳"
+                                            readonly
+                                            bg-color="orange-lighten-5"
+                                            class="text-orange-darken-3 font-weight-bold"
                                         ></v-text-field>
                                     </v-col>
                                 </v-row>
@@ -469,12 +470,11 @@ const form = reactive({
         unit_price: 0,
         unit_mrp: 0,
         total_mrp: 0,
-        labor_cost: 0,
-        transport_cost: 0
+        extra_cost: 0
     }],
 })
 
-const subtotalTP = computed(() => form.items.reduce((sum, item) => sum + (item.quantity * item.unit_price) + (item.labor_cost || 0) + (item.transport_cost || 0), 0))
+const subtotalTP = computed(() => form.items.reduce((sum, item) => sum + (item.quantity * item.unit_price) + (item.extra_cost || 0), 0))
 const subtotalMRP = computed(() => form.items.reduce((sum, item) => sum + (item.total_mrp || 0), 0))
 const totalTP = computed(() => subtotalTP.value - form.discount)
 const totalMRP = computed(() => subtotalMRP.value)
@@ -491,8 +491,7 @@ const addItem = () => form.items.push({
     unit_price: 0,
     unit_mrp: 0,
     total_mrp: 0,
-    labor_cost: 0,
-    transport_cost: 0
+    extra_cost: 0
 })
 const removeItem = (index) => form.items.splice(index, 1)
 
@@ -554,7 +553,23 @@ const savePurchase = async () => {
 
     saving.value = true
     try {
-        await api.post('/purchases', form)
+        const payload = {
+            ...form,
+            items: form.items.map(item => ({
+                product_id: item.product_id,
+                size: item.size || '',
+                package_qty: item.package_qty || 1,
+                unit_per_package: item.unit_per_package || 1,
+                package_price: item.package_price || 0,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                unit_mrp: item.unit_mrp || 0,
+                total_mrp: item.total_mrp || 0,
+                labor_cost: item.extra_cost || 0,
+                transport_cost: 0,
+            }))
+        }
+        await api.post('/purchases', payload)
         router.push({ name: 'purchases' })
     } catch (error) {
         console.error('Error:', error)

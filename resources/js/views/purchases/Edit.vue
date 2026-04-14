@@ -226,12 +226,12 @@
                                     </v-col>
                                 </v-row>
 
-                                <!-- Labor & Transport Cost Row -->
+                                <!-- Extra Cost Row -->
                                 <v-row dense class="mt-2">
                                     <v-col cols="6">
                                         <v-text-field
-                                            v-model.number="item.labor_cost"
-                                            label="Labor Cost"
+                                            v-model.number="item.extra_cost"
+                                            label="Extra Cost (Labor+Transport)"
                                             type="number"
                                             density="comfortable"
                                             hide-details
@@ -240,12 +240,13 @@
                                     </v-col>
                                     <v-col cols="6">
                                         <v-text-field
-                                            v-model.number="item.transport_cost"
-                                            label="Transport Cost"
-                                            type="number"
+                                            :model-value="formatNumber(item.unit_price + (item.extra_cost || 0) / (item.quantity || 1))"
+                                            label="Eff. Unit TP"
                                             density="comfortable"
                                             hide-details
-                                            prefix="৳"
+                                            readonly
+                                            bg-color="orange-lighten-5"
+                                            class="text-orange-darken-3 font-weight-bold"
                                         ></v-text-field>
                                     </v-col>
                                 </v-row>
@@ -375,7 +376,7 @@ const form = reactive({
     items: [],
 })
 
-const subtotalTP = computed(() => form.items.reduce((sum, item) => sum + (item.quantity * item.unit_price) + (item.labor_cost || 0) + (item.transport_cost || 0), 0))
+const subtotalTP = computed(() => form.items.reduce((sum, item) => sum + (item.quantity * item.unit_price) + (item.extra_cost || 0), 0))
 const subtotalMRP = computed(() => form.items.reduce((sum, item) => sum + (item.total_mrp || 0), 0))
 const totalTP = computed(() => subtotalTP.value - form.discount)
 const totalMRP = computed(() => subtotalMRP.value)
@@ -392,8 +393,7 @@ const addItem = () => form.items.push({
     unit_price: 0,
     unit_mrp: 0,
     total_mrp: 0,
-    labor_cost: 0,
-    transport_cost: 0
+    extra_cost: 0
 })
 const removeItem = (index) => form.items.splice(index, 1)
 
@@ -457,8 +457,7 @@ const fetchData = async () => {
             unit_price: parseFloat(item.unit_price) || 0,
             unit_mrp: parseFloat(item.unit_mrp) || 0,
             total_mrp: parseFloat(item.total_mrp) || 0,
-            labor_cost: parseFloat(item.labor_cost) || 0,
-            transport_cost: parseFloat(item.transport_cost) || 0,
+            extra_cost: (parseFloat(item.labor_cost) || 0) + (parseFloat(item.transport_cost) || 0),
         }))
     } catch (error) {
         console.error('Error:', error)
@@ -495,8 +494,8 @@ const savePurchase = async () => {
                 unit_price: item.unit_price,
                 unit_mrp: item.unit_mrp || 0,
                 total_mrp: item.total_mrp || 0,
-                labor_cost: item.labor_cost || 0,
-                transport_cost: item.transport_cost || 0,
+                labor_cost: item.extra_cost || 0,
+                transport_cost: 0,
             }))
         }
 
