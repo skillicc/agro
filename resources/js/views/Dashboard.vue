@@ -197,7 +197,7 @@
                                 <v-list-item-title class="text-body-2">{{ product.name }}</v-list-item-title>
                                 <template v-slot:append>
                                     <div class="text-right">
-                                        <div class="text-body-2 font-weight-bold">{{ product.total_qty }} pcs</div>
+                                        <div class="text-body-2 font-weight-bold">{{ product.total_qty }} {{ product.unit || 'pcs' }}</div>
                                         <div class="text-caption text-grey">৳{{ formatNumber(product.total_amount) }}</div>
                                     </div>
                                 </template>

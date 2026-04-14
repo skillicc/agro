@@ -79,8 +79,8 @@ class ReportController extends Controller
             ->join('products', 'sale_items.product_id', '=', 'products.id')
             ->whereIn('sales.project_id', $projectIds)
             ->whereBetween('sales.date', [$startOfMonth, $endOfMonth])
-            ->select('products.name', DB::raw('SUM(sale_items.quantity) as total_qty'), DB::raw('SUM(sale_items.total) as total_amount'))
-            ->groupBy('sale_items.product_id', 'products.name')
+            ->select('products.name', 'products.unit', DB::raw('SUM(sale_items.quantity) as total_qty'), DB::raw('SUM(sale_items.total) as total_amount'))
+            ->groupBy('sale_items.product_id', 'products.name', 'products.unit')
             ->orderByDesc('total_qty')
             ->limit(5)
             ->get();
