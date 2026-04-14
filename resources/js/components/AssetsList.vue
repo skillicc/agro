@@ -143,7 +143,7 @@ const fetchAssets = async () => {
 
 const fetchLands = async () => {
     try {
-        const response = await api.get('/lands')
+        const response = await api.get('/lands', { params: { project_id: props.projectId } })
         lands.value = Array.isArray(response.data) ? response.data : (response.data?.data ?? [])
     } catch (error) {
         console.error('Error fetching lands:', error)
