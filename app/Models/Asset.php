@@ -12,6 +12,7 @@ class Asset extends Model
 
     protected $fillable = [
         'project_id',
+        'land_id',
         'name',
         'description',
         'value',
@@ -28,6 +29,11 @@ class Asset extends Model
     public function project()
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function land()
+    {
+        return $this->belongsTo(Land::class);
     }
 
     public function creator()

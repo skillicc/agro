@@ -3,16 +3,11 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * লোকাল টেস্ট: http://localhost:8000 (php artisan serve)
- * লাইভ স্মোক টেস্ট: https://agro.tishohagh.com
  *
  * লোকাল রান:   npm run test:e2e
- * লাইভ রান:    npm run test:e2e:live
  */
 
-const isLive = process.env.TEST_ENV === 'live';
-const baseURL = isLive
-  ? 'https://agro.tishohagh.com'
-  : 'http://localhost:8000';
+const baseURL = 'http://localhost:8000';
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -36,13 +31,11 @@ export default defineConfig({
     },
   ],
 
-  // লোকাল টেস্টে PHP artisan serve অটো স্টার্ট
-  webServer: isLive
-    ? undefined
-    : {
-        command: 'php artisan serve --port=8000',
-        url: 'http://localhost:8000',
-        reuseExistingServer: true,
-        timeout: 30000,
-      },
+  // PHP artisan serve অটো স্টার্ট
+  webServer: {
+    command: 'php artisan serve --port=8000',
+    url: 'http://localhost:8000',
+    reuseExistingServer: true,
+    timeout: 30000,
+  },
 });

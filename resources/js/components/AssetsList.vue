@@ -49,6 +49,14 @@
                             prefix="৳"
                             required
                         ></v-text-field>
+                        <v-select
+                            v-model="form.land_id"
+                            :items="lands"
+                            item-title="name"
+                            item-value="id"
+                            label="Land"
+                            clearable
+                        ></v-select>
                         <v-text-field
                             v-model="form.purchase_date"
                             label="Purchase Date"
@@ -93,6 +101,7 @@ const props = defineProps({
 })
 
 const assets = ref([])
+const lands = ref([])
 const loading = ref(false)
 const dialog = ref(false)
 const deleteDialog = ref(false)
@@ -115,6 +124,7 @@ const form = reactive({
     name: '',
     invoice_no: '',
     value: '',
+    land_id: null,
     depreciation_rate: 0,
     purchase_date: '',
     description: ''
@@ -131,6 +141,15 @@ const fetchAssets = async () => {
     loading.value = false
 }
 
+const fetchLands = async () => {
+    try {
+        const response = await api.get('/lands')
+        lands.value = Array.isArray(response.data) ? response.data : (response.data?.data ?? [])
+    } catch (error) {
+        console.error('Error fetching lands:', error)
+    }
+}
+
 const openDialog = (asset = null) => {
     editMode.value = !!asset
     selectedAsset.value = asset
@@ -139,6 +158,7 @@ const openDialog = (asset = null) => {
             name: asset.name,
             invoice_no: asset.invoice_no || '',
             value: asset.value,
+            land_id: asset.land_id || null,
             depreciation_rate: asset.depreciation_rate || 0,
             purchase_date: asset.purchase_date || '',
             description: asset.description || ''
@@ -148,6 +168,7 @@ const openDialog = (asset = null) => {
             name: '',
             invoice_no: '',
             value: '',
+            land_id: null,
             depreciation_rate: 0,
             purchase_date: '',
             description: ''
@@ -192,5 +213,6 @@ const deleteAsset = async () => {
 
 onMounted(() => {
     fetchAssets()
+    fetchLands()
 })
 </script>

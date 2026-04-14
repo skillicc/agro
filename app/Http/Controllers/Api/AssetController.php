@@ -10,7 +10,7 @@ class AssetController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Asset::with(['project', 'creator']);
+        $query = Asset::with(['project', 'land', 'creator']);
 
         if ($request->project_id) {
             $query->where('project_id', $request->project_id);
@@ -25,6 +25,7 @@ class AssetController extends Controller
     {
         $request->validate([
             'project_id' => 'required|exists:projects,id',
+            'land_id' => 'nullable|exists:lands,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'value' => 'required|numeric|min:0',
@@ -37,7 +38,7 @@ class AssetController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
-        return response()->json($asset->load(['project', 'creator']), 201);
+        return response()->json($asset->load(['project', 'land', 'creator']), 201);
     }
 
     public function show(Asset $asset)
@@ -48,6 +49,7 @@ class AssetController extends Controller
     public function update(Request $request, Asset $asset)
     {
         $request->validate([
+            'land_id' => 'nullable|exists:lands,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'value' => 'required|numeric|min:0',
@@ -57,7 +59,7 @@ class AssetController extends Controller
 
         $asset->update($request->all());
 
-        return response()->json($asset->load(['project', 'creator']));
+        return response()->json($asset->load(['project', 'land', 'creator']));
     }
 
     public function destroy(Asset $asset)
