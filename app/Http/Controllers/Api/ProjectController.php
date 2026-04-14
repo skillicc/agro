@@ -22,6 +22,9 @@ class ProjectController extends Controller
         $projects = $builder
             ->with(['lands:id,name'])
             ->withCount(['expenses', 'purchases', 'sales', 'lands'])
+            ->withSum('expenses', 'amount')
+            ->withSum('purchases', 'total')
+            ->withSum('sales', 'total')
             ->get();
 
         return response()->json($projects);

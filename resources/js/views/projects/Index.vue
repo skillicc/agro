@@ -43,16 +43,16 @@
                         </div>
                         <v-row dense class="mt-2">
                             <v-col cols="4" class="text-center">
-                                <div class="text-h6">{{ project.expenses_count || 0 }}</div>
-                                <div class="text-caption">Expenses</div>
+                                <div class="text-subtitle-2 font-weight-bold text-error">৳{{ formatAmount(project.expenses_sum_amount) }}</div>
+                                <div class="text-caption text-medium-emphasis">Expenses</div>
                             </v-col>
                             <v-col cols="4" class="text-center">
-                                <div class="text-h6">{{ project.purchases_count || 0 }}</div>
-                                <div class="text-caption">Purchases</div>
+                                <div class="text-subtitle-2 font-weight-bold text-primary">৳{{ formatAmount(project.purchases_sum_total) }}</div>
+                                <div class="text-caption text-medium-emphasis">Purchases</div>
                             </v-col>
                             <v-col cols="4" class="text-center">
-                                <div class="text-h6">{{ project.sales_count || 0 }}</div>
-                                <div class="text-caption">Sales</div>
+                                <div class="text-subtitle-2 font-weight-bold text-success">৳{{ formatAmount(project.sales_sum_total) }}</div>
+                                <div class="text-caption text-medium-emphasis">Sales</div>
                             </v-col>
                         </v-row>
                     </v-card-text>
@@ -270,6 +270,13 @@ const getProjectColor = (type) => {
         central: 'warning',
     }
     return colors[type] || 'grey'
+}
+
+const formatAmount = (val) => {
+    const n = Number(val || 0)
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K'
+    return n.toLocaleString('en-BD')
 }
 
 const getTypeLabel = (type) => {
