@@ -17,6 +17,9 @@
                     ৳{{ Number(item.current_value || item.value).toLocaleString() }}
                 </span>
             </template>
+            <template v-slot:item.description="{ item }">
+                <span :title="item.description" style="max-width:160px;display:inline-block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ item.description || '—' }}</span>
+            </template>
             <template v-slot:item.actions="{ item }">
                 <v-btn icon size="x-small" @click="openDialog(item)">
                     <v-icon>mdi-pencil</v-icon>
@@ -115,7 +118,7 @@ const headers = [
     { title: 'Invoice No.', key: 'invoice_no' },
     { title: 'Purchase Value', key: 'value' },
     { title: 'Current Value', key: 'current_value' },
-    { title: 'Depreciation', key: 'depreciation_rate' },
+    { title: 'Description', key: 'description' },
     { title: 'Purchase Date', key: 'purchase_date' },
     { title: 'Actions', key: 'actions', sortable: false },
 ]
