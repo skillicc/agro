@@ -23,7 +23,7 @@ class ProjectController extends Controller
             ->with(['lands:id,name'])
             ->withCount(['expenses', 'purchases', 'sales', 'lands'])
             ->withSum('expenses', 'amount')
-            ->withSum('purchases', 'total')
+            ->withSum('assets', 'value')
             ->withSum('sales', 'total')
             ->get();
 

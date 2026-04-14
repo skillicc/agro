@@ -47,8 +47,8 @@
                                 <div class="text-caption text-medium-emphasis">Expenses</div>
                             </v-col>
                             <v-col cols="4" class="text-center">
-                                <div class="text-subtitle-2 font-weight-bold text-primary">৳{{ formatAmount(project.purchases_sum_total) }}</div>
-                                <div class="text-caption text-medium-emphasis">Purchases</div>
+                                <div class="text-subtitle-2 font-weight-bold text-primary">৳{{ formatAmount(project.assets_sum_value) }}</div>
+                                <div class="text-caption text-medium-emphasis">Asset Value</div>
                             </v-col>
                             <v-col cols="4" class="text-center">
                                 <div class="text-subtitle-2 font-weight-bold text-success">৳{{ formatAmount(project.sales_sum_total) }}</div>
