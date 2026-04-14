@@ -50,12 +50,6 @@
                             required
                         ></v-text-field>
                         <v-text-field
-                            v-model.number="form.depreciation_rate"
-                            label="Depreciation Rate (%/Year)"
-                            type="number"
-                            suffix="%"
-                        ></v-text-field>
-                        <v-text-field
                             v-model="form.purchase_date"
                             label="Purchase Date"
                             type="date"
