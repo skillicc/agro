@@ -100,7 +100,7 @@ const headers = [
     { title: 'Code', key: 'code' },
     { title: 'Location', key: 'location' },
     { title: 'Size', key: 'size' },
-    { title: 'Current Project', key: 'current_project', sortable: false },
+    { title: 'Latest Project', key: 'current_project', sortable: false },
     { title: 'Status', key: 'is_active' },
     { title: 'Actions', key: 'actions', sortable: false, align: 'end' },
 ]

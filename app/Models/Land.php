@@ -37,7 +37,7 @@ class Land extends Model
 
     public function currentCultivation()
     {
-        return $this->hasOne(LandCultivation::class)->where('status', 'active')->latestOfMany('opening_date');
+        return $this->hasOne(LandCultivation::class)->latestOfMany('opening_date');
     }
 
     public function expenses()
