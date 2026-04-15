@@ -61,6 +61,12 @@
                             required
                         ></v-text-field>
                         <v-text-field
+                            v-model="form.sale_value"
+                            label="Sale Value"
+                            type="number"
+                            prefix="৳"
+                        ></v-text-field>
+                        <v-text-field
                             v-model="form.date"
                             label="Date"
                             type="date"
@@ -147,6 +153,7 @@ const form = reactive({
     category_id: null,
     name: '',
     quantity: '',
+    sale_value: '',
     date: new Date().toISOString().split('T')[0],
     note: ''
 })
@@ -243,6 +250,7 @@ const openDialog = (production = null) => {
             category_id: production.product?.category_id || null,
             name: production.product?.name || '',
             quantity: production.quantity,
+            sale_value: production.product?.selling_price || '',
             date: production.date,
             note: production.note || ''
         })
@@ -251,6 +259,7 @@ const openDialog = (production = null) => {
             category_id: null,
             name: '',
             quantity: '',
+            sale_value: '',
             date: new Date().toISOString().split('T')[0],
             note: ''
         })
@@ -273,12 +282,17 @@ const saveProduction = async () => {
                 unit: 'kg',
                 buying_price: 0,
                 production_cost: 0,
-                selling_price: 0,
+                selling_price: Number(form.sale_value || 0),
                 alert_quantity: 0,
                 description: '',
             })
             product = response.data
             await fetchProducts()
+        } else {
+            await api.put(`/products/${product.id}`, {
+                selling_price: Number(form.sale_value || 0),
+                category_id: form.category_id,
+            })
         }
 
         const data = {
