@@ -52,12 +52,15 @@ class ProductionController extends Controller
     public function update(Request $request, Production $production)
     {
         $request->validate([
+            'project_id' => 'sometimes|exists:projects,id',
+            'product_id' => 'sometimes|exists:products,id',
+            'quantity' => 'sometimes|integer|min:1',
             'cost' => 'nullable|numeric|min:0',
             'date' => 'required|date',
             'note' => 'nullable|string',
         ]);
 
-        $production->update($request->only(['cost', 'date', 'note']));
+        $production->update($request->only(['project_id', 'product_id', 'quantity', 'cost', 'date', 'note']));
 
         return response()->json($production->load(['project', 'product', 'creator']));
     }

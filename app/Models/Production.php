@@ -46,6 +46,25 @@ class Production extends Model
             $production->product->increment('stock_quantity', $production->quantity);
         });
 
+        static::updated(function ($production) {
+            $originalProductId = $production->getOriginal('product_id');
+            $originalQuantity = (float) $production->getOriginal('quantity');
+            $newQuantity = (float) $production->quantity;
+
+            if ($originalProductId == $production->product_id) {
+                $difference = $newQuantity - $originalQuantity;
+
+                if ($difference > 0) {
+                    $production->product->increment('stock_quantity', $difference);
+                } elseif ($difference < 0) {
+                    $production->product->decrement('stock_quantity', abs($difference));
+                }
+            } else {
+                Product::where('id', $originalProductId)->decrement('stock_quantity', $originalQuantity);
+                Product::where('id', $production->product_id)->increment('stock_quantity', $newQuantity);
+            }
+        });
+
         static::deleted(function ($production) {
             $production->product->decrement('stock_quantity', $production->quantity);
         });

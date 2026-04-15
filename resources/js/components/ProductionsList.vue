@@ -49,14 +49,11 @@
                                 <v-icon>mdi-plus</v-icon>
                             </v-btn>
                         </div>
-                        <v-select
-                            v-model="form.product_id"
-                            :items="filteredProducts"
-                            item-title="name"
-                            item-value="id"
+                        <v-text-field
+                            v-model="form.name"
                             label="Name"
                             required
-                        ></v-select>
+                        ></v-text-field>
                         <v-text-field
                             v-model="form.quantity"
                             label="Quantity"
@@ -148,7 +145,7 @@ const headers = [
 
 const form = reactive({
     category_id: null,
-    product_id: null,
+    name: '',
     quantity: '',
     date: new Date().toISOString().split('T')[0],
     note: ''
@@ -182,11 +179,12 @@ const filteredCategories = computed(() => {
     return Array.from(map.values())
 })
 
-const filteredProducts = computed(() => {
-    const list = productionProducts.value
-    if (!form.category_id) return list
-    return list.filter(product => product.category_id === form.category_id)
-})
+const findMatchingProduct = () => {
+    const name = form.name.trim().toLowerCase()
+    return productionProducts.value.find(product =>
+        product.name?.trim().toLowerCase() === name && (product.category_id || null) === (form.category_id || null)
+    )
+}
 
 const fetchProductions = async () => {
     loading.value = true
@@ -230,7 +228,6 @@ const saveCategory = async () => {
         const response = await api.post('/categories', { name: categoryForm.name })
         await fetchCategories()
         form.category_id = response.data.id
-        form.product_id = null
         categoryDialog.value = false
     } catch (error) {
         console.error('Error:', error)
@@ -244,7 +241,7 @@ const openDialog = (production = null) => {
     if (production) {
         Object.assign(form, {
             category_id: production.product?.category_id || null,
-            product_id: production.product_id,
+            name: production.product?.name || '',
             quantity: production.quantity,
             date: production.date,
             note: production.note || ''
@@ -252,7 +249,7 @@ const openDialog = (production = null) => {
     } else {
         Object.assign(form, {
             category_id: null,
-            product_id: null,
+            name: '',
             quantity: '',
             date: new Date().toISOString().split('T')[0],
             note: ''
@@ -262,9 +259,36 @@ const openDialog = (production = null) => {
 }
 
 const saveProduction = async () => {
+    if (!form.name.trim()) return
+
     saving.value = true
     try {
-        const data = { ...form, project_id: props.projectId }
+        let product = findMatchingProduct()
+
+        if (!product) {
+            const response = await api.post('/products', {
+                name: form.name.trim(),
+                category_id: form.category_id,
+                type: 'own_production',
+                unit: 'kg',
+                buying_price: 0,
+                production_cost: 0,
+                selling_price: 0,
+                alert_quantity: 0,
+                description: '',
+            })
+            product = response.data
+            await fetchProducts()
+        }
+
+        const data = {
+            project_id: props.projectId,
+            product_id: product.id,
+            quantity: form.quantity,
+            date: form.date,
+            note: form.note,
+        }
+
         if (editMode.value) {
             await api.put(`/productions/${selectedProduction.value.id}`, data)
         } else {
