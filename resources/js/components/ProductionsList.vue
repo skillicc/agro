@@ -28,6 +28,11 @@
                 <v-card-title>{{ editMode ? 'Edit Production' : 'Add Production' }}</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="saveProduction">
+                        <v-text-field
+                            v-model="form.name"
+                            label="Name"
+                            required
+                        ></v-text-field>
                         <div class="d-flex align-center ga-2">
                             <v-select
                                 v-model="form.category_id"
@@ -49,11 +54,6 @@
                                 <v-icon>mdi-plus</v-icon>
                             </v-btn>
                         </div>
-                        <v-text-field
-                            v-model="form.name"
-                            label="Name"
-                            required
-                        ></v-text-field>
                         <v-text-field
                             v-model="form.quantity"
                             label="Quantity"
