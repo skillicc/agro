@@ -52,12 +52,15 @@ class DamageController extends Controller
     public function update(Request $request, Damage $damage)
     {
         $request->validate([
+            'project_id' => 'sometimes|exists:projects,id',
+            'product_id' => 'sometimes|exists:products,id',
+            'quantity' => 'sometimes|integer|min:1',
             'value' => 'required|numeric|min:0',
             'date' => 'required|date',
             'reason' => 'nullable|string',
         ]);
 
-        $damage->update($request->only(['value', 'date', 'reason']));
+        $damage->update($request->only(['project_id', 'product_id', 'quantity', 'value', 'date', 'reason']));
 
         return response()->json($damage->load(['project', 'product', 'creator']));
     }

@@ -31,14 +31,32 @@
                 <v-card-title>{{ editMode ? 'Edit Damage' : 'Record Damage' }}</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="saveDamage">
-                        <v-select
-                            v-model="form.product_id"
-                            :items="products"
-                            item-title="name"
-                            item-value="id"
-                            label="Product"
+                        <v-text-field
+                            v-model="form.name"
+                            label="Name"
                             required
-                        ></v-select>
+                        ></v-text-field>
+                        <div class="d-flex align-center ga-2">
+                            <v-select
+                                v-model="form.category_id"
+                                :items="filteredCategories"
+                                item-title="name"
+                                item-value="id"
+                                label="Category"
+                                clearable
+                                class="flex-grow-1"
+                            ></v-select>
+                            <v-btn
+                                icon
+                                size="small"
+                                color="primary"
+                                variant="tonal"
+                                @click="openCategoryDialog"
+                                title="Add Category"
+                            >
+                                <v-icon>mdi-plus</v-icon>
+                            </v-btn>
+                        </div>
                         <v-text-field
                             v-model="form.quantity"
                             label="Quantity"
@@ -47,7 +65,7 @@
                         ></v-text-field>
                         <v-text-field
                             v-model="form.value"
-                            label="Total Value"
+                            label="Damage Value"
                             type="number"
                             prefix="৳"
                             required
@@ -60,7 +78,7 @@
                         ></v-text-field>
                         <v-textarea
                             v-model="form.reason"
-                            label="Reason"
+                            label="Note"
                             rows="2"
                         ></v-textarea>
                     </v-form>
@@ -69,6 +87,24 @@
                     <v-spacer></v-spacer>
                     <v-btn @click="dialog = false">Cancel</v-btn>
                     <v-btn color="primary" @click="saveDamage" :loading="saving">Save</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="categoryDialog" max-width="400">
+            <v-card>
+                <v-card-title>Add Category</v-card-title>
+                <v-card-text>
+                    <v-text-field
+                        v-model="categoryForm.name"
+                        label="Category Name"
+                        required
+                    ></v-text-field>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="categoryDialog = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="saveCategory" :loading="savingCategory">Save</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -89,7 +125,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import api from '../services/api'
 
 const props = defineProps({
@@ -98,13 +134,16 @@ const props = defineProps({
 
 const damages = ref([])
 const products = ref([])
+const categories = ref([])
 const loading = ref(false)
 const dialog = ref(false)
 const deleteDialog = ref(false)
+const categoryDialog = ref(false)
 const editMode = ref(false)
 const selectedDamage = ref(null)
 const saving = ref(false)
 const deleting = ref(false)
+const savingCategory = ref(false)
 
 const headers = [
     { title: 'Date', key: 'date' },
@@ -116,12 +155,48 @@ const headers = [
 ]
 
 const form = reactive({
-    product_id: null,
+    category_id: null,
+    name: '',
     quantity: '',
     value: '',
     date: new Date().toISOString().split('T')[0],
     reason: ''
 })
+
+const categoryForm = reactive({
+    name: ''
+})
+
+const productionProducts = computed(() => {
+    return products.value.filter(product => product.type === 'own_production')
+})
+
+const filteredCategories = computed(() => {
+    const map = new Map()
+
+    productionProducts.value.forEach(product => {
+        if (product.category_id && product.category?.name) {
+            map.set(product.category_id, {
+                id: product.category_id,
+                name: product.category.name,
+            })
+        }
+    })
+
+    const selectedCategory = categories.value.find(category => category.id === form.category_id)
+    if (selectedCategory) {
+        map.set(selectedCategory.id, selectedCategory)
+    }
+
+    return Array.from(map.values())
+})
+
+const findMatchingProduct = () => {
+    const name = form.name.trim().toLowerCase()
+    return productionProducts.value.find(product =>
+        product.name?.trim().toLowerCase() === name && (product.category_id || null) === (form.category_id || null)
+    )
+}
 
 const fetchDamages = async () => {
     loading.value = true
@@ -143,12 +218,42 @@ const fetchProducts = async () => {
     }
 }
 
+const fetchCategories = async () => {
+    try {
+        const response = await api.get('/categories')
+        categories.value = response.data
+    } catch (error) {
+        console.error('Error:', error)
+    }
+}
+
+const openCategoryDialog = () => {
+    categoryForm.name = ''
+    categoryDialog.value = true
+}
+
+const saveCategory = async () => {
+    if (!categoryForm.name.trim()) return
+
+    savingCategory.value = true
+    try {
+        const response = await api.post('/categories', { name: categoryForm.name })
+        await fetchCategories()
+        form.category_id = response.data.id
+        categoryDialog.value = false
+    } catch (error) {
+        console.error('Error:', error)
+    }
+    savingCategory.value = false
+}
+
 const openDialog = (damage = null) => {
     editMode.value = !!damage
     selectedDamage.value = damage
     if (damage) {
         Object.assign(form, {
-            product_id: damage.product_id,
+            category_id: damage.product?.category_id || null,
+            name: damage.product?.name || '',
             quantity: damage.quantity,
             value: damage.value,
             date: damage.date,
@@ -156,7 +261,8 @@ const openDialog = (damage = null) => {
         })
     } else {
         Object.assign(form, {
-            product_id: null,
+            category_id: null,
+            name: '',
             quantity: '',
             value: '',
             date: new Date().toISOString().split('T')[0],
@@ -167,9 +273,37 @@ const openDialog = (damage = null) => {
 }
 
 const saveDamage = async () => {
+    if (!form.name.trim()) return
+
     saving.value = true
     try {
-        const data = { ...form, project_id: props.projectId }
+        let product = findMatchingProduct()
+
+        if (!product) {
+            const response = await api.post('/products', {
+                name: form.name.trim(),
+                category_id: form.category_id,
+                type: 'own_production',
+                unit: 'kg',
+                buying_price: 0,
+                production_cost: 0,
+                selling_price: 0,
+                alert_quantity: 0,
+                description: '',
+            })
+            product = response.data
+            await fetchProducts()
+        }
+
+        const data = {
+            project_id: props.projectId,
+            product_id: product.id,
+            quantity: form.quantity,
+            value: form.value,
+            date: form.date,
+            reason: form.reason,
+        }
+
         if (editMode.value) {
             await api.put(`/damages/${selectedDamage.value.id}`, data)
         } else {
@@ -203,5 +337,6 @@ const deleteDamage = async () => {
 onMounted(() => {
     fetchDamages()
     fetchProducts()
+    fetchCategories()
 })
 </script>

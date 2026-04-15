@@ -46,6 +46,25 @@ class Damage extends Model
             $damage->product->decrement('stock_quantity', $damage->quantity);
         });
 
+        static::updated(function ($damage) {
+            $originalProductId = $damage->getOriginal('product_id');
+            $originalQuantity = (float) $damage->getOriginal('quantity');
+            $newQuantity = (float) $damage->quantity;
+
+            if ($originalProductId == $damage->product_id) {
+                $difference = $newQuantity - $originalQuantity;
+
+                if ($difference > 0) {
+                    $damage->product->decrement('stock_quantity', $difference);
+                } elseif ($difference < 0) {
+                    $damage->product->increment('stock_quantity', abs($difference));
+                }
+            } else {
+                Product::where('id', $originalProductId)->increment('stock_quantity', $originalQuantity);
+                Product::where('id', $damage->product_id)->decrement('stock_quantity', $newQuantity);
+            }
+        });
+
         static::deleted(function ($damage) {
             $damage->product->increment('stock_quantity', $damage->quantity);
         });
