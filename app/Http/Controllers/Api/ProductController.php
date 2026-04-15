@@ -5,13 +5,25 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\Warehouse;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $products = $this->productsQuery()->get();
+        $query = $this->productsQuery();
+
+        if ($request->filled('project_id')) {
+            $query->where('project_id', $request->project_id);
+        } elseif ($request->filled('warehouse_id')) {
+            $warehouse = Warehouse::find($request->warehouse_id);
+            if ($warehouse?->project_id) {
+                $query->where('project_id', $warehouse->project_id);
+            }
+        }
+
+        $products = $query->get();
         return response()->json($products);
     }
 

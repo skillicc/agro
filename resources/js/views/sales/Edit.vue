@@ -373,6 +373,24 @@ const getProductUnit = (productId) => {
     return product ? product.unit : ''
 }
 
+const fetchProducts = async () => {
+    try {
+        const params = {}
+
+        if (form.project_id) {
+            params.project_id = form.project_id
+        } else if (form.warehouse_id) {
+            params.warehouse_id = form.warehouse_id
+        }
+
+        const response = await api.get('/products', { params })
+        products.value = response.data
+    } catch (error) {
+        console.error('Error loading products:', error)
+        products.value = []
+    }
+}
+
 const loadProjectLands = async () => {
     if (!form.project_id) {
         projectLands.value = []
@@ -396,17 +414,15 @@ const loadProjectLands = async () => {
 const fetchData = async () => {
     loading.value = true
     try {
-        const [projectsRes, warehousesRes, customersRes, productsRes, saleRes] = await Promise.all([
+        const [projectsRes, warehousesRes, customersRes, saleRes] = await Promise.all([
             api.get('/projects'),
             api.get('/warehouses'),
             api.get('/customers'),
-            api.get('/products'),
             api.get(`/sales/${route.params.id}`),
         ])
         projects.value = projectsRes.data
         warehouses.value = warehousesRes.data
         customers.value = customersRes.data
-        products.value = productsRes.data
 
         // Populate form with existing data
         const sale = saleRes.data
@@ -421,6 +437,7 @@ const fetchData = async () => {
         form.note = sale.note || ''
 
         await loadProjectLands()
+        await fetchProducts()
 
         // Load items with batches
         form.items = []
@@ -464,6 +481,7 @@ watch(
         }
 
         await loadProjectLands()
+        await fetchProducts()
 
         for (let index = 0; index < form.items.length; index += 1) {
             await syncItemSource(index)

@@ -409,6 +409,24 @@ const getProductUnit = (productId) => {
     return product ? product.unit : ''
 }
 
+const fetchProducts = async () => {
+    try {
+        const params = {}
+
+        if (form.project_id) {
+            params.project_id = form.project_id
+        } else if (form.warehouse_id) {
+            params.warehouse_id = form.warehouse_id
+        }
+
+        const response = await api.get('/products', { params })
+        products.value = response.data
+    } catch (error) {
+        console.error('Error loading products:', error)
+        products.value = []
+    }
+}
+
 const loadProjectLands = async () => {
     if (!form.project_id) {
         projectLands.value = []
@@ -431,16 +449,14 @@ const loadProjectLands = async () => {
 
 const fetchData = async () => {
     try {
-        const [projectsRes, warehousesRes, customersRes, productsRes] = await Promise.all([
+        const [projectsRes, warehousesRes, customersRes] = await Promise.all([
             api.get('/projects'),
             api.get('/warehouses'),
             api.get('/customers'),
-            api.get('/products'),
         ])
         projects.value = projectsRes.data
         warehouses.value = warehousesRes.data
         customers.value = customersRes.data
-        products.value = productsRes.data
 
         // Set default Walk-in Customer
         const walkInCustomer = customers.value.find(c => c.name === 'Walk-in Customer')
@@ -453,6 +469,8 @@ const fetchData = async () => {
             form.project_id = parseInt(route.query.project_id)
             await loadProjectLands()
         }
+
+        await fetchProducts()
     } catch (error) {
         console.error('Error:', error)
     }
@@ -466,6 +484,7 @@ watch(
         }
 
         await loadProjectLands()
+        await fetchProducts()
 
         for (let index = 0; index < form.items.length; index += 1) {
             await syncItemSource(index)
