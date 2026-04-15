@@ -105,6 +105,10 @@
                             </v-btn>
                         </div>
                         <v-text-field
+                            v-model="form.name"
+                            label="Name"
+                        ></v-text-field>
+                        <v-text-field
                             v-model="form.bill_no"
                             label="Bill No."
                         ></v-text-field>
@@ -261,6 +265,7 @@ const savingCategory = ref(false)
 
 const headers = [
     { title: 'Date', key: 'date' },
+    { title: 'Name', key: 'name' },
     { title: 'Bill No.', key: 'bill_no' },
     { title: 'Land', key: 'land' },
     { title: 'Category', key: 'category' },
@@ -272,6 +277,7 @@ const headers = [
 const form = reactive({
     land_id: null,
     expense_category_id: null,
+    name: '',
     bill_no: '',
     amount: '',
     date: new Date().toISOString().split('T')[0],
@@ -374,6 +380,7 @@ const openDialog = (expense = null) => {
         Object.assign(form, {
             land_id: expense.land_id || null,
             expense_category_id: expense.expense_category_id,
+            name: expense.name || '',
             bill_no: expense.bill_no || '',
             amount: expense.amount,
             date: expense.date,
@@ -383,6 +390,7 @@ const openDialog = (expense = null) => {
         Object.assign(form, {
             land_id: selectedLandId.value || null,
             expense_category_id: null,
+            name: '',
             bill_no: '',
             amount: '',
             date: new Date().toISOString().split('T')[0],

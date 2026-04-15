@@ -45,6 +45,7 @@ class ExpenseController extends Controller
     {
         $rules = [
             'expense_category_id' => 'required|exists:expense_categories,id',
+            'name' => 'nullable|string|max:255',
             'amount' => 'required|numeric|min:0',
             'date' => 'required|date',
             'description' => 'nullable|string',
@@ -108,6 +109,7 @@ class ExpenseController extends Controller
     {
         $rules = [
             'expense_category_id' => 'required|exists:expense_categories,id',
+            'name' => 'nullable|string|max:255',
             'amount' => 'required|numeric|min:0',
             'date' => 'required|date',
             'description' => 'nullable|string',
@@ -210,6 +212,7 @@ class ExpenseController extends Controller
             'land_id' => $expense->land_id,
             'warehouse_id' => $expense->warehouse_id,
             'expense_category_id' => $expense->expense_category_id,
+            'name' => $expense->name,
             'bill_no' => $expense->bill_no,
             'amount' => (float) ($expense->amount ?? 0),
             'date' => $expense->date?->format('Y-m-d') ?? $expense->date,
@@ -239,6 +242,7 @@ class ExpenseController extends Controller
             'land_id' => 'Land',
             'warehouse_id' => 'Warehouse',
             'expense_category_id' => 'Category',
+            'name' => 'Name',
             'bill_no' => 'Bill No.',
             'amount' => 'Amount',
             'date' => 'Date',

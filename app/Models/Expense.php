@@ -15,6 +15,7 @@ class Expense extends Model
         'land_id',
         'warehouse_id',
         'expense_category_id',
+        'name',
         'bill_no',
         'amount',
         'date',

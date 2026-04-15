@@ -130,6 +130,7 @@
                                 <v-icon>mdi-plus</v-icon>
                             </v-btn>
                         </div>
+                        <v-text-field v-model="form.name" label="Name"></v-text-field>
                         <v-text-field v-model="form.bill_no" label="Bill No."></v-text-field>
                         <v-text-field v-model.number="form.amount" label="Amount" type="number" required></v-text-field>
                         <v-text-field v-model="form.date" label="Date" type="date" required></v-text-field>
@@ -202,11 +203,12 @@ const newCategoryName = ref('')
 const savingCategory = ref(false)
 
 const filters = reactive({ project_id: null, warehouse_id: null, land_id: null, start_date: '', end_date: '' })
-const form = reactive({ expense_type: 'project', project_id: null, land_id: null, warehouse_id: null, expense_category_id: null, bill_no: '', amount: 0, date: new Date().toISOString().split('T')[0], description: '' })
+const form = reactive({ expense_type: 'project', project_id: null, land_id: null, warehouse_id: null, expense_category_id: null, name: '', bill_no: '', amount: 0, date: new Date().toISOString().split('T')[0], description: '' })
 
 const headers = [
     { title: 'SL', key: 'sl', width: '60px' },
     { title: 'Date', key: 'date' },
+    { title: 'Name', key: 'name' },
     { title: 'Bill No.', key: 'bill_no' },
     { title: 'Source', key: 'source' },
     { title: 'Land', key: 'land' },
@@ -322,9 +324,9 @@ const openDialog = (expense = null) => {
     selectedExpense.value = expense
     if (expense) {
         const expenseType = expense.warehouse_id ? 'warehouse' : 'project'
-        Object.assign(form, { ...expense, expense_type: expenseType, land_id: expense.land_id || null })
+        Object.assign(form, { ...expense, expense_type: expenseType, land_id: expense.land_id || null, name: expense.name || '' })
     } else {
-        Object.assign(form, { expense_type: 'project', project_id: null, land_id: null, warehouse_id: null, expense_category_id: null, bill_no: '', amount: 0, date: new Date().toISOString().split('T')[0], description: '' })
+        Object.assign(form, { expense_type: 'project', project_id: null, land_id: null, warehouse_id: null, expense_category_id: null, name: '', bill_no: '', amount: 0, date: new Date().toISOString().split('T')[0], description: '' })
     }
     Promise.all([loadCategories(), loadFormLands()])
     dialog.value = true
