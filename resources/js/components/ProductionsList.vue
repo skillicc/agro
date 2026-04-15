@@ -31,7 +31,7 @@
                         <div class="d-flex align-center ga-2">
                             <v-select
                                 v-model="form.category_id"
-                                :items="categories"
+                                :items="filteredCategories"
                                 item-title="name"
                                 item-value="id"
                                 label="Category"
@@ -158,9 +158,34 @@ const categoryForm = reactive({
     name: ''
 })
 
+const productionProducts = computed(() => {
+    return products.value.filter(product => product.type === 'own_production')
+})
+
+const filteredCategories = computed(() => {
+    const map = new Map()
+
+    productionProducts.value.forEach(product => {
+        if (product.category_id && product.category?.name) {
+            map.set(product.category_id, {
+                id: product.category_id,
+                name: product.category.name,
+            })
+        }
+    })
+
+    const selectedCategory = categories.value.find(category => category.id === form.category_id)
+    if (selectedCategory) {
+        map.set(selectedCategory.id, selectedCategory)
+    }
+
+    return Array.from(map.values())
+})
+
 const filteredProducts = computed(() => {
-    if (!form.category_id) return products.value
-    return products.value.filter(product => product.category_id === form.category_id)
+    const list = productionProducts.value
+    if (!form.category_id) return list
+    return list.filter(product => product.category_id === form.category_id)
 })
 
 const fetchProductions = async () => {
