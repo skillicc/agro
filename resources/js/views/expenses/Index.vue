@@ -109,6 +109,7 @@
                             required
                             @update:model-value="loadCategories"
                         ></v-select>
+                        <v-text-field v-model="form.name" label="Name"></v-text-field>
                         <div class="d-flex ga-2 align-center">
                             <v-select
                                 v-model="form.expense_category_id"
@@ -130,7 +131,6 @@
                                 <v-icon>mdi-plus</v-icon>
                             </v-btn>
                         </div>
-                        <v-text-field v-model="form.name" label="Name"></v-text-field>
                         <v-text-field v-model="form.bill_no" label="Bill No."></v-text-field>
                         <v-text-field v-model.number="form.amount" label="Amount" type="number" required></v-text-field>
                         <v-text-field v-model="form.date" label="Date" type="date" required></v-text-field>
