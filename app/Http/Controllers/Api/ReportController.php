@@ -85,6 +85,37 @@ class ReportController extends Controller
             ->limit(5)
             ->get();
 
+        // Weekly sales vs expenses chart (last 7 days)
+        $weekStart = $today->copy()->subDays(6)->startOfDay();
+        $weekEnd = $today->copy()->endOfDay();
+
+        $salesByDate = Sale::whereIn('project_id', $projectIds)
+            ->whereBetween('date', [$weekStart->toDateString(), $weekEnd->toDateString()])
+            ->selectRaw('DATE(date) as sale_date, SUM(total) as amount')
+            ->groupBy('sale_date')
+            ->pluck('amount', 'sale_date');
+
+        $expensesByDate = Expense::whereIn('project_id', $projectIds)
+            ->whereBetween('date', [$weekStart->toDateString(), $weekEnd->toDateString()])
+            ->selectRaw('DATE(date) as expense_date, SUM(amount) as amount')
+            ->groupBy('expense_date')
+            ->pluck('amount', 'expense_date');
+
+        $weeklySalesExpenses = collect(range(6, 0))->map(function ($daysAgo) use ($today, $salesByDate, $expensesByDate) {
+            $date = $today->copy()->subDays($daysAgo);
+            $dateKey = $date->toDateString();
+            $sales = (float) ($salesByDate[$dateKey] ?? 0);
+            $expenses = (float) ($expensesByDate[$dateKey] ?? 0);
+
+            return [
+                'date' => $dateKey,
+                'label' => $date->format('D'),
+                'sales' => $sales,
+                'expenses' => $expenses,
+                'total' => $sales + $expenses,
+            ];
+        })->values();
+
         return response()->json([
             'total_projects' => Project::whereIn('id', $projectIds)->count(),
             'total_suppliers' => Supplier::count(),
@@ -108,6 +139,8 @@ class ReportController extends Controller
 
             'total_supplier_due' => Supplier::sum('total_due'),
             'total_customer_due' => Customer::sum('total_due'),
+
+            'weekly_sales_expenses' => $weeklySalesExpenses,
 
             'recent_sales' => Sale::whereIn('project_id', $projectIds)
                 ->with(['project', 'customer'])

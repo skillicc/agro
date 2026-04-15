@@ -119,6 +119,31 @@
         </v-row>
 
         <v-row dense class="mt-2 mt-sm-4">
+            <v-col cols="12">
+                <v-card>
+                    <v-card-title class="d-flex flex-wrap align-center justify-space-between text-subtitle-1 text-sm-h6">
+                        <div>
+                            <v-icon class="mr-2" size="small">mdi-chart-bar-stacked</v-icon>
+                            Weekly Sales vs Expenses
+                        </div>
+                        <span class="text-caption text-grey">Last 7 days</span>
+                    </v-card-title>
+                    <v-card-text class="pa-3 pa-sm-4">
+                        <div class="d-flex flex-wrap ga-2 mb-4">
+                            <v-chip color="success" size="small" variant="tonal">Sales: ৳{{ formatNumber(weeklySalesTotal) }}</v-chip>
+                            <v-chip color="warning" size="small" variant="tonal">Expenses: ৳{{ formatNumber(weeklyExpenseTotal) }}</v-chip>
+                        </div>
+
+                        <div v-if="dashboard.weekly_sales_expenses?.length" class="chart-wrapper">
+                            <Bar :data="weeklyChartData" :options="weeklyChartOptions" />
+                        </div>
+                        <div v-else class="text-center text-grey py-6">No weekly data available</div>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+        </v-row>
+
+        <v-row dense class="mt-2 mt-sm-4">
             <!-- Due Summary & Quick Stats -->
             <v-col cols="12" md="6" lg="4">
                 <v-card class="h-100">
@@ -286,8 +311,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { Bar } from 'vue-chartjs'
+import {
+    Chart as ChartJS,
+    Title,
+    Tooltip,
+    Legend,
+    BarElement,
+    CategoryScale,
+    LinearScale,
+} from 'chart.js'
 import api from '../services/api'
+
+ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
 
 const dashboard = ref({
     total_projects: 0,
@@ -312,12 +349,75 @@ const dashboard = ref({
     recent_purchases: [],
     recent_expenses: [],
     top_products: [],
+    weekly_sales_expenses: [],
 })
 
 const loading = ref(false)
 
 const formatNumber = (num) => {
     return Number(num || 0).toLocaleString('en-BD')
+}
+
+const weeklySalesTotal = computed(() =>
+    (dashboard.value.weekly_sales_expenses || []).reduce((sum, item) => sum + Number(item.sales || 0), 0)
+)
+
+const weeklyExpenseTotal = computed(() =>
+    (dashboard.value.weekly_sales_expenses || []).reduce((sum, item) => sum + Number(item.expenses || 0), 0)
+)
+
+const weeklyChartData = computed(() => {
+    const items = dashboard.value.weekly_sales_expenses || []
+
+    return {
+        labels: items.map(item => item.label),
+        datasets: [
+            {
+                label: 'Sales',
+                data: items.map(item => Number(item.sales || 0)),
+                backgroundColor: '#22c55e',
+                borderRadius: 6,
+                borderSkipped: false,
+            },
+            {
+                label: 'Expenses',
+                data: items.map(item => Number(item.expenses || 0)),
+                backgroundColor: '#f59e0b',
+                borderRadius: 6,
+                borderSkipped: false,
+            },
+        ],
+    }
+})
+
+const weeklyChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            position: 'top',
+        },
+        tooltip: {
+            callbacks: {
+                label: (context) => `${context.dataset.label}: ৳${formatNumber(context.raw)}`,
+            },
+        },
+    },
+    scales: {
+        x: {
+            stacked: true,
+            grid: {
+                display: false,
+            },
+        },
+        y: {
+            stacked: true,
+            beginAtZero: true,
+            ticks: {
+                callback: (value) => `৳${formatNumber(value)}`,
+            },
+        },
+    },
 }
 
 const fetchDashboard = async () => {
@@ -339,5 +439,10 @@ onMounted(() => {
 <style scoped>
 .h-100 {
     height: 100%;
+}
+
+.chart-wrapper {
+    position: relative;
+    height: 320px;
 }
 </style>
