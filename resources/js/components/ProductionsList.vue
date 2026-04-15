@@ -28,14 +28,27 @@
                 <v-card-title>{{ editMode ? 'Edit Production' : 'Add Production' }}</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="saveProduction">
-                        <v-select
-                            v-model="form.category_id"
-                            :items="categories"
-                            item-title="name"
-                            item-value="id"
-                            label="Category"
-                            clearable
-                        ></v-select>
+                        <div class="d-flex align-center ga-2">
+                            <v-select
+                                v-model="form.category_id"
+                                :items="categories"
+                                item-title="name"
+                                item-value="id"
+                                label="Category"
+                                clearable
+                                class="flex-grow-1"
+                            ></v-select>
+                            <v-btn
+                                icon
+                                size="small"
+                                color="primary"
+                                variant="tonal"
+                                @click="openCategoryDialog"
+                                title="Add Category"
+                            >
+                                <v-icon>mdi-plus</v-icon>
+                            </v-btn>
+                        </div>
                         <v-select
                             v-model="form.product_id"
                             :items="filteredProducts"
@@ -71,6 +84,24 @@
             </v-card>
         </v-dialog>
 
+        <v-dialog v-model="categoryDialog" max-width="400">
+            <v-card>
+                <v-card-title>Add Category</v-card-title>
+                <v-card-text>
+                    <v-text-field
+                        v-model="categoryForm.name"
+                        label="Category Name"
+                        required
+                    ></v-text-field>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="categoryDialog = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="saveCategory" :loading="savingCategory">Save</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <!-- Delete Confirm -->
         <v-dialog v-model="deleteDialog" max-width="400">
             <v-card>
@@ -100,10 +131,12 @@ const categories = ref([])
 const loading = ref(false)
 const dialog = ref(false)
 const deleteDialog = ref(false)
+const categoryDialog = ref(false)
 const editMode = ref(false)
 const selectedProduction = ref(null)
 const saving = ref(false)
 const deleting = ref(false)
+const savingCategory = ref(false)
 
 const headers = [
     { title: 'Date', key: 'date' },
@@ -119,6 +152,10 @@ const form = reactive({
     quantity: '',
     date: new Date().toISOString().split('T')[0],
     note: ''
+})
+
+const categoryForm = reactive({
+    name: ''
 })
 
 const filteredProducts = computed(() => {
@@ -153,6 +190,27 @@ const fetchCategories = async () => {
     } catch (error) {
         console.error('Error:', error)
     }
+}
+
+const openCategoryDialog = () => {
+    categoryForm.name = ''
+    categoryDialog.value = true
+}
+
+const saveCategory = async () => {
+    if (!categoryForm.name.trim()) return
+
+    savingCategory.value = true
+    try {
+        const response = await api.post('/categories', { name: categoryForm.name })
+        await fetchCategories()
+        form.category_id = response.data.id
+        form.product_id = null
+        categoryDialog.value = false
+    } catch (error) {
+        console.error('Error:', error)
+    }
+    savingCategory.value = false
 }
 
 const openDialog = (production = null) => {
