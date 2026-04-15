@@ -12,6 +12,7 @@ class Product extends Model
 
     protected $fillable = [
         'name',
+        'project_id',
         'category_id',
         'type',
         'project_type',
@@ -44,6 +45,11 @@ class Product extends Model
         return $this->isOwnProduction()
             ? (float) ($this->production_cost ?? 0)
             : (float) ($this->buying_price ?? 0);
+    }
+
+    public function project()
+    {
+        return $this->belongsTo(Project::class);
     }
 
     public function category()

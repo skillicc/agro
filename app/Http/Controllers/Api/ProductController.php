@@ -19,6 +19,7 @@ class ProductController extends Controller
     {
         $rules = [
             'name' => 'required|string|max:255',
+            'project_id' => 'nullable|exists:projects,id',
             'category_id' => 'nullable|exists:categories,id',
             'category_ids' => 'nullable|array',
             'category_ids.*' => 'exists:categories,id',
@@ -54,6 +55,7 @@ class ProductController extends Controller
     {
         $request->validate([
             'name' => 'nullable|string|max:255',
+            'project_id' => 'nullable|exists:projects,id',
             'category_id' => 'nullable|exists:categories,id',
             'category_ids' => 'nullable|array',
             'category_ids.*' => 'exists:categories,id',
@@ -131,7 +133,7 @@ class ProductController extends Controller
 
     private function productsQuery()
     {
-        return Product::with(['category', 'categories'])
+        return Product::with(['project', 'category', 'categories'])
             ->withSum([
                 'stockBatches as legacy_adjustment_quantity' => function ($query) {
                     $query->legacyMigrationAdjustments();

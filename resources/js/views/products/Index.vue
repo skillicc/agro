@@ -150,6 +150,16 @@
                             </v-col>
                             <v-col cols="12" lg="6">
                                 <v-select
+                                    v-model="form.project_id"
+                                    :items="projects"
+                                    item-title="name"
+                                    item-value="id"
+                                    label="Project"
+                                    clearable
+                                ></v-select>
+                            </v-col>
+                            <v-col cols="12" lg="6">
+                                <v-select
                                     v-model="form.category_ids"
                                     :items="categories"
                                     item-title="name"
@@ -391,6 +401,7 @@ const { smAndUp, mdAndUp } = useDisplay()
 
 const products = ref([])
 const categories = ref([])
+const projects = ref([])
 const loading = ref(false)
 const dialog = ref(false)
 const deleteDialog = ref(false)
@@ -558,6 +569,7 @@ const responsiveHeaders = computed(() => {
 
 const form = reactive({
     name: '',
+    project_id: null,
     category_id: null,
     category_ids: [],
     type: 'trading',
@@ -596,6 +608,15 @@ const fetchCategories = async () => {
     }
 }
 
+const fetchProjects = async () => {
+    try {
+        const response = await api.get('/projects')
+        projects.value = response.data
+    } catch (error) {
+        console.error('Error:', error)
+    }
+}
+
 const openDialog = (product = null) => {
     editMode.value = !!product
     selectedProduct.value = product
@@ -604,7 +625,7 @@ const openDialog = (product = null) => {
         // Extract category IDs from categories array
         form.category_ids = product.categories ? product.categories.map(c => c.id) : []
     } else {
-        Object.assign(form, { name: '', category_id: null, category_ids: [], type: 'trading', unit: 'pcs', buying_price: 0, production_cost: 0, selling_price: 0, alert_quantity: 10, description: '' })
+        Object.assign(form, { name: '', project_id: null, category_id: null, category_ids: [], type: 'trading', unit: 'pcs', buying_price: 0, production_cost: 0, selling_price: 0, alert_quantity: 10, description: '' })
     }
     dialog.value = true
 }
@@ -699,5 +720,6 @@ const deleteCategory = async () => {
 onMounted(() => {
     fetchProducts()
     fetchCategories()
+    fetchProjects()
 })
 </script>
