@@ -29,11 +29,19 @@
                 <v-card-text>
                     <v-form @submit.prevent="saveProduction">
                         <v-select
-                            v-model="form.product_id"
-                            :items="products"
+                            v-model="form.category_id"
+                            :items="categories"
                             item-title="name"
                             item-value="id"
-                            label="Product"
+                            label="Category"
+                            clearable
+                        ></v-select>
+                        <v-select
+                            v-model="form.product_id"
+                            :items="filteredProducts"
+                            item-title="name"
+                            item-value="id"
+                            label="Name"
                             required
                         ></v-select>
                         <v-text-field
@@ -79,7 +87,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import api from '../services/api'
 
 const props = defineProps({
@@ -88,6 +96,7 @@ const props = defineProps({
 
 const productions = ref([])
 const products = ref([])
+const categories = ref([])
 const loading = ref(false)
 const dialog = ref(false)
 const deleteDialog = ref(false)
@@ -105,10 +114,16 @@ const headers = [
 ]
 
 const form = reactive({
+    category_id: null,
     product_id: null,
     quantity: '',
     date: new Date().toISOString().split('T')[0],
     note: ''
+})
+
+const filteredProducts = computed(() => {
+    if (!form.category_id) return products.value
+    return products.value.filter(product => product.category_id === form.category_id)
 })
 
 const fetchProductions = async () => {
@@ -131,11 +146,21 @@ const fetchProducts = async () => {
     }
 }
 
+const fetchCategories = async () => {
+    try {
+        const response = await api.get('/categories')
+        categories.value = response.data
+    } catch (error) {
+        console.error('Error:', error)
+    }
+}
+
 const openDialog = (production = null) => {
     editMode.value = !!production
     selectedProduction.value = production
     if (production) {
         Object.assign(form, {
+            category_id: production.product?.category_id || null,
             product_id: production.product_id,
             quantity: production.quantity,
             date: production.date,
@@ -143,6 +168,7 @@ const openDialog = (production = null) => {
         })
     } else {
         Object.assign(form, {
+            category_id: null,
             product_id: null,
             quantity: '',
             date: new Date().toISOString().split('T')[0],
@@ -189,5 +215,6 @@ const deleteProduction = async () => {
 onMounted(() => {
     fetchProductions()
     fetchProducts()
+    fetchCategories()
 })
 </script>
