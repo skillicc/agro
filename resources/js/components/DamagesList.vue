@@ -47,11 +47,6 @@
                             @update:modelValue="onProductSelected"
                         ></v-autocomplete>
                         <v-text-field
-                            :model-value="selectedProduct?.category?.name || ''"
-                            label="Category"
-                            readonly
-                        ></v-text-field>
-                        <v-text-field
                             v-model="form.quantity"
                             label="Quantity"
                             type="number"
@@ -128,16 +123,13 @@ const props = defineProps({
 
 const damages = ref([])
 const products = ref([])
-const categories = ref([])
 const loading = ref(false)
 const dialog = ref(false)
 const deleteDialog = ref(false)
-const categoryDialog = ref(false)
 const editMode = ref(false)
 const selectedDamage = ref(null)
 const saving = ref(false)
 const deleting = ref(false)
-const savingCategory = ref(false)
 
 const headers = [
     { title: 'Date', key: 'date' },
@@ -164,10 +156,6 @@ const form = reactive({
     value: '',
     date: new Date().toISOString().split('T')[0],
     reason: ''
-})
-
-const categoryForm = reactive({
-    name: ''
 })
 
 const projectProducts = computed(() => {
@@ -216,42 +204,6 @@ const fetchProducts = async () => {
     }
 }
 
-const fetchCategories = async () => {
-    try {
-        const response = await api.get('/categories')
-        categories.value = response.data
-    } catch (error) {
-        console.error('Error:', error)
-    }
-}
-
-const openCategoryDialog = () => {
-    categoryForm.name = ''
-    categoryDialog.value = true
-}
-
-const saveCategory = async () => {
-    if (!categoryForm.name.trim()) return
-
-    savingCategory.value = true
-    try {
-        const response = await api.post('/categories', {
-            name: categoryForm.name.trim(),
-            type: 'own_production',
-        })
-
-        const createdCategory = response.data
-        categories.value = [
-            ...categories.value.filter(category => String(category.id) !== String(createdCategory.id)),
-            createdCategory,
-        ]
-        form.category_id = createdCategory.id
-        categoryDialog.value = false
-    } catch (error) {
-        console.error('Error:', error)
-    }
-    savingCategory.value = false
-}
 
 const openDialog = (damage = null) => {
     editMode.value = !!damage
@@ -347,6 +299,5 @@ const deleteDamage = async () => {
 onMounted(() => {
     fetchDamages()
     fetchProducts()
-    fetchCategories()
 })
 </script>
