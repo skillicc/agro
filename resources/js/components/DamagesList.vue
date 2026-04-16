@@ -174,21 +174,33 @@ const productionProducts = computed(() => {
 const filteredCategories = computed(() => {
     const map = new Map()
 
+    categories.value.forEach(category => {
+        if (category?.id && category?.name && category.type === 'own_production') {
+            map.set(String(category.id), {
+                id: category.id,
+                name: category.name,
+            })
+        }
+    })
+
     productionProducts.value.forEach(product => {
         if (product.category_id && product.category?.name) {
-            map.set(product.category_id, {
+            map.set(String(product.category_id), {
                 id: product.category_id,
                 name: product.category.name,
             })
         }
     })
 
-    const selectedCategory = categories.value.find(category => category.id === form.category_id)
+    const selectedCategory = categories.value.find(category => String(category.id) === String(form.category_id))
     if (selectedCategory) {
-        map.set(selectedCategory.id, selectedCategory)
+        map.set(String(selectedCategory.id), {
+            id: selectedCategory.id,
+            name: selectedCategory.name,
+        })
     }
 
-    return Array.from(map.values())
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
 })
 
 const findMatchingProduct = () => {
@@ -237,9 +249,17 @@ const saveCategory = async () => {
 
     savingCategory.value = true
     try {
-        const response = await api.post('/categories', { name: categoryForm.name })
-        await fetchCategories()
-        form.category_id = response.data.id
+        const response = await api.post('/categories', {
+            name: categoryForm.name.trim(),
+            type: 'own_production',
+        })
+
+        const createdCategory = response.data
+        categories.value = [
+            ...categories.value.filter(category => String(category.id) !== String(createdCategory.id)),
+            createdCategory,
+        ]
+        form.category_id = createdCategory.id
         categoryDialog.value = false
     } catch (error) {
         console.error('Error:', error)
