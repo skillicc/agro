@@ -55,10 +55,10 @@
                 <v-tab value="lands" v-if="showLandLedger">Land Ledger / Profit</v-tab>
                 <v-tab value="purchases">Purchases</v-tab>
                 <v-tab value="sales">Sales</v-tab>
+                <v-tab value="damages">Damages</v-tab>
                 <v-tab value="assets">Assets</v-tab>
                 <v-tab value="employees">Employees</v-tab>
                 <v-tab value="attendance" v-if="isAdministration">Attendance</v-tab>
-                <v-tab value="damages" v-if="project.type === 'nursery' || project.type === 'shop'">Damages</v-tab>
                 <v-tab value="productions" v-if="project.type === 'nursery'">Productions</v-tab>
             </v-tabs>
 
@@ -76,6 +76,9 @@
                     <v-window-item value="sales">
                         <SalesList :projectId="project.id" :lands="project.lands || []" />
                     </v-window-item>
+                    <v-window-item value="damages">
+                        <DamagesList :projectId="project.id" />
+                    </v-window-item>
                     <v-window-item value="assets">
                         <AssetsList :projectId="project.id" />
                     </v-window-item>
@@ -85,9 +88,6 @@
                     </v-window-item>
                     <v-window-item value="attendance" v-if="isAdministration">
                         <AdminAttendance :projectId="project.id" />
-                    </v-window-item>
-                    <v-window-item value="damages">
-                        <DamagesList :projectId="project.id" />
                     </v-window-item>
                     <v-window-item value="productions">
                         <ProductionsList :projectId="project.id" />

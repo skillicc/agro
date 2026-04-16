@@ -15,7 +15,23 @@ class ProductController extends Controller
         $query = $this->productsQuery();
 
         if ($request->filled('project_id')) {
-            $query->where('project_id', $request->project_id);
+            $projectId = $request->project_id;
+
+            $query->where(function ($productQuery) use ($projectId) {
+                $productQuery->where('project_id', $projectId)
+                    ->orWhereHas('productions', function ($relationQuery) use ($projectId) {
+                        $relationQuery->where('project_id', $projectId);
+                    })
+                    ->orWhereHas('damages', function ($relationQuery) use ($projectId) {
+                        $relationQuery->where('project_id', $projectId);
+                    })
+                    ->orWhereHas('purchaseItems.purchase', function ($relationQuery) use ($projectId) {
+                        $relationQuery->where('project_id', $projectId);
+                    })
+                    ->orWhereHas('saleItems.sale', function ($relationQuery) use ($projectId) {
+                        $relationQuery->where('project_id', $projectId);
+                    });
+            });
         } elseif ($request->filled('warehouse_id')) {
             $warehouse = Warehouse::find($request->warehouse_id);
             if ($warehouse?->project_id) {

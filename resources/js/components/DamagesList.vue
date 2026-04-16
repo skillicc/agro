@@ -8,6 +8,11 @@
             </v-btn>
         </div>
 
+        <div class="d-flex flex-wrap ga-2 mb-3">
+            <v-chip color="error" variant="tonal">Total Damage Qty: {{ totalDamageQuantity }}</v-chip>
+            <v-chip color="warning" variant="tonal">Total Damage Value: ৳{{ totalDamageValue }}</v-chip>
+        </div>
+
         <v-data-table :headers="headers" :items="damages" :loading="loading" density="compact">
             <template v-slot:item.product="{ item }">
                 {{ item.product?.name }}
@@ -31,32 +36,21 @@
                 <v-card-title>{{ editMode ? 'Edit Damage' : 'Record Damage' }}</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="saveDamage">
-                        <v-text-field
-                            v-model="form.name"
-                            label="Name"
+                        <v-autocomplete
+                            v-model="form.product_id"
+                            :items="projectProducts"
+                            item-title="name"
+                            item-value="id"
+                            label="Product"
+                            clearable
                             required
+                            @update:modelValue="onProductSelected"
+                        ></v-autocomplete>
+                        <v-text-field
+                            :model-value="selectedProduct?.category?.name || ''"
+                            label="Category"
+                            readonly
                         ></v-text-field>
-                        <div class="d-flex align-center ga-2">
-                            <v-select
-                                v-model="form.category_id"
-                                :items="filteredCategories"
-                                item-title="name"
-                                item-value="id"
-                                label="Category"
-                                clearable
-                                class="flex-grow-1"
-                            ></v-select>
-                            <v-btn
-                                icon
-                                size="small"
-                                color="primary"
-                                variant="tonal"
-                                @click="openCategoryDialog"
-                                title="Add Category"
-                            >
-                                <v-icon>mdi-plus</v-icon>
-                            </v-btn>
-                        </div>
                         <v-text-field
                             v-model="form.quantity"
                             label="Quantity"
@@ -154,7 +148,16 @@ const headers = [
     { title: 'Actions', key: 'actions', sortable: false },
 ]
 
+const totalDamageQuantity = computed(() => {
+    return damages.value.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
+})
+
+const totalDamageValue = computed(() => {
+    return Number(damages.value.reduce((sum, item) => sum + Number(item.value || 0), 0)).toLocaleString('en-BD')
+})
+
 const form = reactive({
+    product_id: null,
     category_id: null,
     name: '',
     quantity: '',
@@ -167,45 +170,28 @@ const categoryForm = reactive({
     name: ''
 })
 
-const productionProducts = computed(() => {
-    return products.value.filter(product => product.type === 'own_production')
+const projectProducts = computed(() => {
+    return [...products.value].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
 })
 
-const filteredCategories = computed(() => {
-    const map = new Map()
+const selectedProduct = computed(() => {
+    return projectProducts.value.find(product => String(product.id) === String(form.product_id)) || null
+})
 
-    categories.value.forEach(category => {
-        if (category?.id && category?.name && category.type === 'own_production') {
-            map.set(String(category.id), {
-                id: category.id,
-                name: category.name,
-            })
-        }
-    })
-
-    productionProducts.value.forEach(product => {
-        if (product.category_id && product.category?.name) {
-            map.set(String(product.category_id), {
-                id: product.category_id,
-                name: product.category.name,
-            })
-        }
-    })
-
-    const selectedCategory = categories.value.find(category => String(category.id) === String(form.category_id))
-    if (selectedCategory) {
-        map.set(String(selectedCategory.id), {
-            id: selectedCategory.id,
-            name: selectedCategory.name,
-        })
+const onProductSelected = () => {
+    if (!selectedProduct.value) {
+        form.category_id = null
+        form.name = ''
+        return
     }
 
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
-})
+    form.name = selectedProduct.value.name || ''
+    form.category_id = selectedProduct.value.category_id || null
+}
 
 const findMatchingProduct = () => {
     const name = form.name.trim().toLowerCase()
-    return productionProducts.value.find(product =>
+    return projectProducts.value.find(product =>
         product.name?.trim().toLowerCase() === name && (product.category_id || null) === (form.category_id || null)
     )
 }
@@ -223,7 +209,7 @@ const fetchDamages = async () => {
 
 const fetchProducts = async () => {
     try {
-        const response = await api.get('/products')
+        const response = await api.get(`/products?project_id=${props.projectId}`)
         products.value = response.data
     } catch (error) {
         console.error('Error:', error)
@@ -272,6 +258,7 @@ const openDialog = (damage = null) => {
     selectedDamage.value = damage
     if (damage) {
         Object.assign(form, {
+            product_id: damage.product?.id || damage.product_id || null,
             category_id: damage.product?.category_id || null,
             name: damage.product?.name || '',
             quantity: damage.quantity,
@@ -281,6 +268,7 @@ const openDialog = (damage = null) => {
         })
     } else {
         Object.assign(form, {
+            product_id: null,
             category_id: null,
             name: '',
             quantity: '',
@@ -293,15 +281,16 @@ const openDialog = (damage = null) => {
 }
 
 const saveDamage = async () => {
-    if (!form.name.trim()) return
+    if (!form.product_id && !form.name.trim()) return
 
     saving.value = true
     try {
-        let product = findMatchingProduct()
+        let product = selectedProduct.value || findMatchingProduct()
 
         if (!product) {
             const response = await api.post('/products', {
                 name: form.name.trim(),
+                project_id: props.projectId,
                 category_id: form.category_id,
                 type: 'own_production',
                 unit: 'kg',
@@ -312,6 +301,7 @@ const saveDamage = async () => {
                 description: '',
             })
             product = response.data
+            form.product_id = product.id
             await fetchProducts()
         }
 
