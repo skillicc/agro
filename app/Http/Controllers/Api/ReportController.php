@@ -85,36 +85,73 @@ class ReportController extends Controller
             ->limit(5)
             ->get();
 
-        // Weekly sales vs expenses chart (last 7 days)
-        $weekStart = $today->copy()->subDays(6)->startOfDay();
-        $weekEnd = $today->copy()->endOfDay();
+        // Weekly comparison chart (running week vs last week)
+        $runningWeekStart = $today->copy()->subDays(6)->startOfDay();
+        $runningWeekEnd = $today->copy()->endOfDay();
+        $lastWeekStart = $today->copy()->subDays(13)->startOfDay();
+        $lastWeekEnd = $today->copy()->subDays(7)->endOfDay();
 
-        $salesByDate = Sale::whereIn('project_id', $projectIds)
-            ->whereBetween('date', [$weekStart->toDateString(), $weekEnd->toDateString()])
+        $runningSalesByDate = Sale::whereIn('project_id', $projectIds)
+            ->whereBetween('date', [$runningWeekStart->toDateString(), $runningWeekEnd->toDateString()])
             ->selectRaw('DATE(date) as sale_date, SUM(total) as amount')
             ->groupBy('sale_date')
             ->pluck('amount', 'sale_date');
 
-        $expensesByDate = Expense::whereIn('project_id', $projectIds)
-            ->whereBetween('date', [$weekStart->toDateString(), $weekEnd->toDateString()])
+        $runningExpensesByDate = Expense::whereIn('project_id', $projectIds)
+            ->whereBetween('date', [$runningWeekStart->toDateString(), $runningWeekEnd->toDateString()])
             ->selectRaw('DATE(date) as expense_date, SUM(amount) as amount')
             ->groupBy('expense_date')
             ->pluck('amount', 'expense_date');
 
-        $weeklySalesExpenses = collect(range(6, 0))->map(function ($daysAgo) use ($today, $salesByDate, $expensesByDate) {
+        $lastSalesByDate = Sale::whereIn('project_id', $projectIds)
+            ->whereBetween('date', [$lastWeekStart->toDateString(), $lastWeekEnd->toDateString()])
+            ->selectRaw('DATE(date) as sale_date, SUM(total) as amount')
+            ->groupBy('sale_date')
+            ->pluck('amount', 'sale_date');
+
+        $lastExpensesByDate = Expense::whereIn('project_id', $projectIds)
+            ->whereBetween('date', [$lastWeekStart->toDateString(), $lastWeekEnd->toDateString()])
+            ->selectRaw('DATE(date) as expense_date, SUM(amount) as amount')
+            ->groupBy('expense_date')
+            ->pluck('amount', 'expense_date');
+
+        $runningWeek = collect(range(6, 0))->map(function ($daysAgo) use ($today, $runningSalesByDate, $runningExpensesByDate) {
             $date = $today->copy()->subDays($daysAgo);
             $dateKey = $date->toDateString();
-            $sales = (float) ($salesByDate[$dateKey] ?? 0);
-            $expenses = (float) ($expensesByDate[$dateKey] ?? 0);
 
             return [
                 'date' => $dateKey,
                 'label' => $date->format('D'),
-                'sales' => $sales,
-                'expenses' => $expenses,
-                'total' => $sales + $expenses,
+                'sales' => (float) ($runningSalesByDate[$dateKey] ?? 0),
+                'expenses' => (float) ($runningExpensesByDate[$dateKey] ?? 0),
             ];
         })->values();
+
+        $lastWeek = collect(range(13, 7))->map(function ($daysAgo) use ($today, $lastSalesByDate, $lastExpensesByDate) {
+            $date = $today->copy()->subDays($daysAgo);
+            $dateKey = $date->toDateString();
+
+            return [
+                'date' => $dateKey,
+                'label' => $date->format('D'),
+                'sales' => (float) ($lastSalesByDate[$dateKey] ?? 0),
+                'expenses' => (float) ($lastExpensesByDate[$dateKey] ?? 0),
+            ];
+        })->values();
+
+        $weeklySalesExpenses = [
+            'labels' => $runningWeek->pluck('label')->values(),
+            'running_week' => $runningWeek,
+            'last_week' => $lastWeek,
+            'running_label' => $runningWeekStart->format('d M') . ' - ' . $runningWeekEnd->format('d M'),
+            'last_label' => $lastWeekStart->format('d M') . ' - ' . $lastWeekEnd->format('d M'),
+            'totals' => [
+                'running_sales' => $runningWeek->sum('sales'),
+                'running_expenses' => $runningWeek->sum('expenses'),
+                'last_sales' => $lastWeek->sum('sales'),
+                'last_expenses' => $lastWeek->sum('expenses'),
+            ],
+        ];
 
         return response()->json([
             'total_projects' => Project::whereIn('id', $projectIds)->count(),

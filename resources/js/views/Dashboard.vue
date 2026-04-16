@@ -124,17 +124,22 @@
                     <v-card-title class="d-flex flex-wrap align-center justify-space-between text-subtitle-1 text-sm-h6">
                         <div>
                             <v-icon class="mr-2" size="small">mdi-chart-bar-stacked</v-icon>
-                            Weekly Sales vs Expenses
+                            Weekly Sales vs Expenses Comparison
                         </div>
-                        <span class="text-caption text-grey">Last 7 days</span>
+                        <span class="text-caption text-grey">Running week vs last week</span>
                     </v-card-title>
                     <v-card-text class="pa-3 pa-sm-4">
-                        <div class="d-flex flex-wrap ga-2 mb-4">
-                            <v-chip color="success" size="small" variant="tonal">Sales: ৳{{ formatNumber(weeklySalesTotal) }}</v-chip>
-                            <v-chip color="warning" size="small" variant="tonal">Expenses: ৳{{ formatNumber(weeklyExpenseTotal) }}</v-chip>
+                        <div class="d-flex flex-wrap ga-2 mb-2">
+                            <v-chip color="success" size="small" variant="tonal">Running Sales: ৳{{ formatNumber(runningWeekSalesTotal) }}</v-chip>
+                            <v-chip color="warning" size="small" variant="tonal">Running Expenses: ৳{{ formatNumber(runningWeekExpenseTotal) }}</v-chip>
+                            <v-chip color="info" size="small" variant="tonal">Last Sales: ৳{{ formatNumber(lastWeekSalesTotal) }}</v-chip>
+                            <v-chip color="error" size="small" variant="tonal">Last Expenses: ৳{{ formatNumber(lastWeekExpenseTotal) }}</v-chip>
+                        </div>
+                        <div class="text-caption text-grey mb-4">
+                            Running Week: {{ weekComparison.running_label || '-' }} · Last Week: {{ weekComparison.last_label || '-' }}
                         </div>
 
-                        <div v-if="dashboard.weekly_sales_expenses?.length" class="chart-wrapper">
+                        <div v-if="weekComparison.labels?.length" class="chart-wrapper">
                             <Bar :data="weeklyChartData" :options="weeklyChartOptions" />
                         </div>
                         <div v-else class="text-center text-grey py-6">No weekly data available</div>
@@ -349,7 +354,14 @@ const dashboard = ref({
     recent_purchases: [],
     recent_expenses: [],
     top_products: [],
-    weekly_sales_expenses: [],
+    weekly_sales_expenses: {
+        labels: [],
+        running_week: [],
+        last_week: [],
+        running_label: '',
+        last_label: '',
+        totals: {},
+    },
 })
 
 const loading = ref(false)
@@ -358,33 +370,52 @@ const formatNumber = (num) => {
     return Number(num || 0).toLocaleString('en-BD')
 }
 
-const weeklySalesTotal = computed(() =>
-    (dashboard.value.weekly_sales_expenses || []).reduce((sum, item) => sum + Number(item.sales || 0), 0)
-)
+const weekComparison = computed(() => dashboard.value.weekly_sales_expenses || {})
 
-const weeklyExpenseTotal = computed(() =>
-    (dashboard.value.weekly_sales_expenses || []).reduce((sum, item) => sum + Number(item.expenses || 0), 0)
-)
+const runningWeekSalesTotal = computed(() => Number(weekComparison.value.totals?.running_sales || 0))
+const runningWeekExpenseTotal = computed(() => Number(weekComparison.value.totals?.running_expenses || 0))
+const lastWeekSalesTotal = computed(() => Number(weekComparison.value.totals?.last_sales || 0))
+const lastWeekExpenseTotal = computed(() => Number(weekComparison.value.totals?.last_expenses || 0))
 
 const weeklyChartData = computed(() => {
-    const items = dashboard.value.weekly_sales_expenses || []
+    const labels = weekComparison.value.labels || []
+    const runningWeek = weekComparison.value.running_week || []
+    const lastWeek = weekComparison.value.last_week || []
 
     return {
-        labels: items.map(item => item.label),
+        labels,
         datasets: [
             {
-                label: 'Sales',
-                data: items.map(item => Number(item.sales || 0)),
+                label: 'Running Week Sales',
+                data: runningWeek.map(item => Number(item.sales || 0)),
                 backgroundColor: '#22c55e',
                 borderRadius: 6,
                 borderSkipped: false,
+                stack: 'running',
             },
             {
-                label: 'Expenses',
-                data: items.map(item => Number(item.expenses || 0)),
+                label: 'Running Week Expenses',
+                data: runningWeek.map(item => Number(item.expenses || 0)),
                 backgroundColor: '#f59e0b',
                 borderRadius: 6,
                 borderSkipped: false,
+                stack: 'running',
+            },
+            {
+                label: 'Last Week Sales',
+                data: lastWeek.map(item => Number(item.sales || 0)),
+                backgroundColor: '#3b82f6',
+                borderRadius: 6,
+                borderSkipped: false,
+                stack: 'last',
+            },
+            {
+                label: 'Last Week Expenses',
+                data: lastWeek.map(item => Number(item.expenses || 0)),
+                backgroundColor: '#ef4444',
+                borderRadius: 6,
+                borderSkipped: false,
+                stack: 'last',
             },
         ],
     }
