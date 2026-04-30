@@ -292,6 +292,16 @@
                         <div v-else>
                             <strong>৳{{ formatNumber(salaryCalculation.calculated_salary) }}</strong>
                         </div>
+                        <div class="text-caption mt-2" v-if="monthPaidLoading">
+                            Checking paid amount for this month...
+                        </div>
+                        <div class="text-caption mt-2" v-else>
+                            Already paid in {{ formatMonthLong(salaryForm.month) }}:
+                            <strong>৳{{ formatNumber(monthPaidAmount) }}</strong>
+                            <span class="mx-1">|</span>
+                            Remaining:
+                            <strong>৳{{ formatNumber(Math.max(0, Number(salaryCalculation.calculated_salary || 0) - monthPaidAmount)) }}</strong>
+                        </div>
                     </v-alert>
 
                     <v-form @submit.prevent="paySalary">
@@ -866,6 +876,8 @@ const allSalariesOriginal = ref([])
 const allAdvancesOriginal = ref([])
 const salaryCalculation = ref(null)
 const salaryExpectationsByMonth = ref({})
+const monthPaidAmount = ref(0)
+const monthPaidLoading = ref(false)
 
 // Calculate EL states
 const calculateELDialog = ref(false)
@@ -1312,6 +1324,8 @@ const openSalaryDialog = async (employee) => {
     selectedEmployee.value = employee
     salaryForm.month = new Date().toISOString().slice(0, 7)
     salaryCalculation.value = null
+    monthPaidAmount.value = 0
+    monthPaidLoading.value = false
 
     await calculateSalaryForSelectedMonth()
     salaryDialog.value = true
@@ -1325,14 +1339,29 @@ const calculateSalaryForSelectedMonth = async () => {
         return
     }
 
+    monthPaidLoading.value = true
+
     try {
-        const response = await api.get(`/employees/${selectedEmployee.value.id}/calculate-salary`, {
-            params: { month: salaryForm.month }
-        })
-        salaryCalculation.value = response.data
-        salaryForm.amount = response.data.calculated_salary
+        const [salaryRes, paidRes] = await Promise.all([
+            api.get(`/employees/${selectedEmployee.value.id}/calculate-salary`, {
+                params: { month: salaryForm.month }
+            }),
+            api.get('/salaries', {
+                params: {
+                    employee_id: selectedEmployee.value.id,
+                    month: salaryForm.month,
+                }
+            })
+        ])
+
+        salaryCalculation.value = salaryRes.data
+        salaryForm.amount = salaryRes.data.calculated_salary
+        monthPaidAmount.value = (paidRes.data || []).reduce((sum, row) => sum + Number(row.amount || 0), 0)
     } catch (error) {
         console.error('Error calculating salary:', error)
+        monthPaidAmount.value = 0
+    } finally {
+        monthPaidLoading.value = false
     }
 }
 
