@@ -319,6 +319,29 @@
                     <v-window v-model="historyTab">
                         <!-- Salary History -->
                         <v-window-item value="salaries">
+                            <v-table v-if="monthlySalarySummary.length > 0" density="compact" class="mt-4 mb-2">
+                                <thead>
+                                    <tr>
+                                        <th>Month</th>
+                                        <th>Total Paid</th>
+                                        <th>Salary</th>
+                                        <th>Difference</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="summary in monthlySalarySummary" :key="summary.month">
+                                        <td>{{ formatMonthShort(summary.month) }}</td>
+                                        <td>৳{{ formatNumber(summary.totalPaid) }}</td>
+                                        <td>৳{{ formatNumber(summary.monthlySalary) }}</td>
+                                        <td>
+                                            <span v-if="summary.difference > 0" class="text-success">+৳{{ formatNumber(summary.difference) }} (More)</span>
+                                            <span v-else-if="summary.difference < 0" class="text-error">-৳{{ formatNumber(Math.abs(summary.difference)) }} (Less)</span>
+                                            <span v-else class="text-grey-darken-1">৳0 (Exact)</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </v-table>
+
                             <v-table density="compact" class="mt-4">
                                 <thead>
                                     <tr>
@@ -1001,6 +1024,33 @@ const totalMonthlySalary = computed(() => employees.value.filter(e => e.is_activ
 // Computed for individual history
 const totalSalary = computed(() => salaryHistory.value.reduce((sum, s) => sum + Number(s.amount), 0))
 const totalAdvance = computed(() => advanceHistory.value.reduce((sum, a) => sum + Number(a.amount), 0))
+
+const monthlySalarySummary = computed(() => {
+    if (!selectedEmployee.value || salaryHistory.value.length === 0) return []
+
+    const monthlySalary = Number(selectedEmployee.value.salary_amount || selectedEmployee.value.calculated_salary || 0)
+    const grouped = salaryHistory.value.reduce((acc, salary) => {
+        const month = salary.month
+        if (!month) return acc
+        if (!acc[month]) {
+            acc[month] = 0
+        }
+        acc[month] += Number(salary.amount || 0)
+        return acc
+    }, {})
+
+    return Object.entries(grouped)
+        .map(([month, totalPaid]) => {
+            const difference = totalPaid - monthlySalary
+            return {
+                month,
+                totalPaid,
+                monthlySalary,
+                difference,
+            }
+        })
+        .sort((a, b) => b.month.localeCompare(a.month))
+})
 
 // Computed for all summary
 const allTotalSalaryPaid = computed(() => allSalaries.value.reduce((sum, s) => sum + Number(s.amount), 0))
