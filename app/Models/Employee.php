@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use DateTimeInterface;
@@ -96,6 +97,95 @@ class Employee extends Model
     public function isContractual(): bool
     {
         return $this->employee_type === 'contractual';
+    }
+
+    public function getSalaryAmountForMonth(string $month): float
+    {
+        $monthEnd = Carbon::createFromFormat('Y-m-d', $month . '-01')->endOfMonth();
+        $adjustments = $this->salaryAdjustments()
+            ->orderBy('effective_date')
+            ->get(['old_salary', 'new_salary', 'effective_date']);
+
+        if ($adjustments->isEmpty()) {
+            return floatval($this->salary_amount);
+        }
+
+        $latestAppliedAdjustment = $adjustments
+            ->filter(fn ($adjustment) => Carbon::parse($adjustment->effective_date)->lte($monthEnd))
+            ->last();
+
+        if ($latestAppliedAdjustment) {
+            return floatval($latestAppliedAdjustment->new_salary);
+        }
+
+        return floatval($adjustments->first()->old_salary);
+    }
+
+    public function calculateRegularSalary(string $month): array
+    {
+        $monthStart = Carbon::createFromFormat('Y-m-d', $month . '-01')->startOfMonth();
+        $monthEnd = $monthStart->copy()->endOfMonth();
+        $baseSalary = $this->getSalaryAmountForMonth($month);
+        $presentDays = $this->getPresentDaysInMonth($month);
+        [$year, $monthNum] = explode('-', $month);
+
+        $totalDays = $this->attendances()
+            ->whereMonth('date', $monthNum)
+            ->whereYear('date', $year)
+            ->count();
+
+        $calculatedSalary = $baseSalary;
+        $isProrated = false;
+
+        if ($this->joining_date) {
+            $joiningDate = Carbon::parse($this->joining_date);
+
+            if ($joiningDate->gt($monthEnd)) {
+                $calculatedSalary = 0;
+                $isProrated = true;
+            } elseif ($joiningDate->isSameMonth($monthStart)) {
+                $workedDays = $presentDays > 0
+                    ? $presentDays
+                    : max(0, $joiningDate->diffInDays($monthEnd) + 1);
+
+                $calculatedSalary = round(($baseSalary / $monthStart->daysInMonth) * $workedDays, 2);
+                $isProrated = true;
+            }
+        }
+
+        return [
+            'employee_type' => 'regular',
+            'salary_amount' => $baseSalary,
+            'present_days' => $presentDays,
+            'total_days' => $totalDays,
+            'calculated_salary' => $calculatedSalary,
+            'month' => $month,
+            'is_prorated' => $isProrated,
+        ];
+    }
+
+    public function calculateMonthlySalaryDetails(string $month): array
+    {
+        if ($this->isRegular()) {
+            return $this->calculateRegularSalary($month);
+        }
+
+        [$year, $monthNum] = explode('-', $month);
+        $presentDays = $this->getPresentDaysInMonth($month);
+        $totalDays = $this->attendances()
+            ->whereMonth('date', $monthNum)
+            ->whereYear('date', $year)
+            ->count();
+
+        return [
+            'employee_type' => 'contractual',
+            'daily_rate' => floatval($this->daily_rate),
+            'present_days' => $presentDays,
+            'total_days' => $totalDays,
+            'calculated_salary' => $this->calculateContractualSalary($month),
+            'month' => $month,
+            'is_prorated' => false,
+        ];
     }
 
     public function calculateContractualSalary(string $month): float

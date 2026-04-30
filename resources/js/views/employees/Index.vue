@@ -260,19 +260,28 @@
             <v-card>
                 <v-card-title>Pay Salary - {{ selectedEmployee?.name }}</v-card-title>
                 <v-card-text>
-                    <!-- Contractual Employee Calculation Info -->
+                    <!-- Salary Calculation Info -->
                     <v-alert
-                        v-if="selectedEmployee?.employee_type === 'contractual'"
+                        v-if="salaryCalculation"
                         type="info"
                         density="compact"
                         class="mb-4"
                     >
-                        <div class="font-weight-bold">Contractual Employee</div>
-                        <div v-if="salaryCalculation">
+                        <div class="font-weight-bold">
+                            {{ selectedEmployee?.employee_type === 'contractual' ? 'Contractual Employee' : 'Expected Salary' }}
+                        </div>
+                        <div v-if="selectedEmployee?.employee_type === 'contractual'">
                             {{ salaryCalculation.present_days }} days x ৳{{ formatNumber(selectedEmployee.daily_rate) }} =
                             <strong>৳{{ formatNumber(salaryCalculation.calculated_salary) }}</strong>
                         </div>
-                        <div v-else class="text-caption">Select month to calculate</div>
+                        <div v-else-if="salaryCalculation.is_prorated && salaryCalculation.present_days > 0">
+                            {{ salaryCalculation.present_days }} worked days =
+                            <strong>৳{{ formatNumber(salaryCalculation.calculated_salary) }}</strong>
+                            <div class="text-caption">Base salary: ৳{{ formatNumber(salaryCalculation.salary_amount) }}</div>
+                        </div>
+                        <div v-else>
+                            <strong>৳{{ formatNumber(salaryCalculation.calculated_salary) }}</strong>
+                        </div>
                     </v-alert>
 
                     <v-form @submit.prevent="paySalary">
@@ -283,7 +292,7 @@
                             item-value="value"
                             label="Salary For"
                             required
-                            @update:model-value="calculateContractualSalary"
+                            @update:model-value="calculateSalaryForSelectedMonth"
                         ></v-select>
                         <v-text-field
                             v-model.number="salaryForm.amount"
@@ -323,14 +332,16 @@
                                 <thead>
                                     <tr>
                                         <th>Month</th>
+                                        <th>Worked Days</th>
                                         <th>Total Paid</th>
-                                        <th>Salary</th>
+                                        <th>Due Salary</th>
                                         <th>Difference</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr v-for="summary in monthlySalarySummary" :key="summary.month">
                                         <td>{{ formatMonthShort(summary.month) }}</td>
+                                        <td>{{ summary.presentDays > 0 ? summary.presentDays : '-' }}</td>
                                         <td>৳{{ formatNumber(summary.totalPaid) }}</td>
                                         <td>৳{{ formatNumber(summary.monthlySalary) }}</td>
                                         <td>
@@ -844,6 +855,7 @@ const filterEmployee = ref(null)
 const allSalariesOriginal = ref([])
 const allAdvancesOriginal = ref([])
 const salaryCalculation = ref(null)
+const salaryExpectationsByMonth = ref({})
 
 // Calculate EL states
 const calculateELDialog = ref(false)
@@ -1027,8 +1039,6 @@ const totalAdvance = computed(() => advanceHistory.value.reduce((sum, a) => sum 
 
 const monthlySalarySummary = computed(() => {
     if (!selectedEmployee.value || salaryHistory.value.length === 0) return []
-
-    const monthlySalary = Number(selectedEmployee.value.salary_amount || selectedEmployee.value.calculated_salary || 0)
     const grouped = salaryHistory.value.reduce((acc, salary) => {
         const month = salary.month
         if (!month) return acc
@@ -1041,12 +1051,20 @@ const monthlySalarySummary = computed(() => {
 
     return Object.entries(grouped)
         .map(([month, totalPaid]) => {
+            const salaryDetails = salaryExpectationsByMonth.value[month] || {}
+            const monthlySalary = Number(
+                salaryDetails.calculated_salary
+                ?? selectedEmployee.value.salary_amount
+                ?? selectedEmployee.value.calculated_salary
+                ?? 0
+            )
             const difference = totalPaid - monthlySalary
             return {
                 month,
                 totalPaid,
                 monthlySalary,
                 difference,
+                presentDays: Number(salaryDetails.present_days || 0),
             }
         })
         .sort((a, b) => b.month.localeCompare(a.month))
@@ -1184,6 +1202,29 @@ const applyFilters = () => {
     allAdvances.value = filteredAdvances
 }
 
+const loadSalaryExpectations = async (employeeId, salaries) => {
+    const months = [...new Set((salaries || []).map((salary) => salary.month).filter(Boolean))]
+
+    if (months.length === 0) {
+        salaryExpectationsByMonth.value = {}
+        return
+    }
+
+    try {
+        const responses = await Promise.all(
+            months.map((month) => api.get(`/employees/${employeeId}/calculate-salary`, { params: { month } }))
+        )
+
+        salaryExpectationsByMonth.value = responses.reduce((acc, response) => {
+            acc[response.data.month] = response.data
+            return acc
+        }, {})
+    } catch (error) {
+        console.error('Error calculating monthly salary summary:', error)
+        salaryExpectationsByMonth.value = {}
+    }
+}
+
 const fetchEmployees = async () => {
     loading.value = true
     try {
@@ -1243,17 +1284,12 @@ const openSalaryDialog = async (employee) => {
     salaryForm.month = new Date().toISOString().slice(0, 7)
     salaryCalculation.value = null
 
-    if (employee.employee_type === 'contractual') {
-        // Calculate salary for contractual employee
-        await calculateContractualSalary()
-    } else {
-        salaryForm.amount = employee.salary_amount
-    }
+    await calculateSalaryForSelectedMonth()
     salaryDialog.value = true
 }
 
-const calculateContractualSalary = async () => {
-    if (!selectedEmployee.value || selectedEmployee.value.employee_type !== 'contractual') {
+const calculateSalaryForSelectedMonth = async () => {
+    if (!selectedEmployee.value) {
         return
     }
     if (!salaryForm.month || !/^\d{4}-\d{2}$/.test(salaryForm.month)) {
@@ -1354,6 +1390,7 @@ const viewHistory = async (employee) => {
     historyTab.value = 'salaries'
     salaryHistory.value = []
     advanceHistory.value = []
+    salaryExpectationsByMonth.value = {}
     historyDialog.value = true
 
     try {
@@ -1363,6 +1400,7 @@ const viewHistory = async (employee) => {
         ])
         salaryHistory.value = salariesRes.data
         advanceHistory.value = advancesRes.data
+        await loadSalaryExpectations(employee.id, salariesRes.data)
     } catch (error) {
         console.error('Error fetching history:', error)
     }
@@ -1442,6 +1480,7 @@ const updateSalary = async () => {
         if (selectedEmployee.value) {
             const salariesRes = await api.get(`/employees/${selectedEmployee.value.id}/salaries`)
             salaryHistory.value = salariesRes.data
+            await loadSalaryExpectations(selectedEmployee.value.id, salariesRes.data)
         }
         fetchEmployees()
         alert('Salary updated successfully!')
@@ -1468,6 +1507,7 @@ const deleteSalary = async () => {
         if (selectedEmployee.value) {
             const salariesRes = await api.get(`/employees/${selectedEmployee.value.id}/salaries`)
             salaryHistory.value = salariesRes.data
+            await loadSalaryExpectations(selectedEmployee.value.id, salariesRes.data)
         }
         fetchEmployees()
         alert('Salary deleted successfully!')

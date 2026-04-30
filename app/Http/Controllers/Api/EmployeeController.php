@@ -222,10 +222,8 @@ class EmployeeController extends Controller
             'note' => 'nullable|string',
         ]);
 
-        // Calculate expected salary
-        $expectedSalary = $employee->isContractual()
-            ? $employee->calculateContractualSalary($request->month)
-            : floatval($employee->salary_amount);
+        $salaryDetails = $employee->calculateMonthlySalaryDetails($request->month);
+        $expectedSalary = floatval($salaryDetails['calculated_salary']);
 
         $paidAmount = floatval($request->amount);
         $salaryAmount = min($paidAmount, $expectedSalary);
@@ -439,39 +437,7 @@ class EmployeeController extends Controller
 
         $month = $request->month;
 
-        if ($employee->isRegular()) {
-            return response()->json([
-                'employee_type' => 'regular',
-                'salary_amount' => $employee->salary_amount,
-                'calculated_salary' => $employee->salary_amount,
-                'month' => $month,
-            ]);
-        }
-
-        // Contractual calculation
-        [$year, $monthNum] = explode('-', $month);
-
-        $presentDays = $employee->attendances()
-            ->whereMonth('date', $monthNum)
-            ->whereYear('date', $year)
-            ->where('status', 'present')
-            ->count();
-
-        $totalDays = $employee->attendances()
-            ->whereMonth('date', $monthNum)
-            ->whereYear('date', $year)
-            ->count();
-
-        $calculatedSalary = $presentDays * floatval($employee->daily_rate);
-
-        return response()->json([
-            'employee_type' => 'contractual',
-            'daily_rate' => $employee->daily_rate,
-            'present_days' => $presentDays,
-            'total_days' => $totalDays,
-            'calculated_salary' => $calculatedSalary,
-            'month' => $month,
-        ]);
+        return response()->json($employee->calculateMonthlySalaryDetails($month));
     }
 
     /**
