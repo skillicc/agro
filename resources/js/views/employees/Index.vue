@@ -274,8 +274,8 @@
                             {{ salaryCalculation.present_days }} days x ৳{{ formatNumber(selectedEmployee.daily_rate) }} =
                             <strong>৳{{ formatNumber(salaryCalculation.calculated_salary) }}</strong>
                         </div>
-                        <div v-else-if="salaryCalculation.is_prorated && salaryCalculation.present_days > 0">
-                            {{ salaryCalculation.present_days }} worked days =
+                        <div v-else-if="salaryCalculation.is_prorated && salaryCalculation.worked_days > 0">
+                            {{ salaryCalculation.worked_days }} worked days =
                             <strong>৳{{ formatNumber(salaryCalculation.calculated_salary) }}</strong>
                             <div class="text-caption">Base salary: ৳{{ formatNumber(salaryCalculation.salary_amount) }}</div>
                         </div>
@@ -341,7 +341,7 @@
                                 <tbody>
                                     <tr v-for="summary in monthlySalarySummary" :key="summary.month">
                                         <td>{{ formatMonthShort(summary.month) }}</td>
-                                        <td>{{ summary.presentDays > 0 ? summary.presentDays : '-' }}</td>
+                                        <td>{{ summary.workedDays > 0 ? summary.workedDays : '-' }}</td>
                                         <td>৳{{ formatNumber(summary.totalPaid) }}</td>
                                         <td>৳{{ formatNumber(summary.monthlySalary) }}</td>
                                         <td>
@@ -1064,7 +1064,7 @@ const monthlySalarySummary = computed(() => {
                 totalPaid,
                 monthlySalary,
                 difference,
-                presentDays: Number(salaryDetails.present_days || 0),
+                workedDays: Number(salaryDetails.worked_days || 0),
             }
         })
         .sort((a, b) => b.month.localeCompare(a.month))

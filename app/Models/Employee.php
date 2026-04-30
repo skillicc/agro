@@ -136,6 +136,7 @@ class Employee extends Model
 
         $calculatedSalary = $baseSalary;
         $isProrated = false;
+        $workedDays = $presentDays > 0 ? $presentDays : null;
 
         if ($this->joining_date) {
             $joiningDate = Carbon::parse($this->joining_date);
@@ -143,6 +144,7 @@ class Employee extends Model
             if ($joiningDate->gt($monthEnd)) {
                 $calculatedSalary = 0;
                 $isProrated = true;
+                $workedDays = 0;
             } elseif ($joiningDate->isSameMonth($monthStart)) {
                 $workedDays = $presentDays > 0
                     ? $presentDays
@@ -157,6 +159,7 @@ class Employee extends Model
             'employee_type' => 'regular',
             'salary_amount' => $baseSalary,
             'present_days' => $presentDays,
+            'worked_days' => $workedDays,
             'total_days' => $totalDays,
             'calculated_salary' => $calculatedSalary,
             'month' => $month,
@@ -181,6 +184,7 @@ class Employee extends Model
             'employee_type' => 'contractual',
             'daily_rate' => floatval($this->daily_rate),
             'present_days' => $presentDays,
+            'worked_days' => $presentDays,
             'total_days' => $totalDays,
             'calculated_salary' => $this->calculateContractualSalary($month),
             'month' => $month,

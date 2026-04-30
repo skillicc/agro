@@ -80,6 +80,7 @@ class EmployeeSalaryCalculationTest extends TestCase
         $this->assertSame('regular', $novemberData['employee_type']);
         $this->assertSame(7200.0, (float) $novemberData['salary_amount']);
         $this->assertSame(21, $novemberData['present_days']);
+        $this->assertSame(21, $novemberData['worked_days']);
         $this->assertSame(5040.0, (float) $novemberData['calculated_salary']);
         $this->assertTrue($novemberData['is_prorated']);
 
