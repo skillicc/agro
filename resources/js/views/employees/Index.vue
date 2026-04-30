@@ -296,7 +296,7 @@
                             Checking paid amount for this month...
                         </div>
                         <div class="text-caption mt-2" v-else>
-                            Already paid in {{ formatMonthLong(salaryForm.month) }}:
+                            Already paid for selected month ({{ formatMonthLong(salaryForm.month) }}):
                             <strong>৳{{ formatNumber(monthPaidAmount) }}</strong>
                             <span class="mx-1">|</span>
                             Remaining:
@@ -1339,20 +1339,27 @@ const calculateSalaryForSelectedMonth = async () => {
         return
     }
 
+    const requestedMonth = salaryForm.month
+    const requestedEmployeeId = selectedEmployee.value.id
     monthPaidLoading.value = true
 
     try {
         const [salaryRes, paidRes] = await Promise.all([
-            api.get(`/employees/${selectedEmployee.value.id}/calculate-salary`, {
-                params: { month: salaryForm.month }
+            api.get(`/employees/${requestedEmployeeId}/calculate-salary`, {
+                params: { month: requestedMonth }
             }),
             api.get('/salaries', {
                 params: {
-                    employee_id: selectedEmployee.value.id,
-                    month: salaryForm.month,
+                    employee_id: requestedEmployeeId,
+                    month: requestedMonth,
                 }
             })
         ])
+
+        // Ignore stale responses if user changed employee/month before request finished.
+        if (!selectedEmployee.value || selectedEmployee.value.id !== requestedEmployeeId || salaryForm.month !== requestedMonth) {
+            return
+        }
 
         salaryCalculation.value = salaryRes.data
         salaryForm.amount = salaryRes.data.calculated_salary
