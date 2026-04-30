@@ -148,7 +148,9 @@ class Employee extends Model
             } elseif ($joiningDate->isSameMonth($monthStart)) {
                 $workedDays = $presentDays > 0
                     ? $presentDays
-                    : max(0, $joiningDate->diffInDays($monthEnd) + 1);
+                    : max(0, $joiningDate->copy()->startOfDay()->diffInDays($monthEnd->copy()->startOfDay()) + 1);
+
+                $workedDays = (int) round($workedDays);
 
                 $calculatedSalary = round(($baseSalary / $monthStart->daysInMonth) * $workedDays, 2);
                 $isProrated = true;
