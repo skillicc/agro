@@ -341,7 +341,7 @@
                             <v-table v-if="monthlySalarySummary.length > 0" density="compact" class="mt-4 mb-2">
                                 <thead>
                                     <tr>
-                                        <th>Month</th>
+                                        <th>Month/Year</th>
                                         <th>Worked Days</th>
                                         <th>Total Paid</th>
                                         <th>Due Salary</th>
@@ -350,7 +350,7 @@
                                 </thead>
                                 <tbody>
                                     <tr v-for="summary in monthlySalarySummary" :key="summary.month">
-                                        <td>{{ formatMonthShort(summary.month) }}</td>
+                                        <td>{{ formatMonthLong(summary.month) }}</td>
                                         <td>{{ summary.workedDays > 0 ? summary.workedDays : '-' }}</td>
                                         <td>৳{{ formatNumber(summary.totalPaid) }}</td>
                                         <td>৳{{ formatNumber(summary.monthlySalary) }}</td>
@@ -1162,6 +1162,12 @@ const formatMonthShort = (monthStr) => {
     const [year, month] = monthStr.split('-')
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     return `${monthNames[parseInt(month) - 1]}'${year.slice(2)}`
+}
+
+const formatMonthLong = (monthStr) => {
+    const [year, month] = monthStr.split('-')
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    return `${monthNames[parseInt(month) - 1]} ${year}`
 }
 
 // Get salary status for an employee in a specific month
