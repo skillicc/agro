@@ -99,13 +99,23 @@
                     @update:model-value="fetchEmployees"
                 ></v-select>
             </v-col>
+            <v-col cols="12" sm="8" md="4">
+                <v-text-field
+                    v-model="employeeSearch"
+                    label="Search by Name"
+                    prepend-inner-icon="mdi-magnify"
+                    clearable
+                    density="compact"
+                    hide-details
+                ></v-text-field>
+            </v-col>
         </v-row>
 
         <v-card>
             <v-card-text>
                 <v-data-table
                     :headers="headers"
-                    :items="sortedEmployees"
+                    :items="filteredEmployees"
                     :loading="loading"
                     items-per-page="-1"
                 >
@@ -934,6 +944,7 @@ const employeeTypes = [
 ]
 
 const filterType = ref(null)
+const employeeSearch = ref('')
 
 // Sort employees by salary (highest first)
 const sortedEmployees = computed(() => {
@@ -953,6 +964,18 @@ const sortedEmployees = computed(() => {
 
         // Sort descending (highest salary first)
         return salaryB - salaryA
+    })
+})
+
+const filteredEmployees = computed(() => {
+    const search = employeeSearch.value.trim().toLowerCase()
+
+    if (!search) {
+        return sortedEmployees.value
+    }
+
+    return sortedEmployees.value.filter((employee) => {
+        return String(employee.name || '').toLowerCase().includes(search)
     })
 })
 
