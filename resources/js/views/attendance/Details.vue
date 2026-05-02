@@ -110,6 +110,7 @@
                 <v-card :loading="loading">
                     <v-card-title class="text-body-1 font-weight-bold">
                         Employee Attendance Summary - {{ monthName }} {{ selectedYear }}
+                        <span v-if="focusedEmployeeName">({{ focusedEmployeeName }})</span>
                     </v-card-title>
                     <v-card-text>
                         <div v-if="employeeChartData" :style="{ height: employeeChartHeight + 'px' }">
@@ -132,7 +133,7 @@
                     </v-card-title>
                     <v-data-table
                         :headers="tableHeaders"
-                        :items="employeeReport"
+                        :items="filteredEmployeeReport"
                         :loading="loading"
                         density="compact"
                         :items-per-page="25"
@@ -184,7 +185,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { Bar, Doughnut } from 'vue-chartjs'
 import {
@@ -213,6 +215,7 @@ ChartJS.register(
 )
 
 const { smAndUp, mdAndUp } = useDisplay()
+const route = useRoute()
 
 const loading = ref(false)
 const dailyData = ref([])
@@ -221,6 +224,7 @@ const employeeReport = ref([])
 const currentDate = new Date()
 const selectedMonth = ref(currentDate.getFullYear() < ATTENDANCE_START_YEAR ? 1 : currentDate.getMonth() + 1)
 const selectedYear = ref(currentDate.getFullYear() < ATTENDANCE_START_YEAR ? ATTENDANCE_START_YEAR : currentDate.getFullYear())
+const selectedEmployeeId = ref(null)
 
 const months = [
     { name: 'January', value: 1 },
@@ -245,6 +249,16 @@ const years = computed(() => {
 const monthName = computed(() => {
     return months.find(m => m.value === selectedMonth.value)?.name || ''
 })
+
+const filteredEmployeeReport = computed(() => {
+    if (!selectedEmployeeId.value) {
+        return employeeReport.value
+    }
+
+    return employeeReport.value.filter((item) => String(item.employee?.id) === String(selectedEmployeeId.value))
+})
+
+const focusedEmployeeName = computed(() => filteredEmployeeReport.value[0]?.employee?.name || '')
 
 const tableHeaders = computed(() => {
     if (mdAndUp.value) {
@@ -278,7 +292,7 @@ const tableHeaders = computed(() => {
 // Summary Statistics
 const summaryStats = computed(() => {
     const totalDays = dailyData.value.length
-    const totalEmployees = employeeReport.value.length
+    const totalEmployees = filteredEmployeeReport.value.length
 
     let totalPresent = 0
     let totalRecords = 0
@@ -399,32 +413,32 @@ const barChartOptions = {
 
 // Employee Bar Chart
 const employeeChartData = computed(() => {
-    if (employeeReport.value.length === 0) return null
+    if (filteredEmployeeReport.value.length === 0) return null
 
     return {
-        labels: employeeReport.value.map(e => e.employee?.name || 'Unknown'),
+        labels: filteredEmployeeReport.value.map(e => e.employee?.name || 'Unknown'),
         datasets: [
             {
                 label: 'Present Days',
-                data: employeeReport.value.map(e => e.present_days),
+                data: filteredEmployeeReport.value.map(e => e.present_days),
                 backgroundColor: '#4CAF50',
                 borderRadius: 4
             },
             {
                 label: 'Absent Days',
-                data: employeeReport.value.map(e => e.absent_days),
+                data: filteredEmployeeReport.value.map(e => e.absent_days),
                 backgroundColor: '#F44336',
                 borderRadius: 4
             },
             {
                 label: 'Leave Days',
-                data: employeeReport.value.map(e => e.leave_days || 0),
+                data: filteredEmployeeReport.value.map(e => e.leave_days || 0),
                 backgroundColor: '#FF9800',
                 borderRadius: 4
             },
             {
                 label: 'Sick Leave Days',
-                data: employeeReport.value.map(e => e.sick_leave_days || 0),
+                data: filteredEmployeeReport.value.map(e => e.sick_leave_days || 0),
                 backgroundColor: '#9C27B0',
                 borderRadius: 4
             }
@@ -433,7 +447,7 @@ const employeeChartData = computed(() => {
 })
 
 const employeeChartHeight = computed(() => {
-    return Math.max(300, employeeReport.value.length * 35)
+    return Math.max(300, filteredEmployeeReport.value.length * 35)
 })
 
 const employeeChartOptions = computed(() => ({
@@ -506,7 +520,29 @@ const fetchAllData = async () => {
     loading.value = false
 }
 
+const syncFiltersFromQuery = () => {
+    const month = Number(route.query.month)
+    const year = Number(route.query.year)
+    const employeeId = route.query.employee_id
+
+    if (month >= 1 && month <= 12) {
+        selectedMonth.value = month
+    }
+
+    if (year >= ATTENDANCE_START_YEAR) {
+        selectedYear.value = year
+    }
+
+    selectedEmployeeId.value = employeeId ? String(employeeId) : null
+}
+
 onMounted(() => {
+    syncFiltersFromQuery()
+    fetchAllData()
+})
+
+watch(() => route.query, () => {
+    syncFiltersFromQuery()
     fetchAllData()
 })
 </script>

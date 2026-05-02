@@ -377,7 +377,17 @@
                                     <tr v-for="summary in filteredMonthlySalarySummary" :key="summary.month">
                                         <td>{{ formatMonthLong(summary.month) }}</td>
                                         <td>
-                                            <div>{{ summary.workedDays > 0 ? summary.workedDays : '-' }}</div>
+                                            <div>
+                                                <button
+                                                    v-if="canOpenAttendanceSheet(summary)"
+                                                    type="button"
+                                                    class="worked-days-link"
+                                                    @click="openAttendanceSheet(summary)"
+                                                >
+                                                    {{ summary.workedDays > 0 ? summary.workedDays : '-' }}
+                                                </button>
+                                                <span v-else>{{ summary.workedDays > 0 ? summary.workedDays : '-' }}</span>
+                                            </div>
                                             <div v-if="summary.workingDaySource && summary.workingDaySource !== 'attendance'" class="text-caption text-grey">
                                                 {{ formatWorkingDaySource(summary.workingDaySource) }}
                                             </div>
@@ -913,9 +923,11 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import api from '../../services/api'
 
+const router = useRouter()
 const { smAndUp, mdAndUp, lgAndUp } = useDisplay()
 
 const employees = ref([])
@@ -1293,6 +1305,26 @@ const formatWorkingDaySource = (source) => {
     if (source === 'manual') return 'Manual'
     if (source === 'suggested') return 'Suggested'
     return 'Attendance'
+}
+
+const canOpenAttendanceSheet = (summary) => {
+    return summary.workingDaySource === 'attendance' && Number(summary.workedDays || 0) > 0 && !!selectedEmployee.value?.id
+}
+
+const openAttendanceSheet = (summary) => {
+    if (!selectedEmployee.value?.id) return
+
+    const [year, month] = String(summary.month || '').split('-')
+    if (!year || !month) return
+
+    router.push({
+        name: 'attendance-details',
+        query: {
+            month: String(Number(month)),
+            year,
+            employee_id: String(selectedEmployee.value.id),
+        },
+    })
 }
 
 // Get salary status for an employee in a specific month
@@ -1804,6 +1836,12 @@ onMounted(() => {
 .bg-error { background-color: #F44336; }
 .bg-warning { background-color: #FF9800; }
 .bg-grey { background-color: #4CAF50; }
+
+.worked-days-link {
+    color: #1976d2;
+    cursor: pointer;
+    text-decoration: underline;
+}
 
 .salary-matrix-container {
     overflow-x: auto;
