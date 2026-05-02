@@ -348,7 +348,21 @@
                     <v-window v-model="historyTab">
                         <!-- Salary History -->
                         <v-window-item value="salaries">
-                            <v-table v-if="monthlySalarySummary.length > 0" density="compact" class="mt-4 mb-2">
+                            <div class="d-flex flex-wrap align-center ga-3 mt-4 mb-2">
+                                <v-select
+                                    v-model="historySalaryMonthFilter"
+                                    :items="historySalaryMonthOptions"
+                                    item-title="label"
+                                    item-value="value"
+                                    label="Filter Salary Month"
+                                    clearable
+                                    density="compact"
+                                    hide-details
+                                    style="max-width: 240px;"
+                                ></v-select>
+                            </div>
+
+                            <v-table v-if="filteredMonthlySalarySummary.length > 0" density="compact" class="mb-2">
                                 <thead>
                                     <tr>
                                         <th>Month/Year</th>
@@ -359,7 +373,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="summary in monthlySalarySummary" :key="summary.month">
+                                    <tr v-for="summary in filteredMonthlySalarySummary" :key="summary.month">
                                         <td>{{ formatMonthLong(summary.month) }}</td>
                                         <td>{{ summary.workedDays > 0 ? summary.workedDays : '-' }}</td>
                                         <td>৳{{ formatNumber(summary.totalPaid) }}</td>
@@ -384,7 +398,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="salary in salaryHistory" :key="salary.id">
+                                    <tr v-for="salary in filteredSalaryHistory" :key="salary.id">
                                         <td>{{ formatMonthShort(salary.month) }}</td>
                                         <td>৳{{ formatNumber(salary.amount) }}</td>
                                         <td>{{ formatDate(salary.payment_date) }}</td>
@@ -398,14 +412,14 @@
                                             </v-btn>
                                         </td>
                                     </tr>
-                                    <tr v-if="salaryHistory.length === 0">
+                                    <tr v-if="filteredSalaryHistory.length === 0">
                                         <td colspan="5" class="text-center text-grey">No salary records found</td>
                                     </tr>
                                 </tbody>
-                                <tfoot v-if="salaryHistory.length > 0">
+                                <tfoot v-if="filteredSalaryHistory.length > 0">
                                     <tr class="font-weight-bold">
                                         <td>Total</td>
-                                        <td>৳{{ formatNumber(totalSalary) }}</td>
+                                        <td>৳{{ formatNumber(filteredTotalSalary) }}</td>
                                         <td colspan="3"></td>
                                     </tr>
                                 </tfoot>
@@ -908,6 +922,7 @@ const deletingSalary = ref(false)
 const deletingAdvance = ref(false)
 const editSalaryForm = reactive({ id: null, amount: 0, month: '', payment_date: '', note: '' })
 const editAdvanceForm = reactive({ id: null, amount: 0, date: '', reason: '', is_deducted: false })
+const historySalaryMonthFilter = ref(null)
 
 const headers = computed(() => {
     if (lgAndUp.value) {
@@ -1072,6 +1087,31 @@ const totalMonthlySalary = computed(() => employees.value.filter(e => e.is_activ
 const totalSalary = computed(() => salaryHistory.value.reduce((sum, s) => sum + Number(s.amount), 0))
 const totalAdvance = computed(() => advanceHistory.value.reduce((sum, a) => sum + Number(a.amount), 0))
 
+const historySalaryMonthOptions = computed(() => {
+    const months = [...new Set(
+        salaryHistory.value
+            .map((salary) => salary.month)
+            .filter(Boolean)
+    )].sort((a, b) => b.localeCompare(a))
+
+    return months.map((month) => ({
+        value: month,
+        label: formatMonthLong(month),
+    }))
+})
+
+const filteredSalaryHistory = computed(() => {
+    if (!historySalaryMonthFilter.value) {
+        return salaryHistory.value
+    }
+
+    return salaryHistory.value.filter((salary) => salary.month === historySalaryMonthFilter.value)
+})
+
+const filteredTotalSalary = computed(() => {
+    return filteredSalaryHistory.value.reduce((sum, salary) => sum + Number(salary.amount || 0), 0)
+})
+
 const monthlySalarySummary = computed(() => {
     if (!selectedEmployee.value || salaryHistory.value.length === 0) return []
     const grouped = salaryHistory.value.reduce((acc, salary) => {
@@ -1103,6 +1143,14 @@ const monthlySalarySummary = computed(() => {
             }
         })
         .sort((a, b) => b.month.localeCompare(a.month))
+})
+
+const filteredMonthlySalarySummary = computed(() => {
+    if (!historySalaryMonthFilter.value) {
+        return monthlySalarySummary.value
+    }
+
+    return monthlySalarySummary.value.filter((summary) => summary.month === historySalaryMonthFilter.value)
 })
 
 // Computed for all summary
@@ -1456,6 +1504,7 @@ const viewHistory = async (employee) => {
     salaryHistory.value = []
     advanceHistory.value = []
     salaryExpectationsByMonth.value = {}
+    historySalaryMonthFilter.value = null
     historyDialog.value = true
 
     try {
