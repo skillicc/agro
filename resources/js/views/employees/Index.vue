@@ -2165,20 +2165,31 @@ onMounted(() => {
 
 .salary-matrix-table .employee-name-col {
     vertical-align: middle;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 2px;
+    min-height: 48px;
+    white-space: normal;
 }
 
 .emp-name {
+    display: block;
     font-weight: 600;
+    color: #111;
     white-space: normal;
     word-break: break-word;
     line-height: 1.25;
 }
 
 .emp-project {
+    display: block;
     font-size: 11px;
     color: #666;
     white-space: normal;
     word-break: break-word;
+    line-height: 1.2;
 }
 
 .status-cell {
