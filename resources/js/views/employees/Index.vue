@@ -880,20 +880,31 @@
                 <v-card-text>
                     <!-- Date Filters -->
                     <v-row class="mb-4">
-                        <v-col cols="12" sm="6" lg="4">
+                        <v-col cols="12" sm="6" lg="3">
                             <v-select
-                                v-model="filterMonth"
-                                :items="periodFilterOptions"
-                                item-title="title"
+                                v-model="filterYear"
+                                :items="yearFilterOptions"
+                                item-title="label"
                                 item-value="value"
-                                label="Filter by Month or Year"
-                                placeholder="Select month or year"
+                                label="Filter by Year"
                                 clearable
                                 density="compact"
                                 hide-details
                             ></v-select>
                         </v-col>
-                        <v-col cols="12" sm="6" lg="4">
+                        <v-col cols="12" sm="6" lg="3">
+                            <v-select
+                                v-model="filterMonth"
+                                :items="monthFilterOptions"
+                                item-title="label"
+                                item-value="value"
+                                label="Filter by Month"
+                                clearable
+                                density="compact"
+                                hide-details
+                            ></v-select>
+                        </v-col>
+                        <v-col cols="12" sm="6" lg="3">
                             <v-select
                                 v-model="filterEmployee"
                                 :items="employeeFilterOptions"
@@ -905,7 +916,7 @@
                                 hide-details
                             ></v-select>
                         </v-col>
-                        <v-col cols="12" sm="6" lg="4">
+                        <v-col cols="12" sm="6" lg="3">
                             <v-btn color="primary" @click="applyFilters" block>
                                 <v-icon left>mdi-filter</v-icon>
                                 Apply Filter
@@ -1058,6 +1069,7 @@ const advanceHistory = ref([])
 const employmentPeriods = ref([])
 const allSalaries = ref([])
 const allAdvances = ref([])
+const filterYear = ref('')
 const filterMonth = ref('')
 const filterEmployee = ref(null)
 const allSalariesOriginal = ref([])
@@ -1369,7 +1381,7 @@ const allTotalAdvanceGiven = computed(() => allAdvances.value.reduce((sum, a) =>
 const employeeFilterOptions = computed(() => employees.value.map(e => ({ id: e.id, name: e.name })))
 
 // Month/year filter options for summary dialog
-const periodFilterOptions = computed(() => {
+const summaryPeriodOptions = computed(() => {
     const monthValues = new Set()
     const yearValues = new Set()
 
@@ -1402,14 +1414,17 @@ const periodFilterOptions = computed(() => {
 
     const yearOptions = [...yearValues]
         .sort((a, b) => b.localeCompare(a))
-        .map((value) => ({ value, title: `Year: ${value}` }))
+        .map((value) => ({ value, label: value }))
 
     const monthOptions = [...monthValues]
         .sort((a, b) => b.localeCompare(a))
-        .map((value) => ({ value, title: `Month: ${formatMonthShort(value)} (${value})` }))
+        .map((value) => ({ value, label: `${formatMonthShort(value)} (${value})` }))
 
-    return [...yearOptions, ...monthOptions]
+    return { years: yearOptions, months: monthOptions }
 })
+
+const yearFilterOptions = computed(() => summaryPeriodOptions.value.years)
+const monthFilterOptions = computed(() => summaryPeriodOptions.value.months)
 
 // Active employees list for matrix
 const activeEmployeesList = computed(() => employees.value.filter(e => e.is_active))
@@ -1520,13 +1535,22 @@ const applyFilters = () => {
     let filteredSalaries = [...allSalariesOriginal.value]
     let filteredAdvances = [...allAdvancesOriginal.value]
 
-    // Filter by selected month or year
-    if (filterMonth.value) {
-        const selectedPeriod = String(filterMonth.value)
-        const matchesPeriod = (value) => String(value || '').startsWith(selectedPeriod)
+    // Filter by selected year
+    if (filterYear.value) {
+        const selectedYear = String(filterYear.value)
+        const matchesYear = (value) => String(value || '').startsWith(selectedYear)
 
-        filteredSalaries = filteredSalaries.filter(s => matchesPeriod(s.month) || matchesPeriod(s.payment_date))
-        filteredAdvances = filteredAdvances.filter(a => matchesPeriod(a.date))
+        filteredSalaries = filteredSalaries.filter(s => matchesYear(s.month) || matchesYear(s.payment_date))
+        filteredAdvances = filteredAdvances.filter(a => matchesYear(a.date))
+    }
+
+    // Filter by selected month
+    if (filterMonth.value) {
+        const selectedMonth = String(filterMonth.value)
+        const matchesMonth = (value) => String(value || '').startsWith(selectedMonth)
+
+        filteredSalaries = filteredSalaries.filter(s => matchesMonth(s.month) || matchesMonth(s.payment_date))
+        filteredAdvances = filteredAdvances.filter(a => matchesMonth(a.date))
     }
 
     // Filter by employee
@@ -1889,6 +1913,7 @@ const showAllSummary = async () => {
     allAdvances.value = []
     allSalariesOriginal.value = []
     allAdvancesOriginal.value = []
+    filterYear.value = ''
     filterMonth.value = ''
     filterEmployee.value = null
     summaryDialog.value = true
