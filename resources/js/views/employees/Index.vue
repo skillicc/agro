@@ -952,7 +952,7 @@
                     </v-row>
 
                     <v-tabs v-model="summaryTab" color="primary">
-                        <v-tab value="matrix">Salary Matrix</v-tab>
+                        <v-tab value="matrix">Monthly Salary Status</v-tab>
                         <v-tab value="salaries">All Salaries</v-tab>
                         <v-tab value="advances">All Advances</v-tab>
                     </v-tabs>
@@ -961,11 +961,15 @@
                         <!-- Salary Matrix -->
                         <v-window-item value="matrix">
                             <div class="mt-4">
+                                <div class="text-subtitle-1 font-weight-bold mb-1">Month-by-Month Salary Status</div>
+                                <div class="text-body-2 text-grey-darken-1 mb-3">
+                                    প্রতিটি ঘর দেখায় ওই employee-এর ওই মাসের salary status।
+                                </div>
                                 <div class="d-flex flex-wrap ga-2 ga-sm-4 mb-3">
-                                    <div class="d-flex align-center"><div class="status-box bg-success mr-2"></div> Paid</div>
-                                    <div class="d-flex align-center"><div class="status-box bg-error mr-2"></div> Not Paid</div>
-                                    <div class="d-flex align-center"><div class="status-box bg-warning mr-2"></div> Pending</div>
-                                    <div class="d-flex align-center"><div class="status-box bg-grey mr-2"></div> Not Joined</div>
+                                    <div class="d-flex align-center"><div class="status-box bg-success mr-2"></div> Paid = বেতন দেওয়া হয়েছে</div>
+                                    <div class="d-flex align-center"><div class="status-box bg-error mr-2"></div> Not Paid = বেতন বাকি আছে</div>
+                                    <div class="d-flex align-center"><div class="status-box bg-warning mr-2"></div> Pending = এখনো due হয়নি</div>
+                                    <div class="d-flex align-center"><div class="status-box bg-grey mr-2"></div> Not Joined = তখন চাকরিতে ছিল না</div>
                                 </div>
                                 <div class="salary-matrix-container">
                                     <table class="salary-matrix-table">
@@ -989,6 +993,7 @@
                                                     :class="getSalaryStatusClass(emp.id, month)"
                                                     :title="getSalaryStatus(emp.id, month).tooltip"
                                                 >
+                                                    <span class="status-text">{{ getSalaryStatusShortLabel(emp.id, month) }}</span>
                                                 </td>
                                             </tr>
                                         </tbody>
@@ -1522,6 +1527,15 @@ const getSalaryStatus = (employeeId, month) => {
     }
 
     return { paid: false, status: 'not-paid', tooltip: 'Not paid' }
+}
+
+const getSalaryStatusShortLabel = (employeeId, month) => {
+    const status = getSalaryStatus(employeeId, month).status
+
+    if (status === 'paid') return 'Paid'
+    if (status === 'pending') return 'Wait'
+    if (status === 'not-joined') return 'N/A'
+    return 'Due'
 }
 
 // Get CSS class for salary status
@@ -2156,6 +2170,14 @@ onMounted(() => {
     min-width: 60px;
 }
 
+.status-text {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1;
+}
+
 .status-paid {
     background-color: #4CAF50 !important;
 }
@@ -2165,7 +2187,7 @@ onMounted(() => {
 }
 
 .status-not-joined {
-    background-color: #4CAF50 !important;
+    background-color: #9e9e9e !important;
 }
 
 .status-pending {
