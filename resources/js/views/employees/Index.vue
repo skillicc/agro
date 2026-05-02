@@ -975,7 +975,7 @@
                                     <table class="salary-matrix-table">
                                         <thead>
                                             <tr>
-                                                <th class="employee-col">Employee</th>
+                                                <th class="employee-col employee-header-col">Employee</th>
                                                 <th v-for="month in salaryMatrixMonths" :key="month">
                                                     {{ formatMonthShort(month) }}
                                                 </th>
@@ -983,7 +983,7 @@
                                         </thead>
                                         <tbody>
                                             <tr v-for="emp in activeEmployeesList" :key="emp.id">
-                                                <td class="employee-col">
+                                                <td class="employee-col employee-name-col">
                                                     <div class="emp-name">{{ emp.name }}</div>
                                                     <div class="emp-project">{{ emp.project?.name || '-' }}</div>
                                                 </td>
@@ -2145,24 +2145,40 @@ onMounted(() => {
 
 .salary-matrix-table .employee-col {
     text-align: left;
-    min-width: 150px;
+    min-width: 180px;
+    width: 180px;
     position: sticky;
     left: 0;
     background: #fff;
     z-index: 1;
+    box-shadow: 2px 0 0 rgba(0, 0, 0, 0.05);
 }
 
 .salary-matrix-table th.employee-col {
     z-index: 3;
 }
 
+.salary-matrix-table .employee-header-col {
+    min-width: 180px;
+    width: 180px;
+}
+
+.salary-matrix-table .employee-name-col {
+    vertical-align: middle;
+}
+
 .emp-name {
     font-weight: 600;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.25;
 }
 
 .emp-project {
     font-size: 11px;
     color: #666;
+    white-space: normal;
+    word-break: break-word;
 }
 
 .status-cell {
@@ -2176,6 +2192,14 @@ onMounted(() => {
     font-weight: 600;
     color: #fff;
     line-height: 1;
+}
+
+@media (max-width: 1366px) {
+    .salary-matrix-table .employee-col,
+    .salary-matrix-table .employee-header-col {
+        min-width: 200px;
+        width: 200px;
+    }
 }
 
 .status-paid {
