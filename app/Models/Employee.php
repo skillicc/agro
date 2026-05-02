@@ -69,6 +69,11 @@ class Employee extends Model
         return $this->hasMany(EmployeeWorkingDayOverride::class);
     }
 
+    public function employmentPeriods()
+    {
+        return $this->hasMany(EmployeeEmploymentPeriod::class)->orderBy('start_date');
+    }
+
     public function isRegular(): bool
     {
         return $this->employee_type === 'regular';
@@ -120,22 +125,7 @@ class Employee extends Model
 
     public function suggestedWorkedDaysForMonth(string $month): ?int
     {
-        $monthStart = Carbon::createFromFormat('Y-m-d', $month . '-01')->startOfMonth();
-        $monthEnd = $monthStart->copy()->endOfMonth();
-
-        if ($this->joining_date) {
-            $joiningDate = Carbon::parse($this->joining_date)->startOfDay();
-
-            if ($joiningDate->gt($monthEnd)) {
-                return 0;
-            }
-
-            if ($joiningDate->isSameMonth($monthStart)) {
-                return max(0, $joiningDate->diffInDays($monthEnd) + 1);
-            }
-        }
-
-        return $monthStart->daysInMonth;
+        return $this->getEmploymentDaysForMonth($month);
     }
 
     public function getWorkedDaysOverrideForMonth(string $month): ?EmployeeWorkingDayOverride
@@ -145,6 +135,81 @@ class Employee extends Model
         }
 
         return $this->workingDayOverrides()->where('month', $month)->first();
+    }
+
+    public function getEmploymentPeriodsForMonth(string $month)
+    {
+        $monthStart = Carbon::createFromFormat('Y-m-d', $month . '-01')->startOfMonth();
+        $monthEnd = $monthStart->copy()->endOfMonth();
+
+        if ($this->relationLoaded('employmentPeriods')) {
+            return $this->employmentPeriods->filter(function ($period) use ($monthStart, $monthEnd) {
+                $endDate = $period->end_date ? Carbon::parse($period->end_date)->endOfDay() : null;
+                return Carbon::parse($period->start_date)->startOfDay()->lte($monthEnd)
+                    && (!$endDate || $endDate->gte($monthStart));
+            })->values();
+        }
+
+        return $this->employmentPeriods()
+            ->whereDate('start_date', '<=', $monthEnd->toDateString())
+            ->where(function ($query) use ($monthStart) {
+                $query->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', $monthStart->toDateString());
+            })
+            ->get();
+    }
+
+    public function getEmploymentDaysForMonth(string $month): int
+    {
+        $monthStart = Carbon::createFromFormat('Y-m-d', $month . '-01')->startOfMonth();
+        $monthEnd = $monthStart->copy()->endOfMonth();
+        $periods = $this->getEmploymentPeriodsForMonth($month);
+        $hasAnyEmploymentPeriods = $this->relationLoaded('employmentPeriods')
+            ? $this->employmentPeriods->isNotEmpty()
+            : $this->employmentPeriods()->exists();
+
+        if ($periods->isEmpty()) {
+            if ($hasAnyEmploymentPeriods) {
+                return 0;
+            }
+
+            if ($this->joining_date) {
+                $joiningDate = Carbon::parse($this->joining_date)->startOfDay();
+
+                if ($joiningDate->gt($monthEnd)) {
+                    return 0;
+                }
+
+                if ($joiningDate->isSameMonth($monthStart)) {
+                    return max(0, $joiningDate->diffInDays($monthEnd) + 1);
+                }
+
+                return $monthStart->daysInMonth;
+            }
+
+            return 0;
+        }
+
+        $coveredDates = [];
+
+        foreach ($periods as $period) {
+            $start = Carbon::parse($period->start_date)->startOfDay()->max($monthStart);
+            $end = $period->end_date
+                ? Carbon::parse($period->end_date)->endOfDay()->min($monthEnd)
+                : $monthEnd->copy();
+
+            if ($start->gt($end)) {
+                continue;
+            }
+
+            $cursor = $start->copy();
+            while ($cursor->lte($end)) {
+                $coveredDates[$cursor->format('Y-m-d')] = true;
+                $cursor->addDay();
+            }
+        }
+
+        return count($coveredDates);
     }
 
     public function getSalaryAmountForMonth(string $month): float
@@ -180,6 +245,7 @@ class Employee extends Model
         $manualWorkedDays = $override?->worked_days;
         $presentDays = $usesAttendance ? $this->getPresentDaysInMonth($month) : 0;
         [$year, $monthNum] = explode('-', $month);
+        $employmentDays = $this->getEmploymentDaysForMonth($month);
 
         $totalDays = $usesAttendance
             ? $this->attendances()
@@ -194,27 +260,18 @@ class Employee extends Model
             ? ($presentDays > 0 ? $presentDays : null)
             : ($manualWorkedDays ?? $suggestedWorkedDays);
 
-        if (!$usesAttendance && $workedDays !== null) {
+        if ($employmentDays === 0) {
+            $calculatedSalary = 0;
+            $workedDays = 0;
+            $isProrated = true;
+        } elseif (!$usesAttendance && $workedDays !== null) {
             $workedDays = max(0, (int) $workedDays);
             $calculatedSalary = round(($baseSalary / $monthStart->daysInMonth) * min($workedDays, $monthStart->daysInMonth), 2);
             $isProrated = $workedDays < $monthStart->daysInMonth;
-        } elseif ($this->joining_date) {
-            $joiningDate = Carbon::parse($this->joining_date);
-
-            if ($joiningDate->gt($monthEnd)) {
-                $calculatedSalary = 0;
-                $isProrated = true;
-                $workedDays = 0;
-            } elseif ($joiningDate->isSameMonth($monthStart)) {
-                $workedDays = $presentDays > 0
-                    ? $presentDays
-                    : max(0, $joiningDate->copy()->startOfDay()->diffInDays($monthEnd->copy()->startOfDay()) + 1);
-
-                $workedDays = (int) round($workedDays);
-
-                $calculatedSalary = round(($baseSalary / $monthStart->daysInMonth) * $workedDays, 2);
-                $isProrated = true;
-            }
+        } elseif ($employmentDays < $monthStart->daysInMonth && $presentDays > 0) {
+            $workedDays = $presentDays;
+            $calculatedSalary = round(($baseSalary / $monthStart->daysInMonth) * $workedDays, 2);
+            $isProrated = true;
         }
 
         return [

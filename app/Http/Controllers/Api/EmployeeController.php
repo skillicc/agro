@@ -8,8 +8,10 @@ use App\Models\Salary;
 use App\Models\Advance;
 use App\Models\SalaryAdjustment;
 use App\Models\EmployeeBonus;
+use App\Models\EmployeeEmploymentPeriod;
 use App\Models\EmployeeWorkingDayOverride;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class EmployeeController extends Controller
 {
@@ -173,6 +175,7 @@ class EmployeeController extends Controller
         $request->validate($rules);
 
         $employee = Employee::create($request->all());
+        $this->syncInitialEmploymentPeriod($employee, $request->user()?->id);
 
         return response()->json($employee->load('project'), 201);
     }
@@ -206,8 +209,35 @@ class EmployeeController extends Controller
         $request->validate($rules);
 
         $employee->update($request->all());
+        $this->syncInitialEmploymentPeriod($employee, $request->user()?->id);
 
         return response()->json($employee->load('project'));
+    }
+
+    private function syncInitialEmploymentPeriod(Employee $employee, ?int $userId = null): void
+    {
+        if (!$employee->joining_date) {
+            return;
+        }
+
+        $periods = $employee->employmentPeriods()->orderBy('start_date')->get();
+
+        if ($periods->isEmpty()) {
+            EmployeeEmploymentPeriod::create([
+                'employee_id' => $employee->id,
+                'start_date' => $employee->joining_date,
+                'note' => 'Initial employment period',
+                'created_by' => $userId,
+            ]);
+            return;
+        }
+
+        if ($periods->count() === 1) {
+            $firstPeriod = $periods->first();
+            if ($firstPeriod && $firstPeriod->start_date?->format('Y-m-d') !== $employee->joining_date->format('Y-m-d')) {
+                $firstPeriod->update(['start_date' => $employee->joining_date]);
+            }
+        }
     }
 
     public function destroy(Employee $employee)
@@ -441,6 +471,78 @@ class EmployeeController extends Controller
         $month = $request->month;
 
         return response()->json($employee->calculateMonthlySalaryDetails($month));
+    }
+
+    public function employmentPeriods(Employee $employee)
+    {
+        return response()->json(
+            $employee->employmentPeriods()->with('creator')->orderByDesc('start_date')->get()
+        );
+    }
+
+    public function storeEmploymentPeriod(Request $request, Employee $employee)
+    {
+        $validated = $request->validate([
+            'start_date' => 'required|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'note' => 'nullable|string|max:255',
+        ]);
+
+        $this->validateEmploymentPeriodOverlap($employee, $validated['start_date'], $validated['end_date'] ?? null);
+
+        $period = EmployeeEmploymentPeriod::create([
+            'employee_id' => $employee->id,
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'] ?? null,
+            'note' => $validated['note'] ?? null,
+            'created_by' => $request->user()->id,
+        ]);
+
+        return response()->json($period->load('creator'), 201);
+    }
+
+    public function updateEmploymentPeriod(Request $request, EmployeeEmploymentPeriod $employmentPeriod)
+    {
+        $validated = $request->validate([
+            'start_date' => 'required|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'note' => 'nullable|string|max:255',
+        ]);
+
+        $this->validateEmploymentPeriodOverlap(
+            $employmentPeriod->employee,
+            $validated['start_date'],
+            $validated['end_date'] ?? null,
+            $employmentPeriod->id
+        );
+
+        $employmentPeriod->update($validated);
+
+        return response()->json($employmentPeriod->load('creator'));
+    }
+
+    public function deleteEmploymentPeriod(EmployeeEmploymentPeriod $employmentPeriod)
+    {
+        $employmentPeriod->delete();
+
+        return response()->json(['message' => 'Employment period deleted successfully']);
+    }
+
+    private function validateEmploymentPeriodOverlap(Employee $employee, string $startDate, ?string $endDate = null, ?int $ignorePeriodId = null): void
+    {
+        $query = $employee->employmentPeriods()
+            ->when($ignorePeriodId, fn ($q) => $q->where('id', '!=', $ignorePeriodId))
+            ->whereDate('start_date', '<=', $endDate ?? '9999-12-31')
+            ->where(function ($query) use ($startDate) {
+                $query->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', $startDate);
+            });
+
+        if ($query->exists()) {
+            throw ValidationException::withMessages([
+                'start_date' => 'This employment period overlaps with an existing period for the employee.',
+            ]);
+        }
     }
 
     public function upsertWorkingDayOverride(Request $request, Employee $employee)

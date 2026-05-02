@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Models\Attendance;
 use App\Models\Employee;
+use App\Models\EmployeeEmploymentPeriod;
 use App\Models\EmployeeWorkingDayOverride;
 use App\Models\Project;
 use App\Models\Salary;
@@ -13,6 +14,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class EmployeeSalaryCalculationTest extends TestCase
@@ -259,5 +261,135 @@ class EmployeeSalaryCalculationTest extends TestCase
         $this->assertSame(12, $details['worked_days']);
         $this->assertSame('manual', $details['working_day_source']);
         $this->assertSame(6000.0, (float) $details['calculated_salary']);
+    }
+
+    public function test_regular_employee_gap_month_has_zero_salary_when_no_employment_period_exists(): void
+    {
+        $project = Project::create([
+            'name' => 'Central',
+            'type' => 'field',
+            'location' => 'Gazipur',
+            'is_active' => true,
+        ]);
+
+        $employee = Employee::create([
+            'project_id' => $project->id,
+            'employee_type' => 'regular',
+            'name' => 'Rayhan',
+            'position' => 'Manager',
+            'salary_amount' => 30000,
+            'joining_date' => '2025-11-11',
+            'earn_leave' => 0,
+            'is_active' => true,
+        ]);
+
+        $employee->employmentPeriods()->delete();
+
+        EmployeeEmploymentPeriod::create([
+            'employee_id' => $employee->id,
+            'start_date' => '2025-11-11',
+            'end_date' => '2025-12-31',
+        ]);
+
+        EmployeeEmploymentPeriod::create([
+            'employee_id' => $employee->id,
+            'start_date' => '2026-03-01',
+            'end_date' => null,
+        ]);
+
+        $details = $employee->fresh()->calculateMonthlySalaryDetails('2026-02');
+
+        $this->assertSame(0, $details['worked_days']);
+        $this->assertSame(0.0, (float) $details['calculated_salary']);
+        $this->assertTrue($details['is_prorated']);
+    }
+
+    public function test_regular_employee_rejoin_month_suggests_only_active_period_days_before_2026(): void
+    {
+        $project = Project::create([
+            'name' => 'Central',
+            'type' => 'field',
+            'location' => 'Gazipur',
+            'is_active' => true,
+        ]);
+
+        $employee = Employee::create([
+            'project_id' => $project->id,
+            'employee_type' => 'regular',
+            'name' => 'Rayhan',
+            'position' => 'Manager',
+            'salary_amount' => 31000,
+            'joining_date' => '2025-11-11',
+            'earn_leave' => 0,
+            'is_active' => true,
+        ]);
+
+        $employee->employmentPeriods()->delete();
+
+        EmployeeEmploymentPeriod::create([
+            'employee_id' => $employee->id,
+            'start_date' => '2025-11-11',
+            'end_date' => '2025-11-30',
+        ]);
+
+        EmployeeEmploymentPeriod::create([
+            'employee_id' => $employee->id,
+            'start_date' => '2025-12-15',
+            'end_date' => null,
+        ]);
+
+        $details = $employee->fresh()->calculateMonthlySalaryDetails('2025-12');
+
+        $this->assertSame(17, $details['worked_days']);
+        $this->assertSame(17, $details['suggested_worked_days']);
+        $this->assertSame('suggested', $details['working_day_source']);
+        $this->assertSame(17000.0, (float) $details['calculated_salary']);
+        $this->assertTrue($details['is_prorated']);
+    }
+
+    public function test_employment_periods_validation_rejects_overlapping_ranges(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'admin',
+            'is_active' => true,
+        ]);
+
+        $project = Project::create([
+            'name' => 'Central',
+            'type' => 'field',
+            'location' => 'Gazipur',
+            'is_active' => true,
+        ]);
+
+        $employee = Employee::create([
+            'project_id' => $project->id,
+            'employee_type' => 'regular',
+            'name' => 'Rayhan',
+            'position' => 'Manager',
+            'salary_amount' => 30000,
+            'joining_date' => '2025-11-11',
+            'earn_leave' => 0,
+            'is_active' => true,
+        ]);
+
+        $employee->employmentPeriods()->delete();
+
+        EmployeeEmploymentPeriod::create([
+            'employee_id' => $employee->id,
+            'start_date' => '2025-11-11',
+            'end_date' => '2025-12-31',
+        ]);
+
+        $controller = app(EmployeeController::class);
+        $request = Request::create("/api/employees/{$employee->id}/employment-periods", 'POST', [
+            'start_date' => '2025-12-15',
+            'end_date' => '2026-01-31',
+            'note' => 'Overlap check',
+        ]);
+        $request->setUserResolver(fn () => $user);
+
+        $this->expectException(ValidationException::class);
+
+        $controller->storeEmploymentPeriod($request, $employee);
     }
 }

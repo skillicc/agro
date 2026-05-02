@@ -343,6 +343,7 @@
                     <v-tabs v-model="historyTab" color="primary">
                         <v-tab value="salaries">Salaries ({{ salaryHistory.length }})</v-tab>
                         <v-tab value="advances">Advances ({{ advanceHistory.length }})</v-tab>
+                        <v-tab value="employment">Employment ({{ employmentPeriods.length }})</v-tab>
                     </v-tabs>
 
                     <v-window v-model="historyTab">
@@ -498,6 +499,49 @@
                                 </tfoot>
                             </v-table>
                         </v-window-item>
+
+                        <v-window-item value="employment">
+                            <div class="d-flex flex-wrap justify-space-between align-center ga-3 mt-4 mb-2">
+                                <div class="text-caption text-grey">
+                                    Add each join and leave period here. Gap months will not count for salary.
+                                </div>
+                                <v-btn color="primary" size="small" @click="openEmploymentPeriodDialog()">
+                                    <v-icon start>mdi-plus</v-icon>
+                                    Add Period
+                                </v-btn>
+                            </div>
+
+                            <v-table density="compact">
+                                <thead>
+                                    <tr>
+                                        <th>Start Date</th>
+                                        <th>End Date</th>
+                                        <th>Note</th>
+                                        <th>Created By</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="period in employmentPeriods" :key="period.id">
+                                        <td>{{ formatDate(period.start_date) }}</td>
+                                        <td>{{ period.end_date ? formatDate(period.end_date) : 'Active' }}</td>
+                                        <td>{{ period.note || '-' }}</td>
+                                        <td>{{ period.creator?.name || '-' }}</td>
+                                        <td>
+                                            <v-btn icon size="x-small" color="primary" @click="openEmploymentPeriodDialog(period)" title="Edit">
+                                                <v-icon size="small">mdi-pencil</v-icon>
+                                            </v-btn>
+                                            <v-btn icon size="x-small" color="error" @click="confirmDeleteEmploymentPeriod(period)" title="Delete">
+                                                <v-icon size="small">mdi-delete</v-icon>
+                                            </v-btn>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="employmentPeriods.length === 0">
+                                        <td colspan="5" class="text-center text-grey">No employment periods found</td>
+                                    </tr>
+                                </tbody>
+                            </v-table>
+                        </v-window-item>
                     </v-window>
                 </v-card-text>
                 <v-card-actions>
@@ -563,6 +607,61 @@
                     <v-spacer></v-spacer>
                     <v-btn @click="workedDaysDialog = false">Cancel</v-btn>
                     <v-btn color="primary" @click="saveWorkedDaysOverride" :loading="savingWorkedDays">Save</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="employmentPeriodDialog" max-width="460">
+            <v-card>
+                <v-card-title>{{ employmentPeriodEditMode ? 'Edit Employment Period' : 'Add Employment Period' }}</v-card-title>
+                <v-card-text>
+                    <div class="mb-3">
+                        <strong>{{ selectedEmployee?.name }}</strong>
+                    </div>
+                    <v-form @submit.prevent="saveEmploymentPeriod">
+                        <v-text-field
+                            v-model="employmentPeriodForm.start_date"
+                            label="Start Date"
+                            type="date"
+                            required
+                        ></v-text-field>
+                        <v-text-field
+                            v-model="employmentPeriodForm.end_date"
+                            label="End Date"
+                            type="date"
+                            hint="Leave blank if employee is currently active"
+                            persistent-hint
+                        ></v-text-field>
+                        <v-textarea
+                            v-model="employmentPeriodForm.note"
+                            label="Note (optional)"
+                            rows="2"
+                        ></v-textarea>
+                    </v-form>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="employmentPeriodDialog = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="saveEmploymentPeriod" :loading="savingEmploymentPeriod">Save</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="deleteEmploymentPeriodDialog" max-width="420">
+            <v-card>
+                <v-card-title class="text-error">Delete Employment Period</v-card-title>
+                <v-card-text>
+                    Are you sure you want to delete this employment period
+                    <strong>
+                        {{ selectedEmploymentPeriodForDelete ? `${formatDate(selectedEmploymentPeriodForDelete.start_date)} - ${selectedEmploymentPeriodForDelete.end_date ? formatDate(selectedEmploymentPeriodForDelete.end_date) : 'Active'}` : '' }}
+                    </strong>?
+                    <br>
+                    This can change historical salary calculations.
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="deleteEmploymentPeriodDialog = false">Cancel</v-btn>
+                    <v-btn color="error" @click="deleteEmploymentPeriod" :loading="deletingEmploymentPeriod">Delete</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -945,6 +1044,7 @@ const saving = ref(false)
 const payingSalary = ref(false)
 const salaryHistory = ref([])
 const advanceHistory = ref([])
+const employmentPeriods = ref([])
 const allSalaries = ref([])
 const allAdvances = ref([])
 const filterMonth = ref('')
@@ -989,6 +1089,14 @@ const historySalaryMonthFilter = ref(null)
 const workedDaysDialog = ref(false)
 const savingWorkedDays = ref(false)
 const workedDaysForm = reactive({ month: '', worked_days: 0, suggested_days: null, note: '' })
+const employmentPeriodDialog = ref(false)
+const employmentPeriodEditMode = ref(false)
+const savingEmploymentPeriod = ref(false)
+const deleteEmploymentPeriodDialog = ref(false)
+const deletingEmploymentPeriod = ref(false)
+const selectedEmploymentPeriod = ref(null)
+const selectedEmploymentPeriodForDelete = ref(null)
+const employmentPeriodForm = reactive({ id: null, start_date: '', end_date: '', note: '' })
 
 const headers = computed(() => {
     if (xlAndUp.value) {
@@ -1310,6 +1418,11 @@ const formatMonthLong = (monthStr) => {
     return `${monthNames[parseInt(month) - 1]} ${year}`
 }
 
+const formatApiDate = (value) => {
+    if (!value) return ''
+    return String(value).split('T')[0]
+}
+
 const canEditManualWorkedDays = (month) => month < '2026-01'
 
 const formatWorkingDaySource = (source) => {
@@ -1320,6 +1433,13 @@ const formatWorkingDaySource = (source) => {
 
 const canOpenAttendanceSheet = (summary) => {
     return summary.workingDaySource === 'attendance' && Number(summary.workedDays || 0) > 0 && !!selectedEmployee.value?.id
+}
+
+const resetEmploymentPeriodForm = () => {
+    employmentPeriodForm.id = null
+    employmentPeriodForm.start_date = ''
+    employmentPeriodForm.end_date = ''
+    employmentPeriodForm.note = ''
 }
 
 const openAttendanceSheet = (summary) => {
@@ -1606,24 +1726,41 @@ const giveBonus = async () => {
     givingBonus.value = false
 }
 
+const fetchEmploymentPeriods = async (employeeId) => {
+    const response = await api.get(`/employees/${employeeId}/employment-periods`)
+    employmentPeriods.value = response.data
+}
+
+const refreshSelectedEmployeeHistory = async () => {
+    if (!selectedEmployee.value) return
+
+    const [salariesRes, advancesRes] = await Promise.all([
+        api.get(`/employees/${selectedEmployee.value.id}/salaries`),
+        api.get(`/employees/${selectedEmployee.value.id}/advances`),
+        fetchEmploymentPeriods(selectedEmployee.value.id),
+    ])
+
+    salaryHistory.value = salariesRes.data
+    advanceHistory.value = advancesRes.data
+    await loadSalaryExpectations(selectedEmployee.value.id, salariesRes.data)
+}
+
 const viewHistory = async (employee) => {
     selectedEmployee.value = employee
     historyTab.value = 'salaries'
     salaryHistory.value = []
     advanceHistory.value = []
+    employmentPeriods.value = []
     salaryExpectationsByMonth.value = {}
     historySalaryMonthFilter.value = null
     workedDaysDialog.value = false
+    employmentPeriodDialog.value = false
+    deleteEmploymentPeriodDialog.value = false
+    resetEmploymentPeriodForm()
     historyDialog.value = true
 
     try {
-        const [salariesRes, advancesRes] = await Promise.all([
-            api.get(`/employees/${employee.id}/salaries`),
-            api.get(`/employees/${employee.id}/advances`)
-        ])
-        salaryHistory.value = salariesRes.data
-        advanceHistory.value = advancesRes.data
-        await loadSalaryExpectations(employee.id, salariesRes.data)
+        await refreshSelectedEmployeeHistory()
     } catch (error) {
         console.error('Error fetching history:', error)
     }
@@ -1648,10 +1785,7 @@ const saveWorkedDaysOverride = async () => {
             note: workedDaysForm.note,
         })
         workedDaysDialog.value = false
-
-        const salariesRes = await api.get(`/employees/${selectedEmployee.value.id}/salaries`)
-        salaryHistory.value = salariesRes.data
-        await loadSalaryExpectations(selectedEmployee.value.id, salariesRes.data)
+        await refreshSelectedEmployeeHistory()
         fetchEmployees()
         alert('Working days saved successfully!')
     } catch (error) {
@@ -1659,6 +1793,74 @@ const saveWorkedDaysOverride = async () => {
         alert(error.response?.data?.message || 'Error saving working days')
     }
     savingWorkedDays.value = false
+}
+
+const openEmploymentPeriodDialog = (period = null) => {
+    employmentPeriodEditMode.value = !!period
+    selectedEmploymentPeriod.value = period
+    resetEmploymentPeriodForm()
+
+    if (period) {
+        employmentPeriodForm.id = period.id
+        employmentPeriodForm.start_date = formatApiDate(period.start_date)
+        employmentPeriodForm.end_date = formatApiDate(period.end_date)
+        employmentPeriodForm.note = period.note || ''
+    } else if (selectedEmployee.value?.joining_date) {
+        employmentPeriodForm.start_date = formatApiDate(selectedEmployee.value.joining_date)
+    }
+
+    employmentPeriodDialog.value = true
+}
+
+const saveEmploymentPeriod = async () => {
+    if (!selectedEmployee.value || !employmentPeriodForm.start_date) return
+
+    savingEmploymentPeriod.value = true
+    try {
+        const payload = {
+            start_date: employmentPeriodForm.start_date,
+            end_date: employmentPeriodForm.end_date || null,
+            note: employmentPeriodForm.note || null,
+        }
+
+        if (employmentPeriodEditMode.value && employmentPeriodForm.id) {
+            await api.put(`/employment-periods/${employmentPeriodForm.id}`, payload)
+        } else {
+            await api.post(`/employees/${selectedEmployee.value.id}/employment-periods`, payload)
+        }
+
+        employmentPeriodDialog.value = false
+        await refreshSelectedEmployeeHistory()
+        fetchEmployees()
+        alert('Employment period saved successfully!')
+    } catch (error) {
+        console.error('Error saving employment period:', error)
+        alert(error.response?.data?.message || 'Error saving employment period')
+    }
+    savingEmploymentPeriod.value = false
+}
+
+const confirmDeleteEmploymentPeriod = (period) => {
+    selectedEmploymentPeriodForDelete.value = period
+    deleteEmploymentPeriodDialog.value = true
+}
+
+const deleteEmploymentPeriod = async () => {
+    if (!selectedEmploymentPeriodForDelete.value) return
+
+    deletingEmploymentPeriod.value = true
+    try {
+        await api.delete(`/employment-periods/${selectedEmploymentPeriodForDelete.value.id}`)
+        deleteEmploymentPeriodDialog.value = false
+        selectedEmploymentPeriodForDelete.value = null
+        await refreshSelectedEmployeeHistory()
+        fetchEmployees()
+        alert('Employment period deleted successfully!')
+    } catch (error) {
+        console.error('Error deleting employment period:', error)
+        alert(error.response?.data?.message || 'Error deleting employment period')
+    }
+    deletingEmploymentPeriod.value = false
 }
 
 const showAllSummary = async () => {

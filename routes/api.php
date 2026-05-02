@@ -117,6 +117,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/employees/{employee}/salary', [EmployeeController::class, 'paySalary']);
     Route::post('/employees/{employee}/advance', [EmployeeController::class, 'giveAdvance']);
     Route::post('/employees/{employee}/working-day-override', [EmployeeController::class, 'upsertWorkingDayOverride']);
+    Route::get('/employees/{employee}/employment-periods', [EmployeeController::class, 'employmentPeriods']);
+    Route::post('/employees/{employee}/employment-periods', [EmployeeController::class, 'storeEmploymentPeriod']);
     Route::get('/employees/{employee}/salaries', [EmployeeController::class, 'employeeSalaries']);
     Route::get('/employees/{employee}/advances', [EmployeeController::class, 'employeeAdvances']);
     Route::get('/employees/{employee}/calculate-salary', [EmployeeController::class, 'calculateSalary']);
@@ -128,6 +130,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/advances', [EmployeeController::class, 'storeAdvance']);
     Route::put('/advances/{advance}', [EmployeeController::class, 'updateAdvance']);
     Route::delete('/advances/{advance}', [EmployeeController::class, 'deleteAdvance']);
+    Route::put('/employment-periods/{employmentPeriod}', [EmployeeController::class, 'updateEmploymentPeriod']);
+    Route::delete('/employment-periods/{employmentPeriod}', [EmployeeController::class, 'deleteEmploymentPeriod']);
 
     // Salary Adjustments
     Route::post('/employees/{employee}/adjust-salary', [EmployeeController::class, 'adjustSalary']);
