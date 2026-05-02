@@ -370,18 +370,36 @@
                                         <th>Total Paid</th>
                                         <th>Due Salary</th>
                                         <th>Difference</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr v-for="summary in filteredMonthlySalarySummary" :key="summary.month">
                                         <td>{{ formatMonthLong(summary.month) }}</td>
-                                        <td>{{ summary.workedDays > 0 ? summary.workedDays : '-' }}</td>
+                                        <td>
+                                            <div>{{ summary.workedDays > 0 ? summary.workedDays : '-' }}</div>
+                                            <div v-if="summary.workingDaySource && summary.workingDaySource !== 'attendance'" class="text-caption text-grey">
+                                                {{ formatWorkingDaySource(summary.workingDaySource) }}
+                                            </div>
+                                        </td>
                                         <td>৳{{ formatNumber(summary.totalPaid) }}</td>
                                         <td>৳{{ formatNumber(summary.monthlySalary) }}</td>
                                         <td>
                                             <span v-if="summary.difference > 0" class="text-success">+৳{{ formatNumber(summary.difference) }} (More)</span>
                                             <span v-else-if="summary.difference < 0" class="text-error">-৳{{ formatNumber(Math.abs(summary.difference)) }} (Less)</span>
                                             <span v-else class="text-grey-darken-1">৳0 (Exact)</span>
+                                        </td>
+                                        <td>
+                                            <v-btn
+                                                v-if="canEditManualWorkedDays(summary.month)"
+                                                icon
+                                                size="x-small"
+                                                color="primary"
+                                                @click="openWorkedDaysDialog(summary)"
+                                                title="Set Manual Working Days"
+                                            >
+                                                <v-icon size="small">mdi-pencil</v-icon>
+                                            </v-btn>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -502,6 +520,39 @@
                     <v-spacer></v-spacer>
                     <v-btn @click="editSalaryDialog = false">Cancel</v-btn>
                     <v-btn color="primary" @click="updateSalary" :loading="updatingSalary">Update</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="workedDaysDialog" max-width="420">
+            <v-card>
+                <v-card-title>Set Working Days</v-card-title>
+                <v-card-text>
+                    <div class="mb-3">
+                        <strong>{{ selectedEmployee?.name }}</strong>
+                        <div class="text-caption text-grey">{{ formatMonthLong(workedDaysForm.month || '2026-01') }}</div>
+                    </div>
+                    <div class="text-caption mb-3 text-grey">
+                        Suggested working days: {{ workedDaysForm.suggested_days ?? '-' }}
+                    </div>
+                    <v-text-field
+                        v-model.number="workedDaysForm.worked_days"
+                        label="Working Days"
+                        type="number"
+                        min="0"
+                        max="31"
+                        required
+                    ></v-text-field>
+                    <v-textarea
+                        v-model="workedDaysForm.note"
+                        label="Note (optional)"
+                        rows="2"
+                    ></v-textarea>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn @click="workedDaysDialog = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="saveWorkedDaysOverride" :loading="savingWorkedDays">Save</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -923,6 +974,9 @@ const deletingAdvance = ref(false)
 const editSalaryForm = reactive({ id: null, amount: 0, month: '', payment_date: '', note: '' })
 const editAdvanceForm = reactive({ id: null, amount: 0, date: '', reason: '', is_deducted: false })
 const historySalaryMonthFilter = ref(null)
+const workedDaysDialog = ref(false)
+const savingWorkedDays = ref(false)
+const workedDaysForm = reactive({ month: '', worked_days: 0, suggested_days: null, note: '' })
 
 const headers = computed(() => {
     if (lgAndUp.value) {
@@ -1140,6 +1194,9 @@ const monthlySalarySummary = computed(() => {
                 monthlySalary,
                 difference,
                 workedDays: Number(salaryDetails.worked_days || 0),
+                workingDaySource: salaryDetails.working_day_source || null,
+                suggestedWorkedDays: salaryDetails.suggested_worked_days ?? null,
+                workingDayNote: salaryDetails.working_day_note || '',
             }
         })
         .sort((a, b) => b.month.localeCompare(a.month))
@@ -1228,6 +1285,14 @@ const formatMonthLong = (monthStr) => {
     const [year, month] = monthStr.split('-')
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     return `${monthNames[parseInt(month) - 1]} ${year}`
+}
+
+const canEditManualWorkedDays = (month) => month < '2026-01'
+
+const formatWorkingDaySource = (source) => {
+    if (source === 'manual') return 'Manual'
+    if (source === 'suggested') return 'Suggested'
+    return 'Attendance'
 }
 
 // Get salary status for an employee in a specific month
@@ -1505,6 +1570,7 @@ const viewHistory = async (employee) => {
     advanceHistory.value = []
     salaryExpectationsByMonth.value = {}
     historySalaryMonthFilter.value = null
+    workedDaysDialog.value = false
     historyDialog.value = true
 
     try {
@@ -1518,6 +1584,38 @@ const viewHistory = async (employee) => {
     } catch (error) {
         console.error('Error fetching history:', error)
     }
+}
+
+const openWorkedDaysDialog = (summary) => {
+    workedDaysForm.month = summary.month
+    workedDaysForm.worked_days = Number(summary.workingDaySource === 'manual' ? summary.workedDays : (summary.suggestedWorkedDays ?? summary.workedDays ?? 0))
+    workedDaysForm.suggested_days = summary.suggestedWorkedDays ?? summary.workedDays ?? 0
+    workedDaysForm.note = summary.workingDayNote || ''
+    workedDaysDialog.value = true
+}
+
+const saveWorkedDaysOverride = async () => {
+    if (!selectedEmployee.value || !workedDaysForm.month) return
+
+    savingWorkedDays.value = true
+    try {
+        await api.post(`/employees/${selectedEmployee.value.id}/working-day-override`, {
+            month: workedDaysForm.month,
+            worked_days: workedDaysForm.worked_days,
+            note: workedDaysForm.note,
+        })
+        workedDaysDialog.value = false
+
+        const salariesRes = await api.get(`/employees/${selectedEmployee.value.id}/salaries`)
+        salaryHistory.value = salariesRes.data
+        await loadSalaryExpectations(selectedEmployee.value.id, salariesRes.data)
+        fetchEmployees()
+        alert('Working days saved successfully!')
+    } catch (error) {
+        console.error('Error saving working days:', error)
+        alert(error.response?.data?.message || 'Error saving working days')
+    }
+    savingWorkedDays.value = false
 }
 
 const showAllSummary = async () => {

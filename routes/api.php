@@ -116,6 +116,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('employees', EmployeeController::class);
     Route::post('/employees/{employee}/salary', [EmployeeController::class, 'paySalary']);
     Route::post('/employees/{employee}/advance', [EmployeeController::class, 'giveAdvance']);
+    Route::post('/employees/{employee}/working-day-override', [EmployeeController::class, 'upsertWorkingDayOverride']);
     Route::get('/employees/{employee}/salaries', [EmployeeController::class, 'employeeSalaries']);
     Route::get('/employees/{employee}/advances', [EmployeeController::class, 'employeeAdvances']);
     Route::get('/employees/{employee}/calculate-salary', [EmployeeController::class, 'calculateSalary']);

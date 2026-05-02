@@ -64,6 +64,11 @@ class Employee extends Model
         return $this->hasMany(EmployeeBonus::class);
     }
 
+    public function workingDayOverrides()
+    {
+        return $this->hasMany(EmployeeWorkingDayOverride::class);
+    }
+
     public function isRegular(): bool
     {
         return $this->employee_type === 'regular';
@@ -113,6 +118,35 @@ class Employee extends Model
         return $monthStart->gte(self::attendanceSalaryStartDate());
     }
 
+    public function suggestedWorkedDaysForMonth(string $month): ?int
+    {
+        $monthStart = Carbon::createFromFormat('Y-m-d', $month . '-01')->startOfMonth();
+        $monthEnd = $monthStart->copy()->endOfMonth();
+
+        if ($this->joining_date) {
+            $joiningDate = Carbon::parse($this->joining_date)->startOfDay();
+
+            if ($joiningDate->gt($monthEnd)) {
+                return 0;
+            }
+
+            if ($joiningDate->isSameMonth($monthStart)) {
+                return max(0, $joiningDate->diffInDays($monthEnd) + 1);
+            }
+        }
+
+        return $monthStart->daysInMonth;
+    }
+
+    public function getWorkedDaysOverrideForMonth(string $month): ?EmployeeWorkingDayOverride
+    {
+        if ($this->relationLoaded('workingDayOverrides')) {
+            return $this->workingDayOverrides->firstWhere('month', $month);
+        }
+
+        return $this->workingDayOverrides()->where('month', $month)->first();
+    }
+
     public function getSalaryAmountForMonth(string $month): float
     {
         $monthEnd = Carbon::createFromFormat('Y-m-d', $month . '-01')->endOfMonth();
@@ -141,6 +175,9 @@ class Employee extends Model
         $monthEnd = $monthStart->copy()->endOfMonth();
         $baseSalary = $this->getSalaryAmountForMonth($month);
         $usesAttendance = self::usesAttendanceForMonth($month);
+        $override = $this->getWorkedDaysOverrideForMonth($month);
+        $suggestedWorkedDays = $this->suggestedWorkedDaysForMonth($month);
+        $manualWorkedDays = $override?->worked_days;
         $presentDays = $usesAttendance ? $this->getPresentDaysInMonth($month) : 0;
         [$year, $monthNum] = explode('-', $month);
 
@@ -153,9 +190,15 @@ class Employee extends Model
 
         $calculatedSalary = $baseSalary;
         $isProrated = false;
-        $workedDays = $presentDays > 0 ? $presentDays : null;
+        $workedDays = $usesAttendance
+            ? ($presentDays > 0 ? $presentDays : null)
+            : ($manualWorkedDays ?? $suggestedWorkedDays);
 
-        if ($this->joining_date) {
+        if (!$usesAttendance && $workedDays !== null) {
+            $workedDays = max(0, (int) $workedDays);
+            $calculatedSalary = round(($baseSalary / $monthStart->daysInMonth) * min($workedDays, $monthStart->daysInMonth), 2);
+            $isProrated = $workedDays < $monthStart->daysInMonth;
+        } elseif ($this->joining_date) {
             $joiningDate = Carbon::parse($this->joining_date);
 
             if ($joiningDate->gt($monthEnd)) {
@@ -183,6 +226,10 @@ class Employee extends Model
             'calculated_salary' => $calculatedSalary,
             'month' => $month,
             'is_prorated' => $isProrated,
+            'working_day_source' => $usesAttendance ? 'attendance' : ($manualWorkedDays !== null ? 'manual' : 'suggested'),
+            'suggested_worked_days' => $usesAttendance ? null : $suggestedWorkedDays,
+            'manual_worked_days' => $manualWorkedDays,
+            'working_day_note' => $override?->note,
         ];
     }
 
@@ -201,16 +248,24 @@ class Employee extends Model
                 ->whereYear('date', $year)
                 ->count()
             : 0;
+        $override = $this->getWorkedDaysOverrideForMonth($month);
+        $suggestedWorkedDays = $this->suggestedWorkedDaysForMonth($month);
+        $manualWorkedDays = $override?->worked_days;
+        $workedDays = $usesAttendance ? $presentDays : ($manualWorkedDays ?? $suggestedWorkedDays ?? 0);
 
         return [
             'employee_type' => 'contractual',
             'daily_rate' => floatval($this->daily_rate),
             'present_days' => $presentDays,
-            'worked_days' => $presentDays,
+            'worked_days' => $workedDays,
             'total_days' => $totalDays,
-            'calculated_salary' => $usesAttendance ? $this->calculateContractualSalary($month) : 0,
+            'calculated_salary' => $usesAttendance ? $this->calculateContractualSalary($month) : ($workedDays * floatval($this->daily_rate)),
             'month' => $month,
             'is_prorated' => false,
+            'working_day_source' => $usesAttendance ? 'attendance' : ($manualWorkedDays !== null ? 'manual' : 'suggested'),
+            'suggested_worked_days' => $usesAttendance ? null : $suggestedWorkedDays,
+            'manual_worked_days' => $manualWorkedDays,
+            'working_day_note' => $override?->note,
         ];
     }
 

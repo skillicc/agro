@@ -8,6 +8,7 @@ use App\Models\Salary;
 use App\Models\Advance;
 use App\Models\SalaryAdjustment;
 use App\Models\EmployeeBonus;
+use App\Models\EmployeeWorkingDayOverride;
 use Illuminate\Http\Request;
 
 class EmployeeController extends Controller
@@ -440,6 +441,39 @@ class EmployeeController extends Controller
         $month = $request->month;
 
         return response()->json($employee->calculateMonthlySalaryDetails($month));
+    }
+
+    public function upsertWorkingDayOverride(Request $request, Employee $employee)
+    {
+        $request->validate([
+            'month' => 'required|string|regex:/^\d{4}-\d{2}$/',
+            'worked_days' => 'required|integer|min:0|max:31',
+            'note' => 'nullable|string|max:255',
+        ]);
+
+        if (Employee::usesAttendanceForMonth($request->month)) {
+            return response()->json([
+                'message' => 'Manual worked days are only allowed for months before 2026-01.',
+            ], 422);
+        }
+
+        $override = EmployeeWorkingDayOverride::updateOrCreate(
+            [
+                'employee_id' => $employee->id,
+                'month' => $request->month,
+            ],
+            [
+                'worked_days' => $request->worked_days,
+                'note' => $request->note,
+                'created_by' => $request->user()->id,
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Worked days saved successfully.',
+            'override' => $override->load('creator'),
+            'salary_details' => $employee->fresh()->calculateMonthlySalaryDetails($request->month),
+        ]);
     }
 
     /**
