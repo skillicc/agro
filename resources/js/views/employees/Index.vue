@@ -928,7 +928,7 @@ import { useDisplay } from 'vuetify'
 import api from '../../services/api'
 
 const router = useRouter()
-const { smAndUp, mdAndUp, lgAndUp } = useDisplay()
+const { smAndUp, mdAndUp, lgAndUp, xlAndUp } = useDisplay()
 
 const employees = ref([])
 const projects = ref([])
@@ -991,8 +991,8 @@ const savingWorkedDays = ref(false)
 const workedDaysForm = reactive({ month: '', worked_days: 0, suggested_days: null, note: '' })
 
 const headers = computed(() => {
-    if (lgAndUp.value) {
-        // Large Desktop (1280px+): show all columns
+    if (xlAndUp.value) {
+        // Extra-large desktop: show all columns
         return [
             { title: '#', key: 'sl', width: '50px' },
             { title: 'Name', key: 'name_position' },
@@ -1008,8 +1008,8 @@ const headers = computed(() => {
             { title: 'Actions', key: 'actions', sortable: false },
         ]
     }
-    if (mdAndUp.value) {
-        // Medium Desktop/Laptop (960px-1279px): fewer columns
+    if (lgAndUp.value) {
+        // Large laptop/desktop with sidebar: fewer columns so actions remain visible
         return [
             { title: '#', key: 'sl', width: '50px' },
             { title: 'Name', key: 'name_position' },
@@ -1021,7 +1021,18 @@ const headers = computed(() => {
             { title: 'Actions', key: 'actions', sortable: false },
         ]
     }
-    // Mobile/Tablet: minimal columns
+    if (mdAndUp.value) {
+        // Tablet/smaller laptop: compact set
+        return [
+            { title: '#', key: 'sl', width: '40px' },
+            { title: 'Name', key: 'name_position' },
+            { title: 'Salary', key: 'salary_display' },
+            { title: 'Due', key: 'current_month_due' },
+            { title: 'Status', key: 'is_active' },
+            { title: 'Actions', key: 'actions', sortable: false, width: '72px' },
+        ]
+    }
+    // Mobile: minimal columns
     return [
         { title: '#', key: 'sl', width: '40px' },
         { title: 'Name', key: 'name_position' },
