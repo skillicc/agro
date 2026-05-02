@@ -42,14 +42,12 @@ class EmployeeController extends Controller
             $totalAdvancePaid = $employee->advances()->sum('amount');
             $employee->total_paid = $totalSalaryPaid + $totalAdvancePaid;
 
-            // Calculate expected salary based on employee type
-            if ($employee->isContractual()) {
-                $employee->calculated_salary = $employee->calculateContractualSalary($previousMonth);
-                $employee->present_days = $employee->getPresentDaysInMonth($previousMonth);
-            } else {
-                $employee->calculated_salary = $employee->salary_amount;
-                $employee->present_days = null;
-            }
+            $salaryDetails = $employee->calculateMonthlySalaryDetails($previousMonth);
+            $employee->calculated_salary = floatval($salaryDetails['calculated_salary'] ?? 0);
+            $employee->present_days = $employee->isContractual()
+                ? ($salaryDetails['present_days'] ?? null)
+                : null;
+            $employee->salary_amount = floatval($salaryDetails['salary_amount'] ?? $employee->salary_amount);
 
             // Check if previous month salary is paid
             $previousMonthSalaryPaid = $employee->salaries()
@@ -106,6 +104,8 @@ class EmployeeController extends Controller
         $previousMonth = now()->subMonthNoOverflow()->format('Y-m');
 
         $employees->each(function ($employee) use ($currentMonth, $previousMonth) {
+            $salaryDetails = $employee->calculateMonthlySalaryDetails($currentMonth);
+
             // Total salary paid all time
             $totalSalaryPaid = $employee->salaries()->sum('amount');
 
@@ -116,7 +116,9 @@ class EmployeeController extends Controller
             $undeductedAdvance = $employee->advances()->where('is_deducted', false)->sum('amount');
 
             // Salary amount
-            $employee->salary = $employee->salary_amount;
+            $employee->salary = floatval($salaryDetails['salary_amount'] ?? $employee->salary_amount);
+            $employee->salary_amount = $employee->salary;
+            $employee->calculated_salary = floatval($salaryDetails['calculated_salary'] ?? $employee->salary);
 
             // Earn Leave balance - auto calculated based on joining date (5 days/month for regular)
             $employee->el_balance = $employee->calculated_earn_leave;
@@ -138,7 +140,7 @@ class EmployeeController extends Controller
             $employee->paid_this_month = $thisMonthPaid;
 
             // Due = salary - paid this month - undeducted advance
-            $employee->due = max(0, floatval($employee->salary_amount) - $thisMonthPaid - $undeductedAdvance);
+            $employee->due = max(0, floatval($employee->calculated_salary) - $thisMonthPaid - $undeductedAdvance);
 
             // Total paid all time
             $employee->total_paid = $totalSalaryPaid;
