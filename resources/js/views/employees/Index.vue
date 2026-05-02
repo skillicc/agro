@@ -99,7 +99,18 @@
                     @update:model-value="fetchEmployees"
                 ></v-select>
             </v-col>
-            <v-col cols="12" sm="8" md="4">
+            <v-col cols="12" sm="4" md="3">
+                <v-select
+                    v-model="filterStatus"
+                    :items="employeeStatuses"
+                    item-title="label"
+                    item-value="value"
+                    label="Status"
+                    density="compact"
+                    hide-details
+                ></v-select>
+            </v-col>
+            <v-col cols="12" sm="4" md="4">
                 <v-text-field
                     v-model="employeeSearch"
                     label="Search by Name"
@@ -1155,7 +1166,14 @@ const employeeTypes = [
     { value: 'contractual', label: 'Contractual' },
 ]
 
+const employeeStatuses = [
+    { value: 'active', label: 'Active' },
+    { value: 'inactive', label: 'Inactive' },
+    { value: 'all', label: 'All' },
+]
+
 const filterType = ref(null)
+const filterStatus = ref('active')
 const employeeSearch = ref('')
 
 // Sort employees by salary (highest first)
@@ -1181,13 +1199,15 @@ const sortedEmployees = computed(() => {
 
 const filteredEmployees = computed(() => {
     const search = employeeSearch.value.trim().toLowerCase()
-
-    if (!search) {
-        return sortedEmployees.value
-    }
-
     return sortedEmployees.value.filter((employee) => {
-        return String(employee.name || '').toLowerCase().includes(search)
+        const matchesSearch = !search || String(employee.name || '').toLowerCase().includes(search)
+        const matchesStatus = filterStatus.value === 'all'
+            ? true
+            : filterStatus.value === 'active'
+                ? !!employee.is_active
+                : !employee.is_active
+
+        return matchesSearch && matchesStatus
     })
 })
 
