@@ -11,6 +11,8 @@ class Employee extends Model
 {
     use HasFactory;
 
+    public const ATTENDANCE_SALARY_START_MONTH = '2026-01';
+
     protected $fillable = [
         'project_id',
         'employee_type',
@@ -99,6 +101,18 @@ class Employee extends Model
         return $this->employee_type === 'contractual';
     }
 
+    public static function attendanceSalaryStartDate(): Carbon
+    {
+        return Carbon::createFromFormat('Y-m-d', self::ATTENDANCE_SALARY_START_MONTH . '-01')->startOfDay();
+    }
+
+    public static function usesAttendanceForMonth(string $month): bool
+    {
+        $monthStart = Carbon::createFromFormat('Y-m-d', $month . '-01')->startOfMonth();
+
+        return $monthStart->gte(self::attendanceSalaryStartDate());
+    }
+
     public function getSalaryAmountForMonth(string $month): float
     {
         $monthEnd = Carbon::createFromFormat('Y-m-d', $month . '-01')->endOfMonth();
@@ -126,13 +140,16 @@ class Employee extends Model
         $monthStart = Carbon::createFromFormat('Y-m-d', $month . '-01')->startOfMonth();
         $monthEnd = $monthStart->copy()->endOfMonth();
         $baseSalary = $this->getSalaryAmountForMonth($month);
-        $presentDays = $this->getPresentDaysInMonth($month);
+        $usesAttendance = self::usesAttendanceForMonth($month);
+        $presentDays = $usesAttendance ? $this->getPresentDaysInMonth($month) : 0;
         [$year, $monthNum] = explode('-', $month);
 
-        $totalDays = $this->attendances()
-            ->whereMonth('date', $monthNum)
-            ->whereYear('date', $year)
-            ->count();
+        $totalDays = $usesAttendance
+            ? $this->attendances()
+                ->whereMonth('date', $monthNum)
+                ->whereYear('date', $year)
+                ->count()
+            : 0;
 
         $calculatedSalary = $baseSalary;
         $isProrated = false;
@@ -175,12 +192,15 @@ class Employee extends Model
             return $this->calculateRegularSalary($month);
         }
 
+        $usesAttendance = self::usesAttendanceForMonth($month);
         [$year, $monthNum] = explode('-', $month);
-        $presentDays = $this->getPresentDaysInMonth($month);
-        $totalDays = $this->attendances()
-            ->whereMonth('date', $monthNum)
-            ->whereYear('date', $year)
-            ->count();
+        $presentDays = $usesAttendance ? $this->getPresentDaysInMonth($month) : 0;
+        $totalDays = $usesAttendance
+            ? $this->attendances()
+                ->whereMonth('date', $monthNum)
+                ->whereYear('date', $year)
+                ->count()
+            : 0;
 
         return [
             'employee_type' => 'contractual',
@@ -188,7 +208,7 @@ class Employee extends Model
             'present_days' => $presentDays,
             'worked_days' => $presentDays,
             'total_days' => $totalDays,
-            'calculated_salary' => $this->calculateContractualSalary($month),
+            'calculated_salary' => $usesAttendance ? $this->calculateContractualSalary($month) : 0,
             'month' => $month,
             'is_prorated' => false,
         ];
@@ -196,6 +216,10 @@ class Employee extends Model
 
     public function calculateContractualSalary(string $month): float
     {
+        if (!self::usesAttendanceForMonth($month)) {
+            return 0;
+        }
+
         [$year, $monthNum] = explode('-', $month);
 
         $presentDays = $this->attendances()
@@ -209,6 +233,10 @@ class Employee extends Model
 
     public function getPresentDaysInMonth(string $month): int
     {
+        if (!self::usesAttendanceForMonth($month)) {
+            return 0;
+        }
+
         [$year, $monthNum] = explode('-', $month);
 
         return $this->attendances()

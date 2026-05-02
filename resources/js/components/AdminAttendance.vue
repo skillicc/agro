@@ -7,6 +7,7 @@
                     v-model="selectedDate"
                     label="Date"
                     type="date"
+                    :min="ATTENDANCE_START_DATE"
                     density="comfortable"
                     hide-details
                     @change="fetchAttendances"
@@ -166,6 +167,8 @@
 import { ref, onMounted, watch } from 'vue'
 import api from '../services/api'
 
+const ATTENDANCE_START_DATE = '2026-01-01'
+
 const props = defineProps({
     projectId: {
         type: Number,
@@ -178,7 +181,12 @@ const loading = ref(false)
 const marking = ref(false)
 const cancelling = ref(false)
 const cancelAllDialog = ref(false)
-const selectedDate = ref(new Date().toISOString().split('T')[0])
+const getInitialAttendanceDate = () => {
+    const today = new Date().toISOString().split('T')[0]
+    return today < ATTENDANCE_START_DATE ? ATTENDANCE_START_DATE : today
+}
+
+const selectedDate = ref(getInitialAttendanceDate())
 
 // Status dialog
 const statusDialog = ref(false)

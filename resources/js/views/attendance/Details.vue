@@ -199,6 +199,8 @@ import {
 } from 'chart.js'
 import api from '../../services/api'
 
+const ATTENDANCE_START_YEAR = 2026
+
 // Register Chart.js components
 ChartJS.register(
     CategoryScale,
@@ -217,8 +219,8 @@ const dailyData = ref([])
 const employeeReport = ref([])
 
 const currentDate = new Date()
-const selectedMonth = ref(currentDate.getMonth() + 1)
-const selectedYear = ref(currentDate.getFullYear())
+const selectedMonth = ref(currentDate.getFullYear() < ATTENDANCE_START_YEAR ? 1 : currentDate.getMonth() + 1)
+const selectedYear = ref(currentDate.getFullYear() < ATTENDANCE_START_YEAR ? ATTENDANCE_START_YEAR : currentDate.getFullYear())
 
 const months = [
     { name: 'January', value: 1 },
@@ -237,7 +239,7 @@ const months = [
 
 const years = computed(() => {
     const currentYear = new Date().getFullYear()
-    return [currentYear - 1, currentYear, currentYear + 1]
+    return [...new Set([ATTENDANCE_START_YEAR, currentYear, currentYear + 1])].sort((a, b) => a - b)
 })
 
 const monthName = computed(() => {

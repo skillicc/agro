@@ -81,7 +81,7 @@ class EmployeeSalaryCalculationTest extends TestCase
 
         $this->assertSame('regular', $novemberData['employee_type']);
         $this->assertSame(7200.0, (float) $novemberData['salary_amount']);
-        $this->assertSame(21, $novemberData['present_days']);
+        $this->assertSame(0, $novemberData['present_days']);
         $this->assertSame(21, $novemberData['worked_days']);
         $this->assertSame(5040.0, (float) $novemberData['calculated_salary']);
         $this->assertTrue($novemberData['is_prorated']);
@@ -154,5 +154,39 @@ class EmployeeSalaryCalculationTest extends TestCase
         $this->assertSame(13000.0, (float) $employeeData['current_month_due']);
 
         Carbon::setTestNow();
+    }
+
+    public function test_regular_employee_pre_2026_month_ignores_attendance_rows_for_salary_summary(): void
+    {
+        $project = Project::create([
+            'name' => 'Central',
+            'type' => 'field',
+            'location' => 'Gazipur',
+            'is_active' => true,
+        ]);
+
+        $employee = Employee::create([
+            'project_id' => $project->id,
+            'employee_type' => 'regular',
+            'name' => 'Idris',
+            'position' => 'Field Worker',
+            'salary_amount' => 18000,
+            'joining_date' => '2025-11-11',
+            'earn_leave' => 0,
+            'is_active' => true,
+        ]);
+
+        Attendance::create([
+            'employee_id' => $employee->id,
+            'date' => '2025-12-02',
+            'status' => 'present',
+        ]);
+
+        $details = $employee->calculateMonthlySalaryDetails('2025-12');
+
+        $this->assertSame(0, $details['present_days']);
+        $this->assertNull($details['worked_days']);
+        $this->assertSame(0, $details['total_days']);
+        $this->assertSame(18000.0, (float) $details['calculated_salary']);
     }
 }

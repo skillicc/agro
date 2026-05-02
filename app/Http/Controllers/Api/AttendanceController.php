@@ -5,14 +5,47 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Employee;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class AttendanceController extends Controller
 {
+    private function attendanceCutoffDate(): Carbon
+    {
+        return Employee::attendanceSalaryStartDate();
+    }
+
+    private function isBeforeAttendanceCutoff(string $date): bool
+    {
+        return Carbon::parse($date)->startOfDay()->lt($this->attendanceCutoffDate());
+    }
+
+    private function isBeforeAttendanceCutoffMonth(int $year, int $month): bool
+    {
+        return Carbon::create($year, $month, 1)->startOfMonth()->lt($this->attendanceCutoffDate()->copy()->startOfMonth());
+    }
+
     // Get attendance for a specific date (manual attendance - no auto-generate)
     public function index(Request $request)
     {
         $date = $request->date ?? now()->toDateString();
+
+        if ($this->isBeforeAttendanceCutoff($date)) {
+            return response()->json([
+                'date' => $date,
+                'attendances' => [],
+                'summary' => [
+                    'total' => 0,
+                    'present' => 0,
+                    'absent' => 0,
+                    'leave' => 0,
+                    'sick_leave' => 0,
+                    'not_marked' => 0,
+                    'regular_count' => 0,
+                    'contractual_count' => 0,
+                ],
+            ]);
+        }
 
         // Build employee query with optional filters
         $employeeQuery = Employee::where('is_active', true);
@@ -82,6 +115,10 @@ class AttendanceController extends Controller
             'status' => 'required|in:present,absent,leave,sick_leave',
         ]);
 
+        if ($this->isBeforeAttendanceCutoff($request->date)) {
+            return response()->json(['message' => 'Attendance tracking starts from 2026-01-01.'], 422);
+        }
+
         $attendance = Attendance::firstOrCreate(
             [
                 'employee_id' => $request->employee_id,
@@ -103,6 +140,10 @@ class AttendanceController extends Controller
     // Toggle single employee attendance (cycles through: present -> absent -> leave -> sick_leave -> present)
     public function toggle(Request $request, Attendance $attendance)
     {
+        if ($this->isBeforeAttendanceCutoff($attendance->date)) {
+            return response()->json(['message' => 'Attendance tracking starts from 2026-01-01.'], 422);
+        }
+
         $statusCycle = ['present', 'absent', 'leave', 'sick_leave'];
         $currentIndex = array_search($attendance->status, $statusCycle);
         $nextIndex = ($currentIndex + 1) % count($statusCycle);
@@ -122,6 +163,10 @@ class AttendanceController extends Controller
             'note' => 'nullable|string|max:255',
         ]);
 
+        if ($this->isBeforeAttendanceCutoff($attendance->date)) {
+            return response()->json(['message' => 'Attendance tracking starts from 2026-01-01.'], 422);
+        }
+
         $attendance->update([
             'status' => $request->status,
             'note' => $request->note,
@@ -133,6 +178,10 @@ class AttendanceController extends Controller
     // Cancel single employee attendance (mark as absent)
     public function cancel(Attendance $attendance)
     {
+        if ($this->isBeforeAttendanceCutoff($attendance->date)) {
+            return response()->json(['message' => 'Attendance tracking starts from 2026-01-01.'], 422);
+        }
+
         $attendance->update(['status' => 'absent']);
 
         return response()->json($attendance->load('employee.project'));
@@ -144,6 +193,10 @@ class AttendanceController extends Controller
         $request->validate([
             'date' => 'required|date',
         ]);
+
+        if ($this->isBeforeAttendanceCutoff($request->date)) {
+            return response()->json(['message' => 'Attendance tracking starts from 2026-01-01.'], 422);
+        }
 
         // Get all active non-Administration employees
         $employees = Employee::where('is_active', true)
@@ -175,6 +228,10 @@ class AttendanceController extends Controller
             'date' => 'required|date',
         ]);
 
+        if ($this->isBeforeAttendanceCutoff($request->date)) {
+            return response()->json(['message' => 'Attendance tracking starts from 2026-01-01.'], 422);
+        }
+
         // Get all active non-Administration employees
         $employees = Employee::where('is_active', true)
             ->whereDoesntHave('project', function ($q) {
@@ -204,6 +261,19 @@ class AttendanceController extends Controller
         $month = $request->month ?? now()->month;
         $year = $request->year ?? now()->year;
 
+        if ($this->isBeforeAttendanceCutoffMonth((int) $year, (int) $month)) {
+            return response()->json([
+                'employee' => $employee->load('project'),
+                'month' => $month,
+                'year' => $year,
+                'total_days' => 0,
+                'present_days' => 0,
+                'absent_days' => 0,
+                'leave_days' => 0,
+                'sick_leave_days' => 0,
+            ]);
+        }
+
         $attendances = Attendance::where('employee_id', $employee->id)
             ->whereMonth('date', $month)
             ->whereYear('date', $year)
@@ -226,6 +296,14 @@ class AttendanceController extends Controller
     {
         $month = $request->month ?? now()->month;
         $year = $request->year ?? now()->year;
+
+        if ($this->isBeforeAttendanceCutoffMonth((int) $year, (int) $month)) {
+            return response()->json([
+                'month' => $month,
+                'year' => $year,
+                'report' => [],
+            ]);
+        }
 
         $employeeQuery = Employee::where('is_active', true)->with(['project']);
 
@@ -286,6 +364,14 @@ class AttendanceController extends Controller
         $month = $request->month ?? now()->month;
         $year = $request->year ?? now()->year;
 
+        if ($this->isBeforeAttendanceCutoffMonth((int) $year, (int) $month)) {
+            return response()->json([
+                'month' => $month,
+                'year' => $year,
+                'daily_data' => [],
+            ]);
+        }
+
         // Get all dates with attendance records for the month
         $attendances = Attendance::whereMonth('date', $month)
             ->whereYear('date', $year)
@@ -333,6 +419,21 @@ class AttendanceController extends Controller
     {
         $date = $request->date ?? now()->toDateString();
         $projectId = $request->project_id;
+
+        if ($this->isBeforeAttendanceCutoff($date)) {
+            return response()->json([
+                'date' => $date,
+                'attendances' => [],
+                'summary' => [
+                    'total' => 0,
+                    'present' => 0,
+                    'absent' => 0,
+                    'leave' => 0,
+                    'sick_leave' => 0,
+                    'not_marked' => 0,
+                ],
+            ]);
+        }
 
         // Position hierarchy order
         $positionOrder = [
@@ -396,6 +497,10 @@ class AttendanceController extends Controller
             'date' => 'required|date',
         ]);
 
+        if ($this->isBeforeAttendanceCutoff($request->date)) {
+            return response()->json(['message' => 'Attendance tracking starts from 2026-01-01.'], 422);
+        }
+
         // Get Administration employees
         $employees = Employee::where('is_active', true)
             ->whereHas('project', function ($q) {
@@ -424,6 +529,10 @@ class AttendanceController extends Controller
         $request->validate([
             'date' => 'required|date',
         ]);
+
+        if ($this->isBeforeAttendanceCutoff($request->date)) {
+            return response()->json(['message' => 'Attendance tracking starts from 2026-01-01.'], 422);
+        }
 
         // Get Administration employees
         $employees = Employee::where('is_active', true)
