@@ -177,6 +177,19 @@ const monthRemainingDue = (month, dueSalary) => {
     return Math.max(0, Number(dueSalary || 0) - Number(allocations.value[month] || 0))
 }
 
+const buildAutoAllocations = (salaryRows, availableAmount) => {
+    const pool = Math.max(0, Number(availableAmount || 0))
+    let remaining = pool
+
+    return salaryRows.reduce((acc, row) => {
+        const due = Math.max(0, Number(row.dueSalary || 0))
+        const allocated = Math.min(due, remaining)
+        acc[row.month] = allocated
+        remaining -= allocated
+        return acc
+    }, {})
+}
+
 const setAllocation = (month, rawValue) => {
     const requested = Math.max(0, Number(rawValue || 0))
     const current = Number(allocations.value[month] || 0)
@@ -264,18 +277,18 @@ const loadData = async () => {
         return { month, dueSalary }
     })
 
-    allocations.value = rows.value.reduce((acc, row) => {
-        acc[row.month] = 0
-        return acc
-    }, {})
+    allocations.value = buildAutoAllocations(rows.value, totalGiven.value)
 
     try {
         const savedResponse = await api.get(`/employees/${employeeId}/simple-salary-sheet`)
         const savedAllocations = savedResponse?.data?.allocations || {}
+        const hasSavedAllocations = Object.keys(savedAllocations).length > 0
 
-        rows.value.forEach((row) => {
-            allocations.value[row.month] = Number(savedAllocations[row.month] || 0)
-        })
+        if (hasSavedAllocations) {
+            rows.value.forEach((row) => {
+                allocations.value[row.month] = Number(savedAllocations[row.month] || 0)
+            })
+        }
     } catch (error) {
         console.error('Error loading saved allocation from server:', error)
     }
