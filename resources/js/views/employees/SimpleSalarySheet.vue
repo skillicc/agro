@@ -8,6 +8,7 @@
                 </div>
             </div>
             <div class="d-flex ga-2">
+                <v-btn color="primary" variant="outlined" @click="saveAllocations">Save Allocation</v-btn>
                 <v-btn variant="outlined" @click="resetAllocations">Reset Allocation</v-btn>
                 <v-btn color="primary" @click="goBack">Back</v-btn>
             </div>
@@ -104,6 +105,7 @@ const allocations = ref({})
 const salaryHistory = ref([])
 const advanceHistory = ref([])
 const salaryExpectationsByMonth = ref({})
+const lastSavedAt = ref('')
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
 
@@ -144,6 +146,11 @@ const formatMonthLong = (monthStr) => {
     return `${monthNames[parseInt(month, 10) - 1]} ${year}`
 }
 
+const getStorageKey = () => {
+    const employeeId = route.params.id
+    return `simple_salary_sheet_allocations_${employeeId}`
+}
+
 const totalGiven = computed(() => {
     const salaryTotal = salaryHistory.value.reduce((sum, item) => sum + Number(item.amount || 0), 0)
     const advanceTotal = advanceHistory.value.reduce((sum, item) => sum + Number(item.amount || 0), 0)
@@ -176,6 +183,39 @@ const resetAllocations = () => {
         acc[row.month] = 0
         return acc
     }, {})
+}
+
+const saveAllocations = () => {
+    try {
+        const payload = {
+            allocations: allocations.value,
+            savedAt: new Date().toISOString(),
+        }
+        localStorage.setItem(getStorageKey(), JSON.stringify(payload))
+        lastSavedAt.value = payload.savedAt
+        alert('Allocation saved successfully!')
+    } catch (error) {
+        console.error('Error saving allocation:', error)
+        alert('Failed to save allocation')
+    }
+}
+
+const loadSavedAllocations = () => {
+    try {
+        const raw = localStorage.getItem(getStorageKey())
+        if (!raw) return
+
+        const parsed = JSON.parse(raw)
+        const saved = parsed?.allocations || {}
+
+        rows.value.forEach((row) => {
+            allocations.value[row.month] = Number(saved[row.month] || 0)
+        })
+
+        lastSavedAt.value = parsed?.savedAt || ''
+    } catch (error) {
+        console.error('Error loading saved allocation:', error)
+    }
 }
 
 const goBack = () => {
@@ -234,6 +274,8 @@ const loadData = async () => {
         acc[row.month] = 0
         return acc
     }, {})
+
+    loadSavedAllocations()
 }
 
 onMounted(async () => {
