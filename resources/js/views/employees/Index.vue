@@ -504,7 +504,7 @@
                                     <tr>
                                         <th>Month/Year</th>
                                         <th>Due Salary</th>
-                                        <th>Paid In Month</th>
+                                        <th>Paid In Month (Salary+Advance)</th>
                                         <th>Carry In</th>
                                         <th>Adjusted Paid</th>
                                         <th>Due</th>
@@ -1482,17 +1482,27 @@ const adjustedSalarySummary = computed(() => {
     if (!selectedEmployee.value) return []
 
     const expectedMonths = Object.keys(salaryExpectationsByMonth.value || {})
-    const paymentMonths = salaryHistory.value
+    const salaryPaymentMonths = salaryHistory.value
         .map((salary) => extractMonthFromDate(salary.payment_date))
         .filter(Boolean)
+    const advancePaymentMonths = advanceHistory.value
+        .map((advance) => extractMonthFromDate(advance.date))
+        .filter(Boolean)
 
-    const months = [...new Set([...expectedMonths, ...paymentMonths])].sort((a, b) => a.localeCompare(b))
+    const months = [...new Set([...expectedMonths, ...salaryPaymentMonths, ...advancePaymentMonths])].sort((a, b) => a.localeCompare(b))
     if (months.length === 0) return []
 
-    const paymentsByMonth = salaryHistory.value.reduce((acc, salary) => {
+    const salaryPaymentsByMonth = salaryHistory.value.reduce((acc, salary) => {
         const month = extractMonthFromDate(salary.payment_date)
         if (!month) return acc
         acc[month] = (acc[month] || 0) + Number(salary.amount || 0)
+        return acc
+    }, {})
+
+    const advancePaymentsByMonth = advanceHistory.value.reduce((acc, advance) => {
+        const month = extractMonthFromDate(advance.date)
+        if (!month) return acc
+        acc[month] = (acc[month] || 0) + Number(advance.amount || 0)
         return acc
     }, {})
 
@@ -1507,7 +1517,7 @@ const adjustedSalarySummary = computed(() => {
             ?? 0
         )
 
-        const paidInMonth = Number(paymentsByMonth[month] || 0)
+        const paidInMonth = Number(salaryPaymentsByMonth[month] || 0) + Number(advancePaymentsByMonth[month] || 0)
         const carryIn = carry
         const available = carryIn + paidInMonth
         const adjustedPaid = Math.min(monthlySalary, available)
@@ -1544,18 +1554,8 @@ const filteredAdjustedTotalPaid = computed(() => {
     return filteredAdjustedSalarySummary.value.reduce((sum, summary) => sum + Number(summary.paidInMonth || 0), 0)
 })
 
-const filteredAdjustedAdvanceTotal = computed(() => {
-    if (!historySalaryMonthFilter.value) {
-        return advanceHistory.value.reduce((sum, advance) => sum + Number(advance.amount || 0), 0)
-    }
-
-    return advanceHistory.value
-        .filter((advance) => extractMonthFromDate(advance.date) === historySalaryMonthFilter.value)
-        .reduce((sum, advance) => sum + Number(advance.amount || 0), 0)
-})
-
 const filteredAdjustedGrandTotalPaid = computed(() => {
-    return Number(filteredAdjustedTotalPaid.value || 0) + Number(filteredAdjustedAdvanceTotal.value || 0)
+    return Number(filteredAdjustedTotalPaid.value || 0)
 })
 
 const lastAdjustedMonthDue = computed(() => {
