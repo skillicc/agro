@@ -466,8 +466,18 @@
                                 </tbody>
                                 <tfoot v-if="filteredSalaryHistory.length > 0">
                                     <tr class="font-weight-bold">
-                                        <td>Total</td>
+                                        <td>Total Salary</td>
                                         <td>৳{{ formatNumber(filteredTotalSalary) }}</td>
+                                        <td colspan="3"></td>
+                                    </tr>
+                                    <tr class="font-weight-bold">
+                                        <td>Total Advance</td>
+                                        <td>৳{{ formatNumber(totalAdvance) }}</td>
+                                        <td colspan="3"></td>
+                                    </tr>
+                                    <tr class="font-weight-bold text-primary">
+                                        <td>Grand Total Paid</td>
+                                        <td>৳{{ formatNumber(totalHistoryPaid) }}</td>
                                         <td colspan="3"></td>
                                     </tr>
                                 </tfoot>
@@ -1372,6 +1382,7 @@ const totalMonthlySalary = computed(() => employees.value.filter(e => e.is_activ
 // Computed for individual history
 const totalSalary = computed(() => salaryHistory.value.reduce((sum, s) => sum + Number(s.amount), 0))
 const totalAdvance = computed(() => advanceHistory.value.reduce((sum, a) => sum + Number(a.amount), 0))
+const totalHistoryPaid = computed(() => Number(totalSalary.value || 0) + Number(totalAdvance.value || 0))
 
 const historySalaryMonthOptions = computed(() => {
     const months = [...new Set(
