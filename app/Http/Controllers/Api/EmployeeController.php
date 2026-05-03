@@ -9,8 +9,10 @@ use App\Models\Advance;
 use App\Models\SalaryAdjustment;
 use App\Models\EmployeeBonus;
 use App\Models\EmployeeEmploymentPeriod;
+use App\Models\EmployeeSimpleSalarySheetAllocation;
 use App\Models\EmployeeWorkingDayOverride;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class EmployeeController extends Controller
@@ -362,6 +364,83 @@ class EmployeeController extends Controller
     {
         $advances = $employee->advances()->with('creator')->orderBy('date', 'desc')->get();
         return response()->json($advances);
+    }
+
+    public function simpleSalarySheetAllocations(Employee $employee)
+    {
+        $records = $employee->simpleSalarySheetAllocations()->get(['month', 'allocated_amount', 'updated_at']);
+
+        return response()->json([
+            'allocations' => $records->mapWithKeys(function ($row) {
+                return [$row->month => (float) $row->allocated_amount];
+            }),
+            'saved_at' => optional($records->max('updated_at'))?->toISOString(),
+        ]);
+    }
+
+    public function saveSimpleSalarySheetAllocations(Request $request, Employee $employee)
+    {
+        $validated = $request->validate([
+            'allocations' => 'required|array',
+        ]);
+
+        $allocations = $validated['allocations'];
+
+        foreach ($allocations as $month => $amount) {
+            if (!preg_match('/^\d{4}-\d{2}$/', (string) $month)) {
+                throw ValidationException::withMessages([
+                    'allocations' => ['Invalid month key format. Use YYYY-MM.'],
+                ]);
+            }
+
+            if (!is_numeric($amount) || (float) $amount < 0) {
+                throw ValidationException::withMessages([
+                    'allocations' => ['Allocation amounts must be numeric values >= 0.'],
+                ]);
+            }
+        }
+
+        DB::transaction(function () use ($employee, $allocations, $request) {
+            $months = array_keys($allocations);
+
+            if (empty($months)) {
+                $employee->simpleSalarySheetAllocations()->delete();
+                return;
+            }
+
+            $employee->simpleSalarySheetAllocations()->whereNotIn('month', $months)->delete();
+
+            foreach ($allocations as $month => $amount) {
+                $normalizedAmount = round((float) $amount, 2);
+
+                if ($normalizedAmount <= 0) {
+                    $employee->simpleSalarySheetAllocations()->where('month', $month)->delete();
+                    continue;
+                }
+
+                $allocation = $employee->simpleSalarySheetAllocations()->firstOrNew([
+                    'month' => $month,
+                ]);
+
+                if (!$allocation->exists) {
+                    $allocation->created_by = $request->user()?->id;
+                }
+
+                $allocation->allocated_amount = $normalizedAmount;
+                $allocation->updated_by = $request->user()?->id;
+                $allocation->save();
+            }
+        });
+
+        $records = $employee->simpleSalarySheetAllocations()->get(['month', 'allocated_amount', 'updated_at']);
+
+        return response()->json([
+            'message' => 'Simple salary sheet allocation saved successfully.',
+            'allocations' => $records->mapWithKeys(function ($row) {
+                return [$row->month => (float) $row->allocated_amount];
+            }),
+            'saved_at' => optional($records->max('updated_at'))?->toISOString(),
+        ]);
     }
 
     public function storeSalary(Request $request)

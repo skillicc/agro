@@ -74,6 +74,11 @@ class Employee extends Model
         return $this->hasMany(EmployeeEmploymentPeriod::class)->orderBy('start_date');
     }
 
+    public function simpleSalarySheetAllocations()
+    {
+        return $this->hasMany(EmployeeSimpleSalarySheetAllocation::class)->orderBy('month');
+    }
+
     public function isRegular(): bool
     {
         return $this->employee_type === 'regular';

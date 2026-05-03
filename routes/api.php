@@ -117,6 +117,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/employees/{employee}/salary', [EmployeeController::class, 'paySalary']);
     Route::post('/employees/{employee}/advance', [EmployeeController::class, 'giveAdvance']);
     Route::post('/employees/{employee}/working-day-override', [EmployeeController::class, 'upsertWorkingDayOverride']);
+    Route::get('/employees/{employee}/simple-salary-sheet', [EmployeeController::class, 'simpleSalarySheetAllocations']);
+    Route::post('/employees/{employee}/simple-salary-sheet', [EmployeeController::class, 'saveSimpleSalarySheetAllocations']);
     Route::get('/employees/{employee}/employment-periods', [EmployeeController::class, 'employmentPeriods']);
     Route::post('/employees/{employee}/employment-periods', [EmployeeController::class, 'storeEmploymentPeriod']);
     Route::get('/employees/{employee}/salaries', [EmployeeController::class, 'employeeSalaries']);

@@ -111,7 +111,6 @@ const allocations = ref({})
 const salaryHistory = ref([])
 const advanceHistory = ref([])
 const salaryExpectationsByMonth = ref({})
-const lastSavedAt = ref('')
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
 
@@ -150,11 +149,6 @@ const formatMonthLong = (monthStr) => {
     const [year, month] = monthStr.split('-')
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     return `${monthNames[parseInt(month, 10) - 1]} ${year}`
-}
-
-const getStorageKey = () => {
-    const employeeId = route.params.id
-    return `simple_salary_sheet_allocations_${employeeId}`
 }
 
 const totalGiven = computed(() => {
@@ -197,36 +191,24 @@ const resetAllocations = () => {
     }, {})
 }
 
-const saveAllocations = () => {
+const saveAllocations = async () => {
+    const employeeId = route.params.id
+    if (!employeeId) return
+
     try {
-        const payload = {
-            allocations: allocations.value,
-            savedAt: new Date().toISOString(),
-        }
-        localStorage.setItem(getStorageKey(), JSON.stringify(payload))
-        lastSavedAt.value = payload.savedAt
-        alert('Allocation saved successfully!')
-    } catch (error) {
-        console.error('Error saving allocation:', error)
-        alert('Failed to save allocation')
-    }
-}
+        const payload = rows.value.reduce((acc, row) => {
+            acc[row.month] = Number(allocations.value[row.month] || 0)
+            return acc
+        }, {})
 
-const loadSavedAllocations = () => {
-    try {
-        const raw = localStorage.getItem(getStorageKey())
-        if (!raw) return
-
-        const parsed = JSON.parse(raw)
-        const saved = parsed?.allocations || {}
-
-        rows.value.forEach((row) => {
-            allocations.value[row.month] = Number(saved[row.month] || 0)
+        await api.post(`/employees/${employeeId}/simple-salary-sheet`, {
+            allocations: payload,
         })
 
-        lastSavedAt.value = parsed?.savedAt || ''
+        alert('Allocation saved to server successfully!')
     } catch (error) {
-        console.error('Error loading saved allocation:', error)
+        console.error('Error saving allocation:', error)
+        alert('Failed to save allocation on server')
     }
 }
 
@@ -287,7 +269,16 @@ const loadData = async () => {
         return acc
     }, {})
 
-    loadSavedAllocations()
+    try {
+        const savedResponse = await api.get(`/employees/${employeeId}/simple-salary-sheet`)
+        const savedAllocations = savedResponse?.data?.allocations || {}
+
+        rows.value.forEach((row) => {
+            allocations.value[row.month] = Number(savedAllocations[row.month] || 0)
+        })
+    } catch (error) {
+        console.error('Error loading saved allocation from server:', error)
+    }
 }
 
 onMounted(async () => {
