@@ -530,6 +530,11 @@
                                 </tbody>
                                 <tfoot v-if="filteredAdjustedSalarySummary.length > 0">
                                     <tr class="font-weight-bold">
+                                        <td colspan="2" class="text-right">Total Paid In Month</td>
+                                        <td>৳{{ formatNumber(filteredAdjustedGrandTotalPaid) }}</td>
+                                        <td colspan="4"></td>
+                                    </tr>
+                                    <tr class="font-weight-bold">
                                         <td colspan="5" class="text-right">Total Due</td>
                                         <td>৳{{ formatNumber(filteredAdjustedTotalDue) }}</td>
                                         <td></td>
