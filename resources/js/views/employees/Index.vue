@@ -353,6 +353,7 @@
                 <v-card-text>
                     <v-tabs v-model="historyTab" color="primary">
                         <v-tab value="salaries">Salaries ({{ salaryHistory.length }})</v-tab>
+                        <v-tab value="adjustments">Adjustment Salary</v-tab>
                         <v-tab value="advances">Advances ({{ advanceHistory.length }})</v-tab>
                         <v-tab value="employment">Employment ({{ employmentPeriods.length }})</v-tab>
                     </v-tabs>
@@ -468,6 +469,55 @@
                                         <td>Total</td>
                                         <td>৳{{ formatNumber(filteredTotalSalary) }}</td>
                                         <td colspan="3"></td>
+                                    </tr>
+                                </tfoot>
+                            </v-table>
+                        </v-window-item>
+
+                        <v-window-item value="adjustments">
+                            <div class="mt-4 mb-2 d-flex flex-wrap ga-3 align-center">
+                                <v-chip color="primary" variant="tonal" size="small">
+                                    Last Month Due: ৳{{ formatNumber(lastAdjustedMonthDue) }}
+                                </v-chip>
+                                <v-chip color="warning" variant="tonal" size="small">
+                                    Total Outstanding Due: ৳{{ formatNumber(filteredAdjustedTotalDue) }}
+                                </v-chip>
+                            </div>
+
+                            <v-table density="compact">
+                                <thead>
+                                    <tr>
+                                        <th>Month/Year</th>
+                                        <th>Due Salary</th>
+                                        <th>Paid In Month</th>
+                                        <th>Carry In</th>
+                                        <th>Adjusted Paid</th>
+                                        <th>Due</th>
+                                        <th>Carry Out</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="summary in filteredAdjustedSalarySummary" :key="summary.month">
+                                        <td>{{ formatMonthLong(summary.month) }}</td>
+                                        <td>৳{{ formatNumber(summary.monthlySalary) }}</td>
+                                        <td>৳{{ formatNumber(summary.paidInMonth) }}</td>
+                                        <td>৳{{ formatNumber(summary.carryIn) }}</td>
+                                        <td>৳{{ formatNumber(summary.adjustedPaid) }}</td>
+                                        <td>
+                                            <span v-if="summary.due > 0" class="text-error">৳{{ formatNumber(summary.due) }}</span>
+                                            <span v-else class="text-success">৳0</span>
+                                        </td>
+                                        <td>৳{{ formatNumber(summary.carryOut) }}</td>
+                                    </tr>
+                                    <tr v-if="filteredAdjustedSalarySummary.length === 0">
+                                        <td colspan="7" class="text-center text-grey">No salary months available for adjustment</td>
+                                    </tr>
+                                </tbody>
+                                <tfoot v-if="filteredAdjustedSalarySummary.length > 0">
+                                    <tr class="font-weight-bold">
+                                        <td colspan="5" class="text-right">Total Due</td>
+                                        <td>৳{{ formatNumber(filteredAdjustedTotalDue) }}</td>
+                                        <td></td>
                                     </tr>
                                 </tfoot>
                             </v-table>
@@ -1391,6 +1441,73 @@ const filteredMonthlyTotalDue = computed(() => {
     }, 0)
 })
 
+const adjustedSalarySummary = computed(() => {
+    if (!selectedEmployee.value) return []
+
+    const expectedMonths = Object.keys(salaryExpectationsByMonth.value || {})
+    const paymentMonths = salaryHistory.value
+        .map((salary) => extractMonthFromDate(salary.payment_date))
+        .filter(Boolean)
+
+    const months = [...new Set([...expectedMonths, ...paymentMonths])].sort((a, b) => a.localeCompare(b))
+    if (months.length === 0) return []
+
+    const paymentsByMonth = salaryHistory.value.reduce((acc, salary) => {
+        const month = extractMonthFromDate(salary.payment_date)
+        if (!month) return acc
+        acc[month] = (acc[month] || 0) + Number(salary.amount || 0)
+        return acc
+    }, {})
+
+    let carry = 0
+
+    return months.map((month) => {
+        const salaryDetails = salaryExpectationsByMonth.value[month] || {}
+        const monthlySalary = Number(
+            salaryDetails.calculated_salary
+            ?? selectedEmployee.value.salary_amount
+            ?? selectedEmployee.value.calculated_salary
+            ?? 0
+        )
+
+        const paidInMonth = Number(paymentsByMonth[month] || 0)
+        const carryIn = carry
+        const available = carryIn + paidInMonth
+        const adjustedPaid = Math.min(monthlySalary, available)
+        const due = Math.max(0, monthlySalary - available)
+        const carryOut = Math.max(0, available - monthlySalary)
+
+        carry = carryOut
+
+        return {
+            month,
+            monthlySalary,
+            paidInMonth,
+            carryIn,
+            adjustedPaid,
+            due,
+            carryOut,
+        }
+    })
+})
+
+const filteredAdjustedSalarySummary = computed(() => {
+    if (!historySalaryMonthFilter.value) {
+        return adjustedSalarySummary.value
+    }
+
+    return adjustedSalarySummary.value.filter((summary) => summary.month === historySalaryMonthFilter.value)
+})
+
+const filteredAdjustedTotalDue = computed(() => {
+    return filteredAdjustedSalarySummary.value.reduce((sum, summary) => sum + Number(summary.due || 0), 0)
+})
+
+const lastAdjustedMonthDue = computed(() => {
+    if (adjustedSalarySummary.value.length === 0) return 0
+    return Number(adjustedSalarySummary.value[adjustedSalarySummary.value.length - 1].due || 0)
+})
+
 // Computed for all summary
 const allTotalSalaryPaid = computed(() => allSalaries.value.reduce((sum, s) => sum + Number(s.amount), 0))
 const allTotalAdvanceGiven = computed(() => allAdvances.value.reduce((sum, a) => sum + Number(a.amount), 0))
@@ -1469,6 +1586,37 @@ const formatMonthLong = (monthStr) => {
     const [year, month] = monthStr.split('-')
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     return `${monthNames[parseInt(month) - 1]} ${year}`
+}
+
+const formatMonthValue = (dateObj) => {
+    const year = dateObj.getFullYear()
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+    return `${year}-${month}`
+}
+
+const extractMonthFromDate = (value) => {
+    if (!value) return null
+    const normalized = String(value)
+    if (/^\d{4}-\d{2}$/.test(normalized)) return normalized
+    if (/^\d{4}-\d{2}-\d{2}/.test(normalized)) return normalized.slice(0, 7)
+    return null
+}
+
+const buildMonthRange = (startMonth, endMonth) => {
+    if (!startMonth || !endMonth || startMonth > endMonth) return []
+
+    const [startYear, startMonthNum] = startMonth.split('-').map(Number)
+    const [endYear, endMonthNum] = endMonth.split('-').map(Number)
+    const cursor = new Date(startYear, startMonthNum - 1, 1)
+    const end = new Date(endYear, endMonthNum - 1, 1)
+    const months = []
+
+    while (cursor <= end) {
+        months.push(formatMonthValue(cursor))
+        cursor.setMonth(cursor.getMonth() + 1)
+    }
+
+    return months
 }
 
 const formatApiDate = (value) => {
@@ -1591,7 +1739,27 @@ const applyFilters = () => {
 }
 
 const loadSalaryExpectations = async (employeeId, salaries) => {
-    const months = [...new Set((salaries || []).map((salary) => salary.month).filter(Boolean))]
+    const salaryMonths = [...new Set((salaries || []).map((salary) => salary.month).filter(Boolean))]
+    const paymentMonths = [...new Set((salaries || []).map((salary) => extractMonthFromDate(salary.payment_date)).filter(Boolean))]
+
+    const allKnownMonths = [...new Set([...salaryMonths, ...paymentMonths])].sort((a, b) => a.localeCompare(b))
+    const joiningMonth = extractMonthFromDate(selectedEmployee.value?.joining_date)
+    const startMonth = [joiningMonth, allKnownMonths[0]].filter(Boolean).sort((a, b) => a.localeCompare(b))[0]
+
+    const now = new Date()
+    const previousMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const previousMonth = formatMonthValue(previousMonthDate)
+
+    let months = []
+    if (startMonth) {
+        const knownEndMonth = allKnownMonths[allKnownMonths.length - 1]
+        const endMonth = knownEndMonth && knownEndMonth > previousMonth ? knownEndMonth : previousMonth
+        months = buildMonthRange(startMonth, endMonth)
+    }
+
+    if (months.length === 0) {
+        months = allKnownMonths
+    }
 
     if (months.length === 0) {
         salaryExpectationsByMonth.value = {}
