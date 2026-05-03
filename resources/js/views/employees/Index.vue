@@ -479,6 +479,9 @@
                                 <v-chip color="primary" variant="tonal" size="small">
                                     Last Month Due: ৳{{ formatNumber(lastAdjustedMonthDue) }}
                                 </v-chip>
+                                <v-chip color="info" variant="tonal" size="small">
+                                    Total Given: ৳{{ formatNumber(filteredAdjustedTotalPaid) }}
+                                </v-chip>
                                 <v-chip color="warning" variant="tonal" size="small">
                                     Total Outstanding Due: ৳{{ formatNumber(filteredAdjustedTotalDue) }}
                                 </v-chip>
@@ -1505,6 +1508,10 @@ const filteredAdjustedSalarySummary = computed(() => {
 
 const filteredAdjustedTotalDue = computed(() => {
     return filteredAdjustedSalarySummary.value.reduce((sum, summary) => sum + Number(summary.due || 0), 0)
+})
+
+const filteredAdjustedTotalPaid = computed(() => {
+    return filteredAdjustedSalarySummary.value.reduce((sum, summary) => sum + Number(summary.paidInMonth || 0), 0)
 })
 
 const lastAdjustedMonthDue = computed(() => {
