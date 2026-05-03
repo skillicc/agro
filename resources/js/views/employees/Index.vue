@@ -192,6 +192,9 @@
                             <v-btn icon size="small" color="info" @click="viewHistory(item)" title="View History">
                                 <v-icon>mdi-history</v-icon>
                             </v-btn>
+                            <v-btn icon size="small" color="teal" @click="openSimpleSalarySheet(item)" title="Simple Salary Sheet">
+                                <v-icon>mdi-table-large</v-icon>
+                            </v-btn>
                             <v-btn icon size="small" color="success" @click="openSalaryDialog(item)" title="Pay Salary">
                                 <v-icon>mdi-cash</v-icon>
                             </v-btn>
@@ -213,6 +216,7 @@
                             </template>
                             <v-list density="compact">
                                 <v-list-item @click="viewHistory(item)" prepend-icon="mdi-history" title="History"></v-list-item>
+                                <v-list-item @click="openSimpleSalarySheet(item)" prepend-icon="mdi-table-large" title="Simple Salary Sheet"></v-list-item>
                                 <v-list-item @click="openSalaryDialog(item)" prepend-icon="mdi-cash" title="Pay Salary"></v-list-item>
                                 <v-list-item v-if="item.employee_type === 'regular'" @click="openAdjustSalaryDialog(item)" prepend-icon="mdi-trending-up" title="Adjust Salary"></v-list-item>
                                 <v-list-item @click="openBonusDialog(item)" prepend-icon="mdi-gift" title="Bonus"></v-list-item>
@@ -2003,6 +2007,15 @@ const openBonusDialog = (employee) => {
     bonusForm.date = new Date().toISOString().split('T')[0]
     bonusForm.reason = ''
     bonusDialog.value = true
+}
+
+const openSimpleSalarySheet = (employee) => {
+    if (!employee?.id) return
+
+    router.push({
+        name: 'employee-simple-salary-sheet',
+        params: { id: String(employee.id) },
+    })
 }
 
 // Give Bonus/Incentive

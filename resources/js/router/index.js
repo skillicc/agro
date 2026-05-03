@@ -23,6 +23,7 @@ const Sales = () => import('../views/sales/Index.vue')
 const SaleCreate = () => import('../views/sales/Create.vue')
 const SaleEdit = () => import('../views/sales/Edit.vue')
 const Employees = () => import('../views/employees/Index.vue')
+const EmployeeSimpleSalarySheet = () => import('../views/employees/SimpleSalarySheet.vue')
 const Attendance = () => import('../views/attendance/Index.vue')
 const AttendanceDetails = () => import('../views/attendance/Details.vue')
 const Reports = () => import('../views/reports/Index.vue')
@@ -132,6 +133,11 @@ const routes = [
                 path: 'employees',
                 name: 'employees',
                 component: Employees,
+            },
+            {
+                path: 'employees/:id/simple-salary-sheet',
+                name: 'employee-simple-salary-sheet',
+                component: EmployeeSimpleSalarySheet,
             },
             {
                 path: 'attendance',
