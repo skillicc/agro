@@ -267,7 +267,13 @@
                             type="number"
                             required
                         ></v-text-field>
-                        <v-text-field v-model="form.joining_date" label="Joining Date" type="date"></v-text-field>
+                        <v-text-field
+                            v-model="form.joining_date"
+                            label="Joining Date"
+                            type="date"
+                            :hint="joiningDateDisplayHint"
+                            persistent-hint
+                        ></v-text-field>
                         <v-text-field v-model.number="form.earn_leave" label="Earn Leave (EL)" type="number" step="0.5"></v-text-field>
                         <v-switch v-model="form.is_active" label="Active" color="success"></v-switch>
                     </v-form>
@@ -1329,6 +1335,23 @@ const form = reactive({ project_id: null, employee_type: 'regular', name: '', ph
 const salaryForm = reactive({ amount: 0, month: '', payment_date: new Date().toISOString().split('T')[0], note: '' })
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-BD')
+
+const joiningDateDisplayHint = computed(() => {
+    if (!form.joining_date) {
+        return 'Example: 24 Dec 2025'
+    }
+
+    const d = new Date(`${form.joining_date}T00:00:00`)
+    if (Number.isNaN(d.getTime())) {
+        return ''
+    }
+
+    return d.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+    })
+})
 
 // Generate salary month options (last 24 months + current month for backdating)
 const salaryMonthOptions = computed(() => {
