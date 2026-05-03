@@ -85,6 +85,12 @@
                             <td colspan="5" class="text-center text-grey">No months available</td>
                         </tr>
                     </tbody>
+                    <tfoot v-if="rows.length > 0">
+                        <tr class="font-weight-bold">
+                            <td colspan="4" class="text-right">Total Remaining Due</td>
+                            <td>৳{{ formatNumber(totalRemainingDue) }}</td>
+                        </tr>
+                    </tfoot>
                 </v-table>
             </v-card-text>
         </v-card>
@@ -162,6 +168,12 @@ const totalAllocated = computed(() => {
 })
 
 const remainingAmount = computed(() => Number(totalGiven.value || 0) - Number(totalAllocated.value || 0))
+
+const totalRemainingDue = computed(() => {
+    return rows.value.reduce((sum, row) => {
+        return sum + monthRemainingDue(row.month, row.dueSalary)
+    }, 0)
+})
 
 const isMonthPaid = (month, dueSalary) => {
     return Number(allocations.value[month] || 0) >= Number(dueSalary || 0)
