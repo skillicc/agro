@@ -441,6 +441,7 @@
                                         <th>Salary For</th>
                                         <th>Amount</th>
                                         <th>Paid On</th>
+                                        <th>Advance</th>
                                         <th>Note</th>
                                         <th>Actions</th>
                                     </tr>
@@ -450,6 +451,7 @@
                                         <td>{{ formatMonthShort(salary.month) }}</td>
                                         <td>৳{{ formatNumber(salary.amount) }}</td>
                                         <td>{{ formatDate(salary.payment_date) }}</td>
+                                        <td>{{ getAdvanceDisplayForDate(salary.payment_date) }}</td>
                                         <td>{{ salary.note || '-' }}</td>
                                         <td>
                                             <v-btn icon size="x-small" color="primary" @click="editSalary(salary)" title="Edit">
@@ -461,24 +463,24 @@
                                         </td>
                                     </tr>
                                     <tr v-if="filteredSalaryHistory.length === 0">
-                                        <td colspan="5" class="text-center text-grey">No salary records found</td>
+                                        <td colspan="6" class="text-center text-grey">No salary records found</td>
                                     </tr>
                                 </tbody>
                                 <tfoot v-if="filteredSalaryHistory.length > 0">
                                     <tr class="font-weight-bold">
                                         <td>Total Salary</td>
                                         <td>৳{{ formatNumber(filteredTotalSalary) }}</td>
-                                        <td colspan="3"></td>
+                                        <td colspan="4"></td>
                                     </tr>
                                     <tr class="font-weight-bold">
                                         <td>Total Advance</td>
                                         <td>৳{{ formatNumber(totalAdvance) }}</td>
-                                        <td colspan="3"></td>
+                                        <td colspan="4"></td>
                                     </tr>
                                     <tr class="font-weight-bold text-primary">
                                         <td>Grand Total Paid</td>
                                         <td>৳{{ formatNumber(totalHistoryPaid) }}</td>
-                                        <td colspan="3"></td>
+                                        <td colspan="4"></td>
                                     </tr>
                                 </tfoot>
                             </v-table>
@@ -1383,6 +1385,23 @@ const totalMonthlySalary = computed(() => employees.value.filter(e => e.is_activ
 const totalSalary = computed(() => salaryHistory.value.reduce((sum, s) => sum + Number(s.amount), 0))
 const totalAdvance = computed(() => advanceHistory.value.reduce((sum, a) => sum + Number(a.amount), 0))
 const totalHistoryPaid = computed(() => Number(totalSalary.value || 0) + Number(totalAdvance.value || 0))
+
+const advanceByDate = computed(() => {
+    return advanceHistory.value.reduce((acc, advance) => {
+        const dateKey = formatApiDate(advance.date)
+        if (!dateKey) return acc
+        acc[dateKey] = (acc[dateKey] || 0) + Number(advance.amount || 0)
+        return acc
+    }, {})
+})
+
+const getAdvanceDisplayForDate = (dateValue) => {
+    const dateKey = formatApiDate(dateValue)
+    if (!dateKey) return '-'
+    const amount = Number(advanceByDate.value[dateKey] || 0)
+    if (!amount) return '-'
+    return `৳${formatNumber(amount)} (${formatDate(dateKey)})`
+}
 
 const historySalaryMonthOptions = computed(() => {
     const months = [...new Set(
