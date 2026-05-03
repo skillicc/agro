@@ -425,6 +425,13 @@
                                         </td>
                                     </tr>
                                 </tbody>
+                                <tfoot>
+                                    <tr class="font-weight-bold">
+                                        <td colspan="3" class="text-right">Total Due</td>
+                                        <td>৳{{ formatNumber(filteredMonthlyTotalDue) }}</td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </tfoot>
                             </v-table>
 
                             <v-table density="compact" class="mt-4">
@@ -1376,6 +1383,12 @@ const filteredMonthlySalarySummary = computed(() => {
     }
 
     return monthlySalarySummary.value.filter((summary) => summary.month === historySalaryMonthFilter.value)
+})
+
+const filteredMonthlyTotalDue = computed(() => {
+    return filteredMonthlySalarySummary.value.reduce((sum, summary) => {
+        return sum + Math.max(0, Number(summary.monthlySalary || 0) - Number(summary.totalPaid || 0))
+    }, 0)
 })
 
 // Computed for all summary
