@@ -1347,7 +1347,11 @@ const elMonthOptions = computed(() => {
 const formatDate = (dateStr) => {
     if (!dateStr) return '-'
     const date = new Date(dateStr)
-    return date.toLocaleDateString('en-CA') // YYYY-MM-DD format
+    return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+    })
 }
 
 // Get group total salary
