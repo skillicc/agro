@@ -492,7 +492,7 @@
                                     Last Month Due: ৳{{ formatNumber(lastAdjustedMonthDue) }}
                                 </v-chip>
                                 <v-chip color="info" variant="tonal" size="small">
-                                    Total Given: ৳{{ formatNumber(filteredAdjustedTotalPaid) }}
+                                    Total Given (Incl. Advance): ৳{{ formatNumber(filteredAdjustedGrandTotalPaid) }}
                                 </v-chip>
                                 <v-chip color="warning" variant="tonal" size="small">
                                     Total Outstanding Due: ৳{{ formatNumber(filteredAdjustedTotalDue) }}
@@ -1542,6 +1542,20 @@ const filteredAdjustedTotalDue = computed(() => {
 
 const filteredAdjustedTotalPaid = computed(() => {
     return filteredAdjustedSalarySummary.value.reduce((sum, summary) => sum + Number(summary.paidInMonth || 0), 0)
+})
+
+const filteredAdjustedAdvanceTotal = computed(() => {
+    if (!historySalaryMonthFilter.value) {
+        return advanceHistory.value.reduce((sum, advance) => sum + Number(advance.amount || 0), 0)
+    }
+
+    return advanceHistory.value
+        .filter((advance) => extractMonthFromDate(advance.date) === historySalaryMonthFilter.value)
+        .reduce((sum, advance) => sum + Number(advance.amount || 0), 0)
+})
+
+const filteredAdjustedGrandTotalPaid = computed(() => {
+    return Number(filteredAdjustedTotalPaid.value || 0) + Number(filteredAdjustedAdvanceTotal.value || 0)
 })
 
 const lastAdjustedMonthDue = computed(() => {
